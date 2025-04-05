@@ -14,6 +14,7 @@ export function Sidebar() {
   const navItems: NavItem[] = [
     { path: "/", label: "Dashboard", icon: "bx-home-alt" },
     { path: "/assessments", label: "Assessments", icon: "bx-clipboard" },
+    { path: "/test-management", label: "Test Management", icon: "bx-test-tube" },
     { path: "/ai-insights", label: "AI Insights", icon: "bx-bulb" },
     { path: "/metrics", label: "Metrics", icon: "bx-bar-chart-alt-2" },
     { path: "/analytics", label: "Analytics", icon: "bx-line-chart" },
