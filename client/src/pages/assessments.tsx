@@ -1,10 +1,13 @@
 import { AppLayout } from "@/components/layout/app-layout";
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, ClipboardCheck, CheckCircle, AlertCircle } from "lucide-react";
+import { Calendar, CheckCircle, ClipboardCheck, AlertCircle } from "lucide-react";
+import { ATMFCard, ATMFCardHeader } from "@/components/design-system/atmf-card";
+import { StatusBadge } from "@/components/design-system/status-badge";
+import { TabView } from "@/components/design-system/tab-view";
+import { IconWrapper } from "@/components/design-system/icon-wrapper";
+import { ProgressBar } from "@/components/design-system/progress-bar";
+import { PageContainer, PageHeader, PageBody } from "@/components/design-system/page-container";
 
 // Sample assessment data - in a real app this would come from an API call
 const upcomingAssessments = [
@@ -48,125 +51,115 @@ const completedAssessments = [
 export default function Assessments() {
   const [activeTab, setActiveTab] = useState("upcoming");
 
-  const getStatusBadge = (status: string) => {
-    switch(status) {
-      case "scheduled":
-        return <Badge className="bg-blue-500">Scheduled</Badge>;
-      case "in_progress":
-        return <Badge className="bg-yellow-500">In Progress</Badge>;
-      case "completed":
-        return <Badge className="bg-green-500">Completed</Badge>;
-      default:
-        return <Badge>Unknown</Badge>;
-    }
-  };
+  const tabs = [
+    { id: "upcoming", label: "Upcoming" },
+    { id: "in-progress", label: "In Progress" },
+    { id: "completed", label: "Completed" }
+  ];
 
   return (
     <AppLayout>
-      <div className="flex flex-col space-y-6 p-8">
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-3xl font-bold">Maturity Assessments</h1>
-            <p className="text-muted-foreground mt-1">Evaluate your testing practices using the Adaptive Testing Maturity Framework</p>
-          </div>
-          <Button className="flex items-center space-x-2">
-            <ClipboardCheck className="w-4 h-4" />
-            <span>Start New Assessment</span>
-          </Button>
-        </div>
+      <PageContainer withPadding className="py-8">
+        <PageHeader 
+          title="Maturity Assessments"
+          description="Evaluate your testing practices using the Adaptive Testing Maturity Framework"
+          actions={
+            <Button className="flex items-center space-x-2">
+              <ClipboardCheck className="w-4 h-4" />
+              <span>Start New Assessment</span>
+            </Button>
+          }
+        />
         
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-3">
-            <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-            <TabsTrigger value="in-progress">In Progress</TabsTrigger>
-            <TabsTrigger value="completed">Completed</TabsTrigger>
-          </TabsList>
+        <PageBody>
+          <TabView 
+            tabs={tabs} 
+            activeTab={activeTab} 
+            onChange={setActiveTab} 
+            variant="underline"
+          />
           
-          <TabsContent value="upcoming" className="mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {activeTab === "upcoming" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
               {upcomingAssessments.map(assessment => (
-                <Card key={assessment.id} className="backdrop-blur-sm bg-white/80 dark:bg-slate-900/80 border-white/20">
-                  <CardHeader>
-                    <CardTitle className="flex justify-between items-start">
-                      <span>{assessment.name}</span>
-                      {getStatusBadge(assessment.status)}
-                    </CardTitle>
-                    <CardDescription>{assessment.dimensionName}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center text-sm text-muted-foreground mb-4">
+                <ATMFCard key={assessment.id} neonEffect="blue">
+                  <ATMFCardHeader
+                    title={assessment.name}
+                    description={assessment.dimensionName}
+                    action={<StatusBadge status={assessment.status} variant="assessment" />}
+                  />
+                  <div className="p-6">
+                    <div className="flex items-center text-sm text-text-muted mb-4">
                       <Calendar className="w-4 h-4 mr-2" />
                       <span>Scheduled for {assessment.scheduledDate}</span>
                     </div>
-                  </CardContent>
-                  <CardFooter>
+                  </div>
+                  <div className="px-6 pb-6">
                     <Button variant="outline" className="w-full">
                       Begin Assessment
                     </Button>
-                  </CardFooter>
-                </Card>
+                  </div>
+                </ATMFCard>
               ))}
               
-              <Card className="border-dashed border-2 flex flex-col items-center justify-center p-6 h-[220px]">
-                <div className="rounded-full bg-primary/10 p-3 mb-4">
-                  <ClipboardCheck className="w-5 h-5 text-primary" />
-                </div>
-                <p className="text-center text-muted-foreground mb-4">Schedule a new assessment for any dimension</p>
+              <ATMFCard className="border-dashed flex flex-col items-center justify-center p-6 h-[220px]">
+                <IconWrapper color="primary" size="lg" className="mb-4">
+                  <ClipboardCheck className="w-5 h-5" />
+                </IconWrapper>
+                <p className="text-center text-text-muted mb-4">Schedule a new assessment for any dimension</p>
                 <Button variant="outline">Schedule Assessment</Button>
-              </Card>
+              </ATMFCard>
             </div>
-          </TabsContent>
+          )}
           
-          <TabsContent value="in-progress" className="mt-6">
-            <div className="flex items-center justify-center border rounded-lg border-dashed p-8 h-64">
+          {activeTab === "in-progress" && (
+            <div className="flex items-center justify-center border rounded-lg border-dashed p-8 h-64 mt-6">
               <div className="text-center">
-                <AlertCircle className="w-8 h-8 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No assessments currently in progress</p>
+                <IconWrapper color="warning" size="lg" className="mx-auto mb-4">
+                  <AlertCircle className="w-5 h-5" />
+                </IconWrapper>
+                <p className="text-text-muted">No assessments currently in progress</p>
                 <Button variant="outline" className="mt-4">Start New Assessment</Button>
               </div>
             </div>
-          </TabsContent>
+          )}
           
-          <TabsContent value="completed" className="mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {activeTab === "completed" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
               {completedAssessments.map(assessment => (
-                <Card key={assessment.id} className="backdrop-blur-sm bg-white/80 dark:bg-slate-900/80 border-white/20">
-                  <CardHeader>
-                    <CardTitle className="flex justify-between items-start">
-                      <span>{assessment.name}</span>
-                      {getStatusBadge(assessment.status)}
-                    </CardTitle>
-                    <CardDescription>{assessment.dimensionName}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center text-sm text-muted-foreground mb-2">
+                <ATMFCard key={assessment.id} neonEffect="blue">
+                  <ATMFCardHeader
+                    title={assessment.name}
+                    description={assessment.dimensionName}
+                    action={<StatusBadge status={assessment.status} variant="assessment" />}
+                  />
+                  <div className="p-6">
+                    <div className="flex items-center text-sm text-text-muted mb-2">
                       <CheckCircle className="w-4 h-4 mr-2" />
                       <span>Completed on {assessment.completedDate}</span>
                     </div>
                     <div className="flex items-center text-sm font-medium mb-4">
                       <span className="mr-2">Current Level:</span>
-                      <Badge variant="outline" className="font-normal">{assessment.level}</Badge>
+                      <StatusBadge status={assessment.level} variant="assessment" />
                     </div>
-                    <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5">
-                      <div
-                        className="bg-primary h-2.5 rounded-full"
-                        style={{ width: `${assessment.score}%` }}
-                      ></div>
-                    </div>
-                    <div className="flex justify-between mt-2 text-xs">
-                      <span>Maturity Score: {assessment.score}%</span>
-                      <span>Next Level: {assessment.score >= 80 ? "100%" : "80%"}</span>
-                    </div>
-                  </CardContent>
-                  <CardFooter>
+                    <ProgressBar 
+                      value={assessment.score} 
+                      max={100} 
+                      color="blue" 
+                      size="sm"
+                      showLabel
+                      label={`Maturity Score: ${assessment.score}%`}
+                    />
+                  </div>
+                  <div className="px-6 pb-6">
                     <Button variant="outline" className="w-full">View Details</Button>
-                  </CardFooter>
-                </Card>
+                  </div>
+                </ATMFCard>
               ))}
             </div>
-          </TabsContent>
-        </Tabs>
-      </div>
+          )}
+        </PageBody>
+      </PageContainer>
     </AppLayout>
   );
 }
