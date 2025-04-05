@@ -2,7 +2,13 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
-import { insertMaturityLevelSchema, insertMetricSchema, insertRecommendationSchema } from "@shared/schema";
+import { 
+  insertMaturityLevelSchema, 
+  insertMetricSchema, 
+  insertRecommendationSchema,
+  insertAssessmentTemplateSchema,
+  insertAssessmentSchema
+} from "@shared/schema";
 import { 
   generateMaturityInsights, 
   generateRecommendations, 
@@ -338,6 +344,138 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error generating test strategy:", error);
       res.status(500).json({ message: "Failed to generate test strategy" });
+    }
+  });
+
+  // Assessment Templates API endpoints
+  app.get("/api/assessment-templates", async (req, res) => {
+    try {
+      const dimensionId = req.query.dimensionId ? parseInt(req.query.dimensionId as string) : undefined;
+      const templates = await storage.getAssessmentTemplates(dimensionId);
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching assessment templates:", error);
+      res.status(500).json({ message: "Failed to fetch assessment templates" });
+    }
+  });
+
+  app.get("/api/assessment-templates/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const template = await storage.getAssessmentTemplate(id);
+      
+      if (!template) {
+        return res.status(404).json({ message: "Assessment template not found" });
+      }
+      
+      res.json(template);
+    } catch (error) {
+      console.error("Error fetching assessment template:", error);
+      res.status(500).json({ message: "Failed to fetch assessment template" });
+    }
+  });
+
+  app.post("/api/assessment-templates", async (req, res) => {
+    try {
+      const templateData = insertAssessmentTemplateSchema.parse(req.body);
+      const newTemplate = await storage.createAssessmentTemplate(templateData);
+      res.status(201).json(newTemplate);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data format", errors: error.errors });
+      }
+      console.error("Error creating assessment template:", error);
+      res.status(500).json({ message: "Failed to create assessment template" });
+    }
+  });
+
+  app.patch("/api/assessment-templates/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updateData = insertAssessmentTemplateSchema.partial().parse(req.body);
+      
+      const updatedTemplate = await storage.updateAssessmentTemplate(id, updateData);
+      
+      if (!updatedTemplate) {
+        return res.status(404).json({ message: "Assessment template not found" });
+      }
+      
+      res.json(updatedTemplate);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data format", errors: error.errors });
+      }
+      console.error("Error updating assessment template:", error);
+      res.status(500).json({ message: "Failed to update assessment template" });
+    }
+  });
+
+  // Assessments API endpoints
+  app.get("/api/assessments", async (req, res) => {
+    try {
+      const filters = {
+        dimensionId: req.query.dimensionId ? parseInt(req.query.dimensionId as string) : undefined,
+        templateId: req.query.templateId ? parseInt(req.query.templateId as string) : undefined,
+        userId: req.query.userId ? parseInt(req.query.userId as string) : undefined,
+        status: req.query.status ? (req.query.status as string) : undefined
+      };
+      
+      const assessments = await storage.getAssessments(filters);
+      res.json(assessments);
+    } catch (error) {
+      console.error("Error fetching assessments:", error);
+      res.status(500).json({ message: "Failed to fetch assessments" });
+    }
+  });
+
+  app.get("/api/assessments/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const assessment = await storage.getAssessment(id);
+      
+      if (!assessment) {
+        return res.status(404).json({ message: "Assessment not found" });
+      }
+      
+      res.json(assessment);
+    } catch (error) {
+      console.error("Error fetching assessment:", error);
+      res.status(500).json({ message: "Failed to fetch assessment" });
+    }
+  });
+
+  app.post("/api/assessments", async (req, res) => {
+    try {
+      const assessmentData = insertAssessmentSchema.parse(req.body);
+      const newAssessment = await storage.createAssessment(assessmentData);
+      res.status(201).json(newAssessment);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data format", errors: error.errors });
+      }
+      console.error("Error creating assessment:", error);
+      res.status(500).json({ message: "Failed to create assessment" });
+    }
+  });
+
+  app.patch("/api/assessments/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updateData = insertAssessmentSchema.partial().parse(req.body);
+      
+      const updatedAssessment = await storage.updateAssessment(id, updateData);
+      
+      if (!updatedAssessment) {
+        return res.status(404).json({ message: "Assessment not found" });
+      }
+      
+      res.json(updatedAssessment);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data format", errors: error.errors });
+      }
+      console.error("Error updating assessment:", error);
+      res.status(500).json({ message: "Failed to update assessment" });
     }
   });
 

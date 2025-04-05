@@ -40,10 +40,7 @@ export function Sidebar() {
         <ul>
           {navItems.map((item) => (
             <li key={item.path} className="mb-1">
-              <div 
-                className="px-1"
-                onClick={() => window.location.href = item.path}
-              >
+              <Link href={item.path} className="px-1">
                 <div className={cn(
                   "nav-link flex items-center px-4 py-3 rounded-lg transition-colors group cursor-pointer",
                   isActive(item.path) 
@@ -58,7 +55,7 @@ export function Sidebar() {
                   )}></i>
                   <span>{item.label}</span>
                 </div>
-              </div>
+              </Link>
             </li>
           ))}
         </ul>

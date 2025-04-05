@@ -3,10 +3,12 @@ import {
   maturityDimensions, type MaturityDimension, type InsertMaturityDimension,
   maturityLevels, type MaturityLevel, type InsertMaturityLevel,
   metrics, type Metric, type InsertMetric,
-  recommendations, type Recommendation, type InsertRecommendation
+  recommendations, type Recommendation, type InsertRecommendation,
+  assessments, type Assessment, type InsertAssessment,
+  assessmentTemplates, type AssessmentTemplate, type InsertAssessmentTemplate
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, asc } from "drizzle-orm";
+import { eq, and, desc, asc, or, inArray, lt, gte, isNull } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -37,6 +39,23 @@ export interface IStorage {
   getRecommendation(id: number): Promise<Recommendation | undefined>;
   createRecommendation(recommendation: InsertRecommendation): Promise<Recommendation>;
   updateRecommendation(id: number, recommendation: Partial<InsertRecommendation>): Promise<Recommendation | undefined>;
+  
+  // Assessment Templates
+  getAssessmentTemplates(dimensionId?: number): Promise<AssessmentTemplate[]>;
+  getAssessmentTemplate(id: number): Promise<AssessmentTemplate | undefined>;
+  createAssessmentTemplate(template: InsertAssessmentTemplate): Promise<AssessmentTemplate>;
+  updateAssessmentTemplate(id: number, template: Partial<InsertAssessmentTemplate>): Promise<AssessmentTemplate | undefined>;
+  
+  // Assessments
+  getAssessments(filters?: {
+    dimensionId?: number;
+    templateId?: number;
+    userId?: number;
+    status?: string;
+  }): Promise<Assessment[]>;
+  getAssessment(id: number): Promise<Assessment | undefined>;
+  createAssessment(assessment: InsertAssessment): Promise<Assessment>;
+  updateAssessment(id: number, assessment: Partial<InsertAssessment>): Promise<Assessment | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -193,6 +212,96 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return updatedRecommendation || undefined;
   }
+  
+  // Assessment Templates
+  async getAssessmentTemplates(dimensionId?: number): Promise<AssessmentTemplate[]> {
+    if (dimensionId) {
+      return db
+        .select()
+        .from(assessmentTemplates)
+        .where(eq(assessmentTemplates.dimensionId, dimensionId))
+        .orderBy(desc(assessmentTemplates.createdAt));
+    }
+    return db
+      .select()
+      .from(assessmentTemplates)
+      .orderBy(desc(assessmentTemplates.createdAt));
+  }
+
+  async getAssessmentTemplate(id: number): Promise<AssessmentTemplate | undefined> {
+    const [template] = await db.select().from(assessmentTemplates).where(eq(assessmentTemplates.id, id));
+    return template || undefined;
+  }
+
+  async createAssessmentTemplate(template: InsertAssessmentTemplate): Promise<AssessmentTemplate> {
+    const [newTemplate] = await db.insert(assessmentTemplates).values(template).returning();
+    return newTemplate;
+  }
+
+  async updateAssessmentTemplate(id: number, template: Partial<InsertAssessmentTemplate>): Promise<AssessmentTemplate | undefined> {
+    const [updatedTemplate] = await db
+      .update(assessmentTemplates)
+      .set(template)
+      .where(eq(assessmentTemplates.id, id))
+      .returning();
+    return updatedTemplate || undefined;
+  }
+  
+  // Assessments
+  async getAssessments(filters?: {
+    dimensionId?: number;
+    templateId?: number;
+    userId?: number;
+    status?: string;
+  }): Promise<Assessment[]> {
+    let queryBuilder = db.select().from(assessments);
+    
+    // Apply filters if provided
+    if (filters) {
+      const conditions = [];
+      
+      if (filters.dimensionId !== undefined) {
+        conditions.push(eq(assessments.dimensionId, filters.dimensionId));
+      }
+      
+      if (filters.templateId !== undefined) {
+        conditions.push(eq(assessments.templateId, filters.templateId));
+      }
+      
+      if (filters.userId !== undefined) {
+        conditions.push(eq(assessments.userId, filters.userId));
+      }
+      
+      if (filters.status !== undefined) {
+        conditions.push(eq(assessments.status, filters.status));
+      }
+      
+      if (conditions.length > 0) {
+        queryBuilder = queryBuilder.where(and(...conditions));
+      }
+    }
+    
+    return await queryBuilder.orderBy(desc(assessments.createdAt));
+  }
+
+  async getAssessment(id: number): Promise<Assessment | undefined> {
+    const [assessment] = await db.select().from(assessments).where(eq(assessments.id, id));
+    return assessment || undefined;
+  }
+
+  async createAssessment(assessment: InsertAssessment): Promise<Assessment> {
+    const [newAssessment] = await db.insert(assessments).values(assessment).returning();
+    return newAssessment;
+  }
+
+  async updateAssessment(id: number, assessment: Partial<InsertAssessment>): Promise<Assessment | undefined> {
+    const [updatedAssessment] = await db
+      .update(assessments)
+      .set(assessment)
+      .where(eq(assessments.id, id))
+      .returning();
+    return updatedAssessment || undefined;
+  }
 
   // Initialize database with sample data
   async initSampleData() {
@@ -331,6 +440,92 @@ export class DatabaseStorage implements IStorage {
         levelId: 2,
         actions: ["Implement", "Dismiss"],
         status: "active"
+      });
+      
+      // Create assessment templates
+      await this.createAssessmentTemplate({
+        name: "Automation Intelligence Assessment",
+        description: "Evaluate the current state of test automation and identify areas for improvement",
+        dimensionId: 1,
+        criteria: [
+          {
+            id: 1,
+            question: "What percentage of your tests are automated?",
+            options: ["Less than 25%", "25-50%", "50-75%", "More than 75%"],
+            weight: 10
+          },
+          {
+            id: 2,
+            question: "How frequently are automated tests executed?",
+            options: ["On demand only", "Weekly", "Daily", "With every code change"],
+            weight: 10
+          },
+          {
+            id: 3,
+            question: "Do you have a dedicated test automation framework?",
+            options: ["No", "Yes, but it's limited", "Yes, it's comprehensive", "Yes, and it's continuously improved"],
+            weight: 15
+          }
+        ]
+      });
+      
+      await this.createAssessmentTemplate({
+        name: "Development-Testing Synergy Assessment",
+        description: "Evaluate collaboration between development and testing teams",
+        dimensionId: 2,
+        criteria: [
+          {
+            id: 1,
+            question: "How early are testers involved in the development process?",
+            options: ["After development is complete", "During implementation", "During design", "From requirements gathering"],
+            weight: 15
+          },
+          {
+            id: 2,
+            question: "Do developers write unit tests for their code?",
+            options: ["Rarely", "Sometimes", "Most of the time", "Always"],
+            weight: 10
+          },
+          {
+            id: 3,
+            question: "Is there a shared responsibility for quality?",
+            options: ["No, only testers are responsible", "Somewhat", "Yes, but testers lead quality efforts", "Yes, quality is everyone's responsibility"],
+            weight: 15
+          }
+        ]
+      });
+      
+      // Create sample assessments
+      await this.createAssessment({
+        name: "Q1 2025 Automation Assessment",
+        dimensionId: 1,
+        templateId: 1,
+        status: "scheduled",
+        scheduledDate: new Date("2025-01-15T00:00:00Z"),
+        userId: 1
+      });
+      
+      await this.createAssessment({
+        name: "Q4 2024 Dev-Test Synergy Assessment",
+        dimensionId: 2,
+        templateId: 2,
+        score: 72,
+        scorePercent: 72,
+        status: "completed",
+        completedDate: new Date("2024-12-10T00:00:00Z"),
+        userId: 1,
+        results: {
+          answers: [
+            { questionId: 1, answer: "During design", score: 3 },
+            { questionId: 2, answer: "Most of the time", score: 3 },
+            { questionId: 3, answer: "Yes, but testers lead quality efforts", score: 3 }
+          ],
+          summary: "Good collaboration between development and testing teams, with room for improvement in shared responsibility.",
+          recommendations: [
+            "Implement paired programming/testing sessions",
+            "Establish quality metrics that both teams are accountable for"
+          ]
+        }
       });
     }
   }

@@ -3,6 +3,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
 
+// Tables
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
@@ -55,6 +56,31 @@ export const recommendations = pgTable("recommendations", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const assessmentTemplates = pgTable("assessment_templates", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  dimensionId: integer("dimension_id").references(() => maturityDimensions.id),
+  criteria: jsonb("criteria").default([]),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const assessments = pgTable("assessments", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  dimensionId: integer("dimension_id").references(() => maturityDimensions.id),
+  templateId: integer("template_id").references(() => assessmentTemplates.id),
+  score: integer("score"),
+  scorePercent: integer("score_percent"),
+  status: text("status").notNull(), // "completed", "scheduled", "in_progress"
+  scheduledDate: timestamp("scheduled_date"),
+  completedDate: timestamp("completed_date"),
+  userId: integer("user_id").references(() => users.id),
+  results: jsonb("results").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Insert Schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -67,7 +93,10 @@ export const insertMaturityDimensionSchema = createInsertSchema(maturityDimensio
 export const insertMaturityLevelSchema = createInsertSchema(maturityLevels);
 export const insertMetricSchema = createInsertSchema(metrics);
 export const insertRecommendationSchema = createInsertSchema(recommendations);
+export const insertAssessmentTemplateSchema = createInsertSchema(assessmentTemplates);
+export const insertAssessmentSchema = createInsertSchema(assessments);
 
+// Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
@@ -83,7 +112,13 @@ export type Metric = typeof metrics.$inferSelect;
 export type InsertRecommendation = z.infer<typeof insertRecommendationSchema>;
 export type Recommendation = typeof recommendations.$inferSelect;
 
-// Define relations
+export type InsertAssessmentTemplate = z.infer<typeof insertAssessmentTemplateSchema>;
+export type AssessmentTemplate = typeof assessmentTemplates.$inferSelect;
+
+export type InsertAssessment = z.infer<typeof insertAssessmentSchema>;
+export type Assessment = typeof assessments.$inferSelect;
+
+// Relations
 export const usersRelations = relations(users, ({ many }) => ({
   // A user might have many recommendations, metrics, etc in the future
 }));
@@ -117,5 +152,28 @@ export const recommendationsRelations = relations(recommendations, ({ one }) => 
   level: one(maturityLevels, {
     fields: [recommendations.levelId],
     references: [maturityLevels.id],
+  }),
+}));
+
+export const assessmentTemplatesRelations = relations(assessmentTemplates, ({ one, many }) => ({
+  dimension: one(maturityDimensions, {
+    fields: [assessmentTemplates.dimensionId],
+    references: [maturityDimensions.id],
+  }),
+  assessments: many(assessments),
+}));
+
+export const assessmentsRelations = relations(assessments, ({ one }) => ({
+  dimension: one(maturityDimensions, {
+    fields: [assessments.dimensionId],
+    references: [maturityDimensions.id],
+  }),
+  template: one(assessmentTemplates, {
+    fields: [assessments.templateId],
+    references: [assessmentTemplates.id],
+  }),
+  user: one(users, {
+    fields: [assessments.userId],
+    references: [users.id],
   }),
 }));

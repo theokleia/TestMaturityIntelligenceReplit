@@ -62,4 +62,19 @@
       stroke-dashoffset: 500;
     }
   }
+  
+  .spinner {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 3px solid rgba(46, 117, 255, 0.1);
+    border-top-color: #2E75FF;
+    animation: spinner 0.8s ease-in-out infinite;
+  }
+  
+  @keyframes spinner {
+    to {
+      transform: rotate(360deg);
+    }
+  }
 }
