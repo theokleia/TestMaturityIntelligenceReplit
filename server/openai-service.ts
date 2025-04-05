@@ -6,6 +6,35 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const MODEL = "gpt-4o";
 
+// ATMF dimensions from the mindmap
+const ATMF_DIMENSIONS = [
+  {
+    id: 1,
+    name: "Automation Intelligence",
+    description: "Focuses on incorporating AI/ML into testing processes for smart test generation, execution, and analysis."
+  },
+  {
+    id: 2,
+    name: "Test Execution Efficiency",
+    description: "Emphasizes optimizing test execution speed, parallelization, and resource utilization."
+  },
+  {
+    id: 3,
+    name: "Test Coverage Optimization",
+    description: "Focuses on achieving comprehensive test coverage with minimal redundancy."
+  },
+  {
+    id: 4,
+    name: "Strategic Quality Management",
+    description: "Aligns testing activities with business objectives and quality goals."
+  },
+  {
+    id: 5,
+    name: "Continuous Quality Integration",
+    description: "Integrates testing throughout the development lifecycle for early defect detection."
+  }
+];
+
 /**
  * Generate maturity assessment insights based on provided testing data
  */
@@ -135,6 +164,210 @@ export async function analyzeTestingData(
     return {
       insights: ["Unable to analyze testing data at this time."],
       riskAreas: []
+    };
+  }
+}
+
+/**
+ * Generate a maturity roadmap for a specific dimension
+ */
+export async function generateMaturityRoadmap(
+  dimensionId: number,
+  currentLevel: number
+): Promise<{
+  levels: Array<{
+    level: number;
+    name: string;
+    description: string;
+    keyInitiatives: string[];
+    estimatedTimeframe: string;
+  }>
+}> {
+  try {
+    // Find the dimension from our known dimensions
+    const dimension = ATMF_DIMENSIONS.find(d => d.id === dimensionId);
+    if (!dimension) {
+      throw new Error(`Dimension with ID ${dimensionId} not found`);
+    }
+
+    const prompt = `
+      Generate a testing maturity roadmap for the "${dimension.name}" dimension of the Adaptive Testing Maturity Framework (ATMF).
+      The team is currently at maturity level ${currentLevel} out of 5.
+      
+      For each maturity level from ${currentLevel} to 5, provide:
+      1. A name for the level (1-3 words)
+      2. A brief description of what this level represents (1-2 sentences)
+      3. 2-3 key initiatives required to achieve this level
+      4. Estimated timeframe to achieve this level from the previous one (e.g., "3-6 months")
+      
+      Return your response in JSON format with a "levels" array containing objects with these properties:
+      level, name, description, keyInitiatives (array), estimatedTimeframe.
+    `;
+
+    const response = await openai.chat.completions.create({
+      model: MODEL,
+      messages: [
+        { 
+          role: "system", 
+          content: "You are an expert testing consultant specializing in the Adaptive Testing Maturity Framework (ATMF)." 
+        },
+        { role: "user", content: prompt }
+      ],
+      temperature: 0.7,
+      max_tokens: 1000,
+      response_format: { type: "json_object" }
+    });
+
+    const result = JSON.parse(response.choices[0].message.content || "{}");
+    return {
+      levels: result.levels || []
+    };
+  } catch (error) {
+    console.error("Error generating maturity roadmap:", error);
+    return {
+      levels: []
+    };
+  }
+}
+
+/**
+ * Analyze test patterns to identify optimization opportunities
+ */
+export async function analyzeTestPatterns(
+  testData: {
+    patterns: string[];
+    coverage: {
+      component: string;
+      percentage: number;
+    }[];
+    executionTimes: {
+      suite: string;
+      time: number;
+    }[];
+  }
+): Promise<{
+  optimizationOpportunities: Array<{
+    title: string;
+    description: string;
+    potentialImpact: "high" | "medium" | "low";
+    implementationEffort: "high" | "medium" | "low";
+  }>;
+  redundancies: string[];
+  coverageGaps: string[];
+}> {
+  try {
+    const prompt = `
+      Analyze the following test pattern data:
+      ${JSON.stringify(testData)}
+      
+      Identify:
+      1. Three specific optimization opportunities with title, description, potential impact (high/medium/low), and implementation effort (high/medium/low)
+      2. Two potential test redundancies
+      3. Two test coverage gaps
+      
+      Return your response in JSON format with these fields:
+      - optimizationOpportunities (array of objects with title, description, potentialImpact, implementationEffort)
+      - redundancies (array of strings)
+      - coverageGaps (array of strings)
+    `;
+
+    const response = await openai.chat.completions.create({
+      model: MODEL,
+      messages: [
+        { 
+          role: "system", 
+          content: "You are an expert testing consultant specializing in test automation optimization." 
+        },
+        { role: "user", content: prompt }
+      ],
+      temperature: 0.7,
+      max_tokens: 800,
+      response_format: { type: "json_object" }
+    });
+
+    const result = JSON.parse(response.choices[0].message.content || "{}");
+    return {
+      optimizationOpportunities: result.optimizationOpportunities || [],
+      redundancies: result.redundancies || [],
+      coverageGaps: result.coverageGaps || []
+    };
+  } catch (error) {
+    console.error("Error analyzing test patterns:", error);
+    return {
+      optimizationOpportunities: [],
+      redundancies: [],
+      coverageGaps: []
+    };
+  }
+}
+
+/**
+ * Generate test strategy recommendations based on project context
+ */
+export async function generateTestStrategy(
+  projectContext: {
+    type: string;
+    technologies: string[];
+    teamSize: number;
+    releaseFrequency: string;
+    qualityGoals: string[];
+  }
+): Promise<{
+  strategyOverview: string;
+  testLevels: Array<{
+    level: string;
+    focus: string;
+    recommendedApproach: string;
+    automationRecommendation: string;
+  }>;
+  toolRecommendations: Array<{
+    category: string;
+    recommendation: string;
+    rationale: string;
+  }>;
+}> {
+  try {
+    const prompt = `
+      Generate a test strategy recommendation for a project with the following context:
+      ${JSON.stringify(projectContext)}
+      
+      Provide:
+      1. A concise strategy overview (2-3 sentences)
+      2. Recommendations for different test levels (unit, integration, e2e, etc.) with focus, approach, and automation recommendation
+      3. Tool recommendations with rationale
+      
+      Return your response in JSON format with these fields:
+      - strategyOverview (string)
+      - testLevels (array of objects with level, focus, recommendedApproach, automationRecommendation)
+      - toolRecommendations (array of objects with category, recommendation, rationale)
+    `;
+
+    const response = await openai.chat.completions.create({
+      model: MODEL,
+      messages: [
+        { 
+          role: "system", 
+          content: "You are an expert testing consultant specializing in test strategy development." 
+        },
+        { role: "user", content: prompt }
+      ],
+      temperature: 0.7,
+      max_tokens: 1200,
+      response_format: { type: "json_object" }
+    });
+
+    const result = JSON.parse(response.choices[0].message.content || "{}");
+    return {
+      strategyOverview: result.strategyOverview || "",
+      testLevels: result.testLevels || [],
+      toolRecommendations: result.toolRecommendations || []
+    };
+  } catch (error) {
+    console.error("Error generating test strategy:", error);
+    return {
+      strategyOverview: "",
+      testLevels: [],
+      toolRecommendations: []
     };
   }
 }

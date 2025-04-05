@@ -35,6 +35,64 @@ export interface TestDataAnalysis {
   }[];
 }
 
+export interface MaturityRoadmapLevel {
+  level: number;
+  name: string;
+  description: string;
+  keyInitiatives: string[];
+  estimatedTimeframe: string;
+}
+
+export interface MaturityRoadmap {
+  levels: MaturityRoadmapLevel[];
+}
+
+export interface TestPatternData {
+  patterns: string[];
+  coverage: {
+    component: string;
+    percentage: number;
+  }[];
+  executionTimes: {
+    suite: string;
+    time: number;
+  }[];
+}
+
+export interface TestPatternAnalysis {
+  optimizationOpportunities: Array<{
+    title: string;
+    description: string;
+    potentialImpact: "high" | "medium" | "low";
+    implementationEffort: "high" | "medium" | "low";
+  }>;
+  redundancies: string[];
+  coverageGaps: string[];
+}
+
+export interface TestStrategyRequest {
+  type: string;
+  technologies: string[];
+  teamSize: number;
+  releaseFrequency: string;
+  qualityGoals: string[];
+}
+
+export interface TestStrategy {
+  strategyOverview: string;
+  testLevels: Array<{
+    level: string;
+    focus: string;
+    recommendedApproach: string;
+    automationRecommendation: string;
+  }>;
+  toolRecommendations: Array<{
+    category: string;
+    recommendation: string;
+    rationale: string;
+  }>;
+}
+
 // Hook to fetch AI insights for a specific dimension
 export function useAiInsights(dimensionId: number) {
   return useQuery<AiInsight>({
@@ -65,6 +123,36 @@ export function useAnalyzeTestingData() {
     mutationFn: async (request: TestDataAnalysisRequest) => {
       const res = await apiRequest('POST', '/api/ai/analyze', request);
       return res.json();
+    },
+  });
+}
+
+// Hook to fetch a maturity roadmap for a dimension
+export function useMaturityRoadmap(dimensionId: number, currentLevel: number = 1) {
+  return useQuery<MaturityRoadmap>({
+    queryKey: ['/api/ai/roadmap', dimensionId, currentLevel],
+    enabled: !!dimensionId,
+    refetchOnWindowFocus: false,
+    staleTime: 30 * 60 * 1000, // 30 minutes
+  });
+}
+
+// Hook to analyze test patterns
+export function useAnalyzeTestPatterns() {
+  return useMutation({
+    mutationFn: async (request: TestPatternData) => {
+      const res = await apiRequest('POST', '/api/ai/test-patterns', request);
+      return res.json() as Promise<TestPatternAnalysis>;
+    },
+  });
+}
+
+// Hook to generate test strategy
+export function useGenerateTestStrategy() {
+  return useMutation({
+    mutationFn: async (request: TestStrategyRequest) => {
+      const res = await apiRequest('POST', '/api/ai/test-strategy', request);
+      return res.json() as Promise<TestStrategy>;
     },
   });
 }

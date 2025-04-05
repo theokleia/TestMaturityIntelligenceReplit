@@ -40,9 +40,12 @@ export function Sidebar() {
         <ul>
           {navItems.map((item) => (
             <li key={item.path} className="mb-1">
-              <Link href={item.path}>
-                <a className={cn(
-                  "nav-link flex items-center px-4 py-3 rounded-lg transition-colors group",
+              <div 
+                className="px-1"
+                onClick={() => window.location.href = item.path}
+              >
+                <div className={cn(
+                  "nav-link flex items-center px-4 py-3 rounded-lg transition-colors group cursor-pointer",
                   isActive(item.path) 
                     ? "text-white" 
                     : "text-text-muted hover:text-white hover:bg-white/5"
@@ -54,8 +57,8 @@ export function Sidebar() {
                       : "text-text-muted group-hover:text-primary"
                   )}></i>
                   <span>{item.label}</span>
-                </a>
-              </Link>
+                </div>
+              </div>
             </li>
           ))}
         </ul>

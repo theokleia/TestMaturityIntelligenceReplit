@@ -3,7 +3,14 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
 import { insertMaturityLevelSchema, insertMetricSchema, insertRecommendationSchema } from "@shared/schema";
-import { generateMaturityInsights, generateRecommendations, analyzeTestingData } from "./openai-service";
+import { 
+  generateMaturityInsights, 
+  generateRecommendations, 
+  analyzeTestingData, 
+  generateMaturityRoadmap,
+  analyzeTestPatterns,
+  generateTestStrategy
+} from "./openai-service";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Get all maturity dimensions
@@ -263,6 +270,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error analyzing testing data:", error);
       res.status(500).json({ message: "Failed to analyze testing data" });
+    }
+  });
+
+  // Generate maturity roadmap for a dimension
+  app.get("/api/ai/roadmap/:dimensionId", async (req, res) => {
+    try {
+      const dimensionId = parseInt(req.params.dimensionId);
+      const currentLevel = req.query.currentLevel ? parseInt(req.query.currentLevel as string) : 1;
+      
+      // Validate dimension exists
+      const dimension = await storage.getMaturityDimension(dimensionId);
+      if (!dimension) {
+        return res.status(404).json({ message: "Dimension not found" });
+      }
+      
+      // Generate roadmap
+      const roadmap = await generateMaturityRoadmap(dimensionId, currentLevel);
+      
+      res.json(roadmap);
+    } catch (error) {
+      console.error("Error generating maturity roadmap:", error);
+      res.status(500).json({ message: "Failed to generate maturity roadmap" });
+    }
+  });
+
+  // Analyze test patterns
+  app.post("/api/ai/test-patterns", async (req, res) => {
+    try {
+      const { patterns, coverage, executionTimes } = req.body;
+      
+      if (!patterns || !coverage || !executionTimes) {
+        return res.status(400).json({ message: "patterns, coverage, and executionTimes are required" });
+      }
+      
+      // Analyze test patterns
+      const analysis = await analyzeTestPatterns({ patterns, coverage, executionTimes });
+      
+      res.json(analysis);
+    } catch (error) {
+      console.error("Error analyzing test patterns:", error);
+      res.status(500).json({ message: "Failed to analyze test patterns" });
+    }
+  });
+
+  // Generate test strategy
+  app.post("/api/ai/test-strategy", async (req, res) => {
+    try {
+      const { type, technologies, teamSize, releaseFrequency, qualityGoals } = req.body;
+      
+      if (!type || !technologies || !teamSize || !releaseFrequency || !qualityGoals) {
+        return res.status(400).json({ 
+          message: "type, technologies, teamSize, releaseFrequency, and qualityGoals are required" 
+        });
+      }
+      
+      // Generate test strategy
+      const strategy = await generateTestStrategy({
+        type,
+        technologies,
+        teamSize,
+        releaseFrequency,
+        qualityGoals
+      });
+      
+      res.json(strategy);
+    } catch (error) {
+      console.error("Error generating test strategy:", error);
+      res.status(500).json({ message: "Failed to generate test strategy" });
     }
   });
 

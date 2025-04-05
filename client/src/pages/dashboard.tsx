@@ -8,6 +8,7 @@ import { MetricsCard } from "@/components/dashboard/metrics-card";
 import { InsightCard } from "@/components/dashboard/insight-card";
 import { AiRecommendation, AiAnalysisCard } from "@/components/dashboard/ai-recommendation";
 import { InteractiveMindmap } from "@/components/dashboard/interactive-mindmap";
+import { MaturityRoadmap } from "@/components/dashboard/maturity-roadmap";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 
@@ -249,6 +250,21 @@ export default function Dashboard() {
                 className="mb-6" 
               />
             ))}
+          </div>
+          
+          {/* Maturity Roadmap */}
+          <div className="mt-12">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-heading font-bold">Maturity Planning</h2>
+              <Button variant="link" className="text-sm text-primary flex items-center">
+                Export Plan
+                <i className="bx bx-download ml-1"></i>
+              </Button>
+            </div>
+            
+            {dimensions && dimensions.length > 0 && (
+              <MaturityRoadmap dimensions={dimensions} />
+            )}
           </div>
         </div>
       </main>
