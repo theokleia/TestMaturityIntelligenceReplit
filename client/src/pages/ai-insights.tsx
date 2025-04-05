@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/layout/header";
+import { AppLayout } from "@/components/layout/app-layout";
 import { LucideActivity, LucideAperture, LucideBellRing, LucideBolt, LucideCalendar, LucideHourglass, LucidePipette, LucideZap } from "lucide-react";
 
 // Define interfaces for data structures
@@ -339,51 +340,53 @@ export default function AiInsights() {
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <Header title="AI Insights" className="mb-1" />
-          <p className="text-gray-400 text-sm">
-            AI-powered analytics and recommendations to enhance your testing maturity
-          </p>
+    <AppLayout>
+      <div className="container mx-auto py-6 space-y-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <Header title="AI Insights" className="mb-1" />
+            <p className="text-gray-400 text-sm">
+              AI-powered analytics and recommendations to enhance your testing maturity
+            </p>
+          </div>
+          
+          <Button 
+            variant="outline" 
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="bg-black/20 border-white/10 hover:bg-black/30"
+          >
+            {isRefreshing ? (
+              <>
+                <div className="spinner mr-2 h-4 w-4"></div>
+                Refreshing...
+              </>
+            ) : (
+              <>Refresh Insights</>
+            )}
+          </Button>
         </div>
         
-        <Button 
-          variant="outline" 
-          onClick={handleRefresh}
-          disabled={isRefreshing}
-          className="bg-black/20 border-white/10 hover:bg-black/30"
-        >
-          {isRefreshing ? (
-            <>
-              <div className="spinner mr-2 h-4 w-4"></div>
-              Refreshing...
-            </>
-          ) : (
-            <>Refresh Insights</>
-          )}
-        </Button>
+        <Tabs defaultValue="key-insights" className="w-full">
+          <TabsList className="grid grid-cols-3 max-w-md mb-6">
+            <TabsTrigger value="key-insights">Key Insights</TabsTrigger>
+            <TabsTrigger value="predictions">Predictions</TabsTrigger>
+            <TabsTrigger value="activity">Recent Activity</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="key-insights" className="mt-0">
+            <KeyInsightsTab />
+          </TabsContent>
+          
+          <TabsContent value="predictions" className="mt-0">
+            <PredictionsTab />
+          </TabsContent>
+          
+          <TabsContent value="activity" className="mt-0">
+            <ActivityTab />
+          </TabsContent>
+        </Tabs>
       </div>
-      
-      <Tabs defaultValue="key-insights" className="w-full">
-        <TabsList className="grid grid-cols-3 max-w-md mb-6">
-          <TabsTrigger value="key-insights">Key Insights</TabsTrigger>
-          <TabsTrigger value="predictions">Predictions</TabsTrigger>
-          <TabsTrigger value="activity">Recent Activity</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="key-insights" className="mt-0">
-          <KeyInsightsTab />
-        </TabsContent>
-        
-        <TabsContent value="predictions" className="mt-0">
-          <PredictionsTab />
-        </TabsContent>
-        
-        <TabsContent value="activity" className="mt-0">
-          <ActivityTab />
-        </TabsContent>
-      </Tabs>
-    </div>
+    </AppLayout>
   );
 }
