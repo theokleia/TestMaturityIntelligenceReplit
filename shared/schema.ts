@@ -1,6 +1,7 @@
-import { pgTable, text, serial, integer, boolean, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, jsonb, timestamp, foreignKey } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -21,7 +22,7 @@ export const maturityDimensions = pgTable("maturity_dimensions", {
 
 export const maturityLevels = pgTable("maturity_levels", {
   id: serial("id").primaryKey(),
-  dimensionId: integer("dimension_id").notNull(),
+  dimensionId: integer("dimension_id").notNull().references(() => maturityDimensions.id, { onDelete: "cascade" }),
   level: integer("level").notNull(),
   name: text("name").notNull(),
   description: text("description").notNull(),
@@ -38,7 +39,7 @@ export const metrics = pgTable("metrics", {
   changeDirection: text("change_direction"), // 'up' or 'down'
   isPositive: boolean("is_positive").default(true),
   color: text("color"),
-  dimensionId: integer("dimension_id"),
+  dimensionId: integer("dimension_id").references(() => maturityDimensions.id, { onDelete: "set null" }),
 });
 
 export const recommendations = pgTable("recommendations", {
@@ -47,10 +48,11 @@ export const recommendations = pgTable("recommendations", {
   description: text("description").notNull(),
   type: text("type").notNull(), // 'insight', 'recommendation', etc.
   priority: text("priority").default("normal"), // 'high', 'normal', 'low'
-  dimensionId: integer("dimension_id"),
-  levelId: integer("level_id"),
+  dimensionId: integer("dimension_id").references(() => maturityDimensions.id, { onDelete: "set null" }),
+  levelId: integer("level_id").references(() => maturityLevels.id, { onDelete: "set null" }),
   actions: jsonb("actions").default([]),
   status: text("status").default("active"), // 'active', 'dismissed', 'implemented'
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -80,3 +82,40 @@ export type Metric = typeof metrics.$inferSelect;
 
 export type InsertRecommendation = z.infer<typeof insertRecommendationSchema>;
 export type Recommendation = typeof recommendations.$inferSelect;
+
+// Define relations
+export const usersRelations = relations(users, ({ many }) => ({
+  // A user might have many recommendations, metrics, etc in the future
+}));
+
+export const maturityDimensionsRelations = relations(maturityDimensions, ({ many }) => ({
+  levels: many(maturityLevels),
+  metrics: many(metrics),
+  recommendations: many(recommendations),
+}));
+
+export const maturityLevelsRelations = relations(maturityLevels, ({ one, many }) => ({
+  dimension: one(maturityDimensions, {
+    fields: [maturityLevels.dimensionId],
+    references: [maturityDimensions.id],
+  }),
+  recommendations: many(recommendations),
+}));
+
+export const metricsRelations = relations(metrics, ({ one }) => ({
+  dimension: one(maturityDimensions, {
+    fields: [metrics.dimensionId],
+    references: [maturityDimensions.id],
+  }),
+}));
+
+export const recommendationsRelations = relations(recommendations, ({ one }) => ({
+  dimension: one(maturityDimensions, {
+    fields: [recommendations.dimensionId],
+    references: [maturityDimensions.id],
+  }),
+  level: one(maturityLevels, {
+    fields: [recommendations.levelId],
+    references: [maturityLevels.id],
+  }),
+}));
