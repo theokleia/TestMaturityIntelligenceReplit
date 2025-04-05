@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+    background-color: #0A0F1F;
+    background-image: radial-gradient(circle at 20% 30%, rgba(46, 117, 255, 0.15) 0%, transparent 30%),
+                      radial-gradient(circle at 80% 70%, rgba(138, 86, 255, 0.1) 0%, transparent 40%);
+    background-size: 100% 100%;
+    background-attachment: fixed;
+  }
+}
+
+@layer utilities {
+  .glassmorphism {
+    @apply bg-black/30 backdrop-blur-md border border-white/5 shadow-lg;
+  }
+  
+  .glassmorphism-light {
+    @apply bg-black/20 backdrop-blur-sm border border-white/5 shadow-md;
+  }
+  
+  .neon-border {
+    box-shadow: 0 0 5px rgba(46, 117, 255, 0.5), 
+                0 0 15px rgba(46, 117, 255, 0.3);
+  }
+  
+  .neon-border-purple {
+    box-shadow: 0 0 5px rgba(138, 86, 255, 0.5), 
+                0 0 15px rgba(138, 86, 255, 0.3);
+  }
+  
+  .neon-border-teal {
+    box-shadow: 0 0 5px rgba(47, 255, 221, 0.5), 
+                0 0 15px rgba(47, 255, 221, 0.3);
+  }
+  
+  .glow-text {
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+  }
+
+  .tab-indicator {
+    height: 3px;
+    transition: all 0.3s ease;
+  }
+}
+
+@layer components {
+  .connection-line {
+    stroke-dasharray: 5;
+    animation: dash 15s linear infinite;
+  }
+  
+  @keyframes dash {
+    to {
+      stroke-dashoffset: 500;
+    }
+  }
+}
