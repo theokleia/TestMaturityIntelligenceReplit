@@ -93,6 +93,37 @@ export interface TestStrategy {
   }>;
 }
 
+export interface GenerateTestCasesRequest {
+  feature: string;
+  requirements: string;
+  complexity: string;
+  testSuiteId: number;
+}
+
+export interface TestCaseStep {
+  step: string;
+  expected: string;
+}
+
+export interface TestCase {
+  id: number;
+  title: string;
+  description: string;
+  preconditions: string;
+  steps: TestCaseStep[];
+  expectedResults: string;
+  priority: string;
+  severity: string;
+  status: string;
+  suiteId: number;
+  userId: number;
+  aiGenerated: boolean;
+  automatable: boolean;
+  automationStatus: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Hook to fetch AI insights for a specific dimension
 export function useAiInsights(dimensionId: number) {
   return useQuery<AiInsight>({
@@ -153,6 +184,23 @@ export function useGenerateTestStrategy() {
     mutationFn: async (request: TestStrategyRequest) => {
       const res = await apiRequest('POST', '/api/ai/test-strategy', request);
       return res.json() as Promise<TestStrategy>;
+    },
+  });
+}
+
+// Hook to generate AI-powered test cases
+export function useGenerateTestCases() {
+  return useMutation({
+    mutationFn: async (request: GenerateTestCasesRequest) => {
+      const res = await apiRequest('POST', '/api/ai/generate-test-cases', request);
+      return res.json() as Promise<{
+        message: string;
+        testCases: TestCase[];
+      }>;
+    },
+    onSuccess: () => {
+      // Invalidate test cases cache when new ones are created
+      queryClient.invalidateQueries({ queryKey: ['/api/test-cases'] });
     },
   });
 }

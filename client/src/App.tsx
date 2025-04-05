@@ -5,6 +5,7 @@ import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
 import Assessments from "@/pages/assessments";
 import AiInsights from "@/pages/ai-insights";
+import TestManagement from "@/pages/test-management";
 
 function Router() {
   return (
@@ -12,6 +13,7 @@ function Router() {
       <Route path="/" component={Dashboard} />
       <Route path="/assessments" component={Assessments} />
       <Route path="/ai-insights" component={AiInsights} />
+      <Route path="/test-management" component={TestManagement} />
       {/* Additional routes go here */}
       <Route component={NotFound} />
     </Switch>

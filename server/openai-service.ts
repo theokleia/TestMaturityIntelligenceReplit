@@ -302,6 +302,76 @@ export async function analyzeTestPatterns(
 }
 
 /**
+ * Generate test cases based on feature description and requirements
+ */
+export async function generateTestCases(
+  feature: string,
+  requirements: string,
+  complexity: string
+): Promise<{
+  testCases: Array<{
+    title: string;
+    description: string;
+    preconditions: string;
+    steps: Array<{ step: string; expected: string }>;
+    expectedResults: string;
+    priority: string;
+    severity: string;
+    automatable: boolean;
+  }>;
+}> {
+  try {
+    const prompt = `
+      Generate detailed test cases for the following feature:
+      
+      Feature: ${feature}
+      Requirements: ${requirements}
+      Complexity: ${complexity}
+      
+      Provide 3 detailed test cases, each with:
+      1. Title
+      2. Description
+      3. Preconditions
+      4. Test steps (each with a step description and expected result)
+      5. Overall expected results
+      6. Priority (high, medium, low based on complexity and criticality)
+      7. Severity (critical, high, normal, low)
+      8. Whether the test case is automatable (true/false)
+      
+      Return your response in JSON format with a "testCases" array containing objects with these properties:
+      title, description, preconditions, steps (array of objects with step and expected properties), 
+      expectedResults, priority, severity, automatable.
+      
+      Make the test cases specific and detailed, with clear preconditions and steps that would be actionable for a tester.
+    `;
+
+    const response = await openai.chat.completions.create({
+      model: MODEL,
+      messages: [
+        { 
+          role: "system", 
+          content: "You are an expert test engineer specializing in test case design and automation." 
+        },
+        { role: "user", content: prompt }
+      ],
+      temperature: 0.7,
+      max_tokens: 1500,
+      response_format: { type: "json_object" }
+    });
+
+    const result = JSON.parse(response.choices[0].message.content || "{}");
+    return {
+      testCases: result.testCases || []
+    };
+  } catch (error) {
+    console.error("Error generating test cases:", error);
+    return {
+      testCases: []
+    };
+  }
+}
+
+/**
  * Generate test strategy recommendations based on project context
  */
 export async function generateTestStrategy(

@@ -5,7 +5,9 @@ import {
   metrics, type Metric, type InsertMetric,
   recommendations, type Recommendation, type InsertRecommendation,
   assessments, type Assessment, type InsertAssessment,
-  assessmentTemplates, type AssessmentTemplate, type InsertAssessmentTemplate
+  assessmentTemplates, type AssessmentTemplate, type InsertAssessmentTemplate,
+  testSuites, type TestSuite, type InsertTestSuite,
+  testCases, type TestCase, type InsertTestCase
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc, or, inArray, lt, gte, isNull } from "drizzle-orm";
@@ -56,6 +58,32 @@ export interface IStorage {
   getAssessment(id: number): Promise<Assessment | undefined>;
   createAssessment(assessment: InsertAssessment): Promise<Assessment>;
   updateAssessment(id: number, assessment: Partial<InsertAssessment>): Promise<Assessment | undefined>;
+
+  // Test Suites
+  getTestSuites(filters?: {
+    userId?: number;
+    status?: string;
+    priority?: string;
+    projectArea?: string;
+    aiGenerated?: boolean;
+  }): Promise<TestSuite[]>;
+  getTestSuite(id: number): Promise<TestSuite | undefined>;
+  createTestSuite(testSuite: InsertTestSuite): Promise<TestSuite>;
+  updateTestSuite(id: number, testSuite: Partial<InsertTestSuite>): Promise<TestSuite | undefined>;
+
+  // Test Cases
+  getTestCases(filters?: {
+    suiteId?: number;
+    userId?: number;
+    status?: string;
+    priority?: string;
+    severity?: string;
+    aiGenerated?: boolean;
+    automatable?: boolean;
+  }): Promise<TestCase[]>;
+  getTestCase(id: number): Promise<TestCase | undefined>;
+  createTestCase(testCase: InsertTestCase): Promise<TestCase>;
+  updateTestCase(id: number, testCase: Partial<InsertTestCase>): Promise<TestCase | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -303,6 +331,136 @@ export class DatabaseStorage implements IStorage {
     return updatedAssessment || undefined;
   }
 
+  // Test Suites
+  async getTestSuites(filters?: {
+    userId?: number;
+    status?: string;
+    priority?: string;
+    projectArea?: string;
+    aiGenerated?: boolean;
+  }): Promise<TestSuite[]> {
+    let queryBuilder = db.select().from(testSuites);
+    
+    if (filters) {
+      const conditions = [];
+      
+      if (filters.userId !== undefined) {
+        conditions.push(eq(testSuites.userId, filters.userId));
+      }
+      
+      if (filters.status !== undefined) {
+        conditions.push(eq(testSuites.status, filters.status));
+      }
+      
+      if (filters.priority !== undefined) {
+        conditions.push(eq(testSuites.priority, filters.priority));
+      }
+      
+      if (filters.projectArea !== undefined) {
+        conditions.push(eq(testSuites.projectArea, filters.projectArea));
+      }
+      
+      if (filters.aiGenerated !== undefined) {
+        conditions.push(eq(testSuites.aiGenerated, filters.aiGenerated));
+      }
+      
+      if (conditions.length > 0) {
+        queryBuilder = queryBuilder.where(and(...conditions));
+      }
+    }
+    
+    return await queryBuilder.orderBy(desc(testSuites.createdAt));
+  }
+
+  async getTestSuite(id: number): Promise<TestSuite | undefined> {
+    const [testSuite] = await db.select().from(testSuites).where(eq(testSuites.id, id));
+    return testSuite || undefined;
+  }
+
+  async createTestSuite(testSuite: InsertTestSuite): Promise<TestSuite> {
+    const [newTestSuite] = await db.insert(testSuites).values(testSuite).returning();
+    return newTestSuite;
+  }
+
+  async updateTestSuite(id: number, testSuite: Partial<InsertTestSuite>): Promise<TestSuite | undefined> {
+    const [updatedTestSuite] = await db
+      .update(testSuites)
+      .set(testSuite)
+      .where(eq(testSuites.id, id))
+      .returning();
+    return updatedTestSuite || undefined;
+  }
+
+  // Test Cases
+  async getTestCases(filters?: {
+    suiteId?: number;
+    userId?: number;
+    status?: string;
+    priority?: string;
+    severity?: string;
+    aiGenerated?: boolean;
+    automatable?: boolean;
+  }): Promise<TestCase[]> {
+    let queryBuilder = db.select().from(testCases);
+    
+    if (filters) {
+      const conditions = [];
+      
+      if (filters.suiteId !== undefined) {
+        conditions.push(eq(testCases.suiteId, filters.suiteId));
+      }
+      
+      if (filters.userId !== undefined) {
+        conditions.push(eq(testCases.userId, filters.userId));
+      }
+      
+      if (filters.status !== undefined) {
+        conditions.push(eq(testCases.status, filters.status));
+      }
+      
+      if (filters.priority !== undefined) {
+        conditions.push(eq(testCases.priority, filters.priority));
+      }
+      
+      if (filters.severity !== undefined) {
+        conditions.push(eq(testCases.severity, filters.severity));
+      }
+      
+      if (filters.aiGenerated !== undefined) {
+        conditions.push(eq(testCases.aiGenerated, filters.aiGenerated));
+      }
+      
+      if (filters.automatable !== undefined) {
+        conditions.push(eq(testCases.automatable, filters.automatable));
+      }
+      
+      if (conditions.length > 0) {
+        queryBuilder = queryBuilder.where(and(...conditions));
+      }
+    }
+    
+    return await queryBuilder.orderBy(desc(testCases.createdAt));
+  }
+
+  async getTestCase(id: number): Promise<TestCase | undefined> {
+    const [testCase] = await db.select().from(testCases).where(eq(testCases.id, id));
+    return testCase || undefined;
+  }
+
+  async createTestCase(testCase: InsertTestCase): Promise<TestCase> {
+    const [newTestCase] = await db.insert(testCases).values(testCase).returning();
+    return newTestCase;
+  }
+
+  async updateTestCase(id: number, testCase: Partial<InsertTestCase>): Promise<TestCase | undefined> {
+    const [updatedTestCase] = await db
+      .update(testCases)
+      .set(testCase)
+      .where(eq(testCases.id, id))
+      .returning();
+    return updatedTestCase || undefined;
+  }
+
   // Initialize database with sample data
   async initSampleData() {
     // Create Admin user
@@ -524,6 +682,136 @@ export class DatabaseStorage implements IStorage {
           recommendations: [
             "Implement paired programming/testing sessions",
             "Establish quality metrics that both teams are accountable for"
+          ]
+        }
+      });
+      
+      // Create sample test suites
+      const apiTestSuite = await this.createTestSuite({
+        name: "API Authentication Tests",
+        description: "Test suite for API authentication endpoints",
+        type: "integration",
+        status: "active",
+        priority: "high",
+        projectArea: "authentication",
+        userId: 1,
+        aiGenerated: false,
+        tags: ["api", "auth", "security"]
+      });
+      
+      const uiTestSuite = await this.createTestSuite({
+        name: "Dashboard UI Tests",
+        description: "Functional tests for the dashboard user interface",
+        type: "functional",
+        status: "active",
+        priority: "medium",
+        projectArea: "dashboard",
+        userId: 1,
+        aiGenerated: false,
+        tags: ["ui", "dashboard", "visualization"]
+      });
+      
+      const aiGeneratedTestSuite = await this.createTestSuite({
+        name: "Payment Processing Tests",
+        description: "End-to-end tests for payment processing flows",
+        type: "end-to-end",
+        status: "active",
+        priority: "high",
+        projectArea: "payments",
+        userId: 1,
+        aiGenerated: true,
+        tags: ["payments", "e2e", "financial"]
+      });
+      
+      // Create sample test cases
+      await this.createTestCase({
+        title: "Verify user login with valid credentials",
+        description: "Test that users can successfully log in with valid username and password",
+        preconditions: "User exists in the system with valid credentials",
+        steps: [
+          { step: "Navigate to login page", expected: "Login form is displayed" },
+          { step: "Enter valid username", expected: "Username is accepted" },
+          { step: "Enter valid password", expected: "Password is accepted" },
+          { step: "Click login button", expected: "User is authenticated and redirected to dashboard" }
+        ],
+        expectedResults: "User is successfully logged in and dashboard is displayed",
+        priority: "high",
+        severity: "critical",
+        status: "passed",
+        suiteId: apiTestSuite.id,
+        userId: 1,
+        aiGenerated: false,
+        automatable: true,
+        automationStatus: "automated"
+      });
+      
+      await this.createTestCase({
+        title: "Verify login failure with invalid password",
+        description: "Test that login fails when user enters invalid password",
+        preconditions: "User exists in the system",
+        steps: [
+          { step: "Navigate to login page", expected: "Login form is displayed" },
+          { step: "Enter valid username", expected: "Username is accepted" },
+          { step: "Enter invalid password", expected: "Password field accepts input" },
+          { step: "Click login button", expected: "Error message is displayed" }
+        ],
+        expectedResults: "Login fails with appropriate error message",
+        priority: "high",
+        severity: "high",
+        status: "passed",
+        suiteId: apiTestSuite.id,
+        userId: 1,
+        aiGenerated: false,
+        automatable: true,
+        automationStatus: "automated"
+      });
+      
+      await this.createTestCase({
+        title: "Verify dashboard loads all widgets correctly",
+        description: "Test that all dashboard widgets load and display data correctly",
+        preconditions: "User is logged in",
+        steps: [
+          { step: "Navigate to dashboard page", expected: "Dashboard page loads" },
+          { step: "Verify metrics widget", expected: "Metrics widget displays current data" },
+          { step: "Verify recommendations panel", expected: "Recommendations are displayed" },
+          { step: "Verify interactive mindmap", expected: "Mindmap is interactive and displays correctly" }
+        ],
+        expectedResults: "All dashboard widgets load and display data correctly",
+        priority: "medium",
+        severity: "normal",
+        status: "in-progress",
+        suiteId: uiTestSuite.id,
+        userId: 1,
+        aiGenerated: false,
+        automatable: true,
+        automationStatus: "not-automated"
+      });
+      
+      await this.createTestCase({
+        title: "Verify payment processing with valid credit card",
+        description: "Test the complete payment flow with a valid credit card",
+        preconditions: "User is logged in and has items in cart",
+        steps: [
+          { step: "Navigate to checkout page", expected: "Checkout page loads with correct items and total" },
+          { step: "Enter shipping information", expected: "Shipping information is accepted" },
+          { step: "Enter valid credit card details", expected: "Credit card information is accepted" },
+          { step: "Confirm payment", expected: "Payment is processed successfully" },
+          { step: "Verify order confirmation", expected: "Order confirmation page displays with correct information" }
+        ],
+        expectedResults: "Payment is processed successfully and order is confirmed",
+        priority: "high",
+        severity: "critical",
+        status: "draft",
+        suiteId: aiGeneratedTestSuite.id,
+        userId: 1,
+        aiGenerated: true,
+        automatable: true,
+        automationStatus: "not-automated",
+        testData: {
+          testCards: [
+            { type: "Visa", number: "4111111111111111", expected: "success" },
+            { type: "Mastercard", number: "5555555555554444", expected: "success" },
+            { type: "American Express", number: "378282246310005", expected: "success" }
           ]
         }
       });

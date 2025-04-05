@@ -7,7 +7,9 @@ import {
   insertMetricSchema, 
   insertRecommendationSchema,
   insertAssessmentTemplateSchema,
-  insertAssessmentSchema
+  insertAssessmentSchema,
+  insertTestSuiteSchema,
+  insertTestCaseSchema
 } from "@shared/schema";
 import { 
   generateMaturityInsights, 
@@ -15,7 +17,8 @@ import {
   analyzeTestingData, 
   generateMaturityRoadmap,
   analyzeTestPatterns,
-  generateTestStrategy
+  generateTestStrategy,
+  generateTestCases
 } from "./openai-service";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -476,6 +479,230 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error updating assessment:", error);
       res.status(500).json({ message: "Failed to update assessment" });
+    }
+  });
+
+  // Test Suites API endpoints
+  app.get("/api/test-suites", async (req, res) => {
+    try {
+      const filters = {
+        userId: req.query.userId ? parseInt(req.query.userId as string) : undefined,
+        status: req.query.status ? (req.query.status as string) : undefined,
+        priority: req.query.priority ? (req.query.priority as string) : undefined,
+        projectArea: req.query.projectArea ? (req.query.projectArea as string) : undefined,
+        aiGenerated: req.query.aiGenerated ? (req.query.aiGenerated === 'true') : undefined
+      };
+      
+      const testSuites = await storage.getTestSuites(filters);
+      res.json(testSuites);
+    } catch (error) {
+      console.error("Error fetching test suites:", error);
+      res.status(500).json({ message: "Failed to fetch test suites" });
+    }
+  });
+
+  app.get("/api/test-suites/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const testSuite = await storage.getTestSuite(id);
+      
+      if (!testSuite) {
+        return res.status(404).json({ message: "Test suite not found" });
+      }
+      
+      res.json(testSuite);
+    } catch (error) {
+      console.error("Error fetching test suite:", error);
+      res.status(500).json({ message: "Failed to fetch test suite" });
+    }
+  });
+
+  app.post("/api/test-suites", async (req, res) => {
+    try {
+      const testSuiteData = insertTestSuiteSchema.parse(req.body);
+      const newTestSuite = await storage.createTestSuite(testSuiteData);
+      res.status(201).json(newTestSuite);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data format", errors: error.errors });
+      }
+      console.error("Error creating test suite:", error);
+      res.status(500).json({ message: "Failed to create test suite" });
+    }
+  });
+
+  app.patch("/api/test-suites/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updateData = insertTestSuiteSchema.partial().parse(req.body);
+      
+      const updatedTestSuite = await storage.updateTestSuite(id, updateData);
+      
+      if (!updatedTestSuite) {
+        return res.status(404).json({ message: "Test suite not found" });
+      }
+      
+      res.json(updatedTestSuite);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data format", errors: error.errors });
+      }
+      console.error("Error updating test suite:", error);
+      res.status(500).json({ message: "Failed to update test suite" });
+    }
+  });
+
+  // Test Cases API endpoints
+  app.get("/api/test-cases", async (req, res) => {
+    try {
+      const filters = {
+        suiteId: req.query.suiteId ? parseInt(req.query.suiteId as string) : undefined,
+        userId: req.query.userId ? parseInt(req.query.userId as string) : undefined,
+        status: req.query.status ? (req.query.status as string) : undefined,
+        priority: req.query.priority ? (req.query.priority as string) : undefined,
+        severity: req.query.severity ? (req.query.severity as string) : undefined,
+        aiGenerated: req.query.aiGenerated ? (req.query.aiGenerated === 'true') : undefined,
+        automatable: req.query.automatable ? (req.query.automatable === 'true') : undefined
+      };
+      
+      const testCases = await storage.getTestCases(filters);
+      res.json(testCases);
+    } catch (error) {
+      console.error("Error fetching test cases:", error);
+      res.status(500).json({ message: "Failed to fetch test cases" });
+    }
+  });
+
+  app.get("/api/test-cases/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const testCase = await storage.getTestCase(id);
+      
+      if (!testCase) {
+        return res.status(404).json({ message: "Test case not found" });
+      }
+      
+      res.json(testCase);
+    } catch (error) {
+      console.error("Error fetching test case:", error);
+      res.status(500).json({ message: "Failed to fetch test case" });
+    }
+  });
+
+  app.post("/api/test-cases", async (req, res) => {
+    try {
+      const testCaseData = insertTestCaseSchema.parse(req.body);
+      const newTestCase = await storage.createTestCase(testCaseData);
+      res.status(201).json(newTestCase);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data format", errors: error.errors });
+      }
+      console.error("Error creating test case:", error);
+      res.status(500).json({ message: "Failed to create test case" });
+    }
+  });
+
+  app.patch("/api/test-cases/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updateData = insertTestCaseSchema.partial().parse(req.body);
+      
+      const updatedTestCase = await storage.updateTestCase(id, updateData);
+      
+      if (!updatedTestCase) {
+        return res.status(404).json({ message: "Test case not found" });
+      }
+      
+      res.json(updatedTestCase);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data format", errors: error.errors });
+      }
+      console.error("Error updating test case:", error);
+      res.status(500).json({ message: "Failed to update test case" });
+    }
+  });
+
+  // AI-powered test case generation
+  app.post("/api/ai/generate-test-cases", async (req, res) => {
+    try {
+      const { feature, requirements, complexity, testSuiteId } = req.body;
+      
+      if (!feature || !requirements || !testSuiteId) {
+        return res.status(400).json({ 
+          message: "feature, requirements, and testSuiteId are required" 
+        });
+      }
+      
+      // Ensure the test suite exists
+      const testSuite = await storage.getTestSuite(parseInt(testSuiteId));
+      if (!testSuite) {
+        return res.status(404).json({ message: "Test suite not found" });
+      }
+      
+      // Generate test cases using AI
+      const generatedTestCases = await generateTestCases(
+        feature,
+        requirements,
+        complexity
+      );
+      
+      const createdTestCases = [];
+      
+      // Create the test cases in the database
+      if (generatedTestCases.testCases && generatedTestCases.testCases.length > 0) {
+        for (const testCase of generatedTestCases.testCases) {
+          const newTestCase = await storage.createTestCase({
+            title: testCase.title,
+            description: testCase.description,
+            preconditions: testCase.preconditions,
+            steps: testCase.steps,
+            expectedResults: testCase.expectedResults,
+            priority: testCase.priority,
+            severity: testCase.severity,
+            status: "draft",
+            suiteId: parseInt(testSuiteId),
+            userId: 1, // Default to admin user
+            aiGenerated: true,
+            automatable: testCase.automatable,
+            automationStatus: "not-automated"
+          });
+          
+          createdTestCases.push(newTestCase);
+        }
+      } else {
+        // Fallback if no test cases were generated
+        const newTestCase = await storage.createTestCase({
+          title: `Test ${feature} functionality`,
+          description: `AI-generated test case for ${feature} based on the provided requirements`,
+          preconditions: "System is accessible and user is logged in",
+          steps: [
+            { step: "Navigate to the feature", expected: "Feature page loads correctly" },
+            { step: "Perform test action", expected: "System responds correctly" },
+            { step: "Verify results", expected: "Expected outcome is achieved" }
+          ],
+          expectedResults: "Feature functions according to requirements",
+          priority: complexity === "high" ? "high" : complexity === "medium" ? "medium" : "low",
+          severity: "normal",
+          status: "draft",
+          suiteId: parseInt(testSuiteId),
+          userId: 1, // Default to admin user
+          aiGenerated: true,
+          automatable: true,
+          automationStatus: "not-automated"
+        });
+        
+        createdTestCases.push(newTestCase);
+      }
+      
+      res.status(201).json({
+        message: "Test cases generated successfully",
+        testCases: createdTestCases
+      });
+    } catch (error) {
+      console.error("Error generating test cases:", error);
+      res.status(500).json({ message: "Failed to generate test cases" });
     }
   });
 

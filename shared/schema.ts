@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, jsonb, timestamp, foreignKey } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, jsonb, timestamp, foreignKey, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -80,6 +80,42 @@ export const assessments = pgTable("assessments", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const testSuites = pgTable("test_suites", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  type: varchar("type", { length: 50 }).notNull(), // functional, integration, end-to-end, etc.
+  status: varchar("status", { length: 30 }).default("active"), // active, archived
+  priority: varchar("priority", { length: 20 }).default("medium"), // high, medium, low
+  projectArea: varchar("project_area", { length: 100 }), // e.g., "authentication", "payment", "checkout"
+  userId: integer("user_id").references(() => users.id),
+  aiGenerated: boolean("ai_generated").default(false),
+  tags: jsonb("tags").default([]),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const testCases = pgTable("test_cases", {
+  id: serial("id").primaryKey(),
+  title: varchar("title", { length: 200 }).notNull(),
+  description: text("description"),
+  preconditions: text("preconditions"),
+  steps: jsonb("steps").default([]), // [{ step: "Login as admin", expected: "Login successful" }]
+  expectedResults: text("expected_results"),
+  actualResults: text("actual_results"),
+  priority: varchar("priority", { length: 20 }).default("medium"), // high, medium, low
+  severity: varchar("severity", { length: 20 }).default("normal"), // critical, high, normal, low
+  status: varchar("status", { length: 30 }).default("draft"), // draft, ready, in-progress, passed, failed
+  suiteId: integer("suite_id").references(() => testSuites.id, { onDelete: "set null" }),
+  userId: integer("user_id").references(() => users.id),
+  aiGenerated: boolean("ai_generated").default(false),
+  automatable: boolean("automatable"),
+  automationStatus: varchar("automation_status", { length: 30 }), // not-automated, in-progress, automated
+  testData: jsonb("test_data").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Insert Schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -95,6 +131,8 @@ export const insertMetricSchema = createInsertSchema(metrics);
 export const insertRecommendationSchema = createInsertSchema(recommendations);
 export const insertAssessmentTemplateSchema = createInsertSchema(assessmentTemplates);
 export const insertAssessmentSchema = createInsertSchema(assessments);
+export const insertTestSuiteSchema = createInsertSchema(testSuites);
+export const insertTestCaseSchema = createInsertSchema(testCases);
 
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -118,9 +156,17 @@ export type AssessmentTemplate = typeof assessmentTemplates.$inferSelect;
 export type InsertAssessment = z.infer<typeof insertAssessmentSchema>;
 export type Assessment = typeof assessments.$inferSelect;
 
+export type InsertTestSuite = z.infer<typeof insertTestSuiteSchema>;
+export type TestSuite = typeof testSuites.$inferSelect;
+
+export type InsertTestCase = z.infer<typeof insertTestCaseSchema>;
+export type TestCase = typeof testCases.$inferSelect;
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
-  // A user might have many recommendations, metrics, etc in the future
+  testSuites: many(testSuites),
+  testCases: many(testCases),
+  assessments: many(assessments),
 }));
 
 export const maturityDimensionsRelations = relations(maturityDimensions, ({ many }) => ({
@@ -174,6 +220,25 @@ export const assessmentsRelations = relations(assessments, ({ one }) => ({
   }),
   user: one(users, {
     fields: [assessments.userId],
+    references: [users.id],
+  }),
+}));
+
+export const testSuitesRelations = relations(testSuites, ({ one, many }) => ({
+  user: one(users, {
+    fields: [testSuites.userId],
+    references: [users.id],
+  }),
+  testCases: many(testCases),
+}));
+
+export const testCasesRelations = relations(testCases, ({ one }) => ({
+  suite: one(testSuites, {
+    fields: [testCases.suiteId],
+    references: [testSuites.id],
+  }),
+  user: one(users, {
+    fields: [testCases.userId],
     references: [users.id],
   }),
 }));
