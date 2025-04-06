@@ -3,6 +3,10 @@ import { cn } from "@/lib/utils";
 
 interface PageContainerProps {
   children: ReactNode;
+  title?: string;
+  subtitle?: string;
+  description?: string; // For backward compatibility
+  actions?: ReactNode;
   className?: string;
   withPadding?: boolean;
 }
@@ -10,6 +14,7 @@ interface PageContainerProps {
 interface PageHeaderProps {
   title: string;
   description?: string;
+  subtitle?: string; // For backward compatibility
   actions?: ReactNode;
   className?: string;
 }
@@ -29,15 +34,35 @@ interface PageBodyProps {
  * PageContainer component for consistent page layout structure
  * based on the ATMosFera design system with background gradient
  */
-export function PageContainer({ children, className, withPadding = false }: PageContainerProps) {
+export function PageContainer({ 
+  children, 
+  title, 
+  subtitle, 
+  description, // For backward compatibility
+  actions, 
+  className, 
+  withPadding = false 
+}: PageContainerProps) {
+  const displaySubtitle = subtitle || description; // Use either subtitle or description
+  
   return (
     <div className={cn(
-      "space-y-8 min-h-screen w-full",
+      "min-h-screen w-full",
       "bg-dashboard-gradient", 
       "bg-atmf-main text-atmf-primary",
-      withPadding ? "p-6" : "", 
+      withPadding ? "px-6 py-8" : "", 
+      "space-y-8",
       className
     )}>
+      {(title || displaySubtitle || actions) && (
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+          <div>
+            {title && <h1 className="text-2xl font-bold">{title}</h1>}
+            {displaySubtitle && <p className="text-atmf-muted">{displaySubtitle}</p>}
+          </div>
+          {actions && <div className="flex-shrink-0">{actions}</div>}
+        </div>
+      )}
       {children}
     </div>
   );
@@ -49,20 +74,23 @@ export function PageContainer({ children, className, withPadding = false }: Page
 export function PageHeader({ 
   title, 
   description, 
+  subtitle,
   actions,
   className 
 }: PageHeaderProps) {
+  const displaySubtitle = subtitle || description; // Use either subtitle or description
+  
   return (
-    <div className={cn("flex items-start justify-between mb-8", className)}>
+    <div className={cn("flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-8", className)}>
       <div>
-        <h1 className="text-3xl font-heading font-bold mb-2">{title}</h1>
-        {description && (
-          <p className="text-text-muted">{description}</p>
+        <h1 className="text-2xl font-bold">{title}</h1>
+        {displaySubtitle && (
+          <p className="text-atmf-muted">{displaySubtitle}</p>
         )}
       </div>
       
       {actions && (
-        <div className="flex items-center space-x-4">
+        <div className="flex-shrink-0">
           {actions}
         </div>
       )}

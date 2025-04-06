@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { AppLayout } from "@/components/layout/app-layout";
+import Layout from "@/components/layout/layout";
 import { 
   Activity, 
   Aperture, 
@@ -400,7 +400,7 @@ export default function AiInsights() {
   };
 
   return (
-    <AppLayout>
+    <Layout>
       <PageContainer withPadding className="py-8">
         <PageHeader 
           title="AI Insights"
@@ -432,6 +432,6 @@ export default function AiInsights() {
           />
         </PageContent>
       </PageContainer>
-    </AppLayout>
+    </Layout>
   );
 }
