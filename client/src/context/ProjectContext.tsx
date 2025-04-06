@@ -13,13 +13,15 @@ export interface Project {
 interface ProjectContextType {
   selectedProject: Project | null;
   setSelectedProject: (project: Project | null) => void;
-  projects: Project[]; // Mock projects list
+  projects: Project[]; // Projects list
+  addProject: (name: string, description?: string) => void;
 }
 
 const ProjectContext = createContext<ProjectContextType>({
   selectedProject: null,
   setSelectedProject: () => {},
   projects: [],
+  addProject: () => {},
 });
 
 // Mock projects for the selector
@@ -34,12 +36,37 @@ const mockProjects: Project[] = [
 // Provider component to wrap the app
 export function ProjectProvider({ children }: { children: ReactNode }) {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [projects, setProjects] = useState<Project[]>(mockProjects);
+  
+  const addProject = (name: string, description?: string) => {
+    // Generate a new unique ID (in a real app, this would come from the backend)
+    const maxId = projects.reduce((max, project) => Math.max(max, project.id), 0);
+    const newId = maxId + 1;
+    
+    // Create the new project with current timestamp
+    const newProject = {
+      id: newId,
+      name,
+      description,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    // Add the new project to the list
+    setProjects([...projects, newProject]);
+    
+    // Optionally select the new project
+    setSelectedProject(newProject);
+    
+    return newProject;
+  };
   
   return (
     <ProjectContext.Provider value={{ 
       selectedProject, 
       setSelectedProject,
-      projects: mockProjects
+      projects,
+      addProject
     }}>
       {children}
     </ProjectContext.Provider>

@@ -14,7 +14,7 @@ import { IconWrapper } from "@/components/design-system/icon-wrapper";
 import { format } from "date-fns";
 
 export default function Projects() {
-  const { projects, selectedProject, setSelectedProject } = useProject();
+  const { projects, selectedProject, setSelectedProject, addProject } = useProject();
   const [isNewProjectOpen, setIsNewProjectOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredProjects, setFilteredProjects] = useState(projects);
@@ -34,14 +34,17 @@ export default function Projects() {
   }, [searchTerm, projects]);
 
   const handleCreateProject = () => {
-    // In a real app, this would call an API to create the project
-    console.log("Create project:", projectForm);
-    setIsNewProjectOpen(false);
-    // Reset form
-    setProjectForm({
-      name: "",
-      description: ""
-    });
+    if (projectForm.name.trim()) {
+      // Add the project using the context function
+      addProject(projectForm.name, projectForm.description);
+      
+      // Close the dialog and reset form
+      setIsNewProjectOpen(false);
+      setProjectForm({
+        name: "",
+        description: ""
+      });
+    }
   };
 
   const resetForm = () => {
