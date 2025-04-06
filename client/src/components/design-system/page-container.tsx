@@ -48,7 +48,7 @@ export function PageContainer({
   return (
     <div className={cn(
       "min-h-screen w-full",
-      "bg-dashboard-gradient", 
+      "bg-[radial-gradient(circle_at_20%_30%,rgba(46,117,255,0.15)_0%,transparent_30%),radial-gradient(circle_at_80%_70%,rgba(138,86,255,0.1)_0%,transparent_40%)]", 
       "bg-atmf-main text-atmf-primary",
       withPadding ? "px-6 py-8" : "", 
       "space-y-8",
