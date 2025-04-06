@@ -22,20 +22,62 @@ export default function ProjectSelector() {
   const [isLoading, setIsLoading] = useState(true);
   
   // Use the projects from context instead of fetching them directly
-  const { projects } = useProject();
+  const { projects, isLoading: contextLoading } = useProject();
+  
+  // Debug logging
+  useEffect(() => {
+    console.log("ProjectSelector - Available projects:", projects);
+    console.log("ProjectSelector - Selected project:", selectedProject);
+    console.log("ProjectSelector - Context loading:", contextLoading);
+  }, [projects, selectedProject, contextLoading]);
   
   // Sync projects from context to local state
   useEffect(() => {
     if (projects && projects.length > 0) {
+      console.log("ProjectSelector - Setting local projects:", projects);
       setLocalProjects(projects);
       setIsLoading(false);
+    } else {
+      console.log("ProjectSelector - No projects available in context or empty array");
     }
   }, [projects]);
   
-  // Basic initialization of loading state (can be removed if causing issues)
+  // Use loading state from context for better synchronization
   useEffect(() => {
-    setIsLoading(projects.length === 0);
-  }, [projects.length]);
+    setIsLoading(contextLoading || projects.length === 0);
+  }, [contextLoading, projects.length]);
+  
+  // Direct API call as a backup if context doesn't provide projects
+  useEffect(() => {
+    // If we still don't have projects after context loading is done, try direct API call
+    if (!contextLoading && projects.length === 0) {
+      console.log("ProjectSelector - No projects from context, making direct API call");
+      
+      fetch('/api/projects')
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Failed to fetch projects directly');
+          }
+          return response.json();
+        })
+        .then(fetchedProjects => {
+          console.log("ProjectSelector - Directly fetched projects:", fetchedProjects);
+          if (fetchedProjects && fetchedProjects.length > 0) {
+            setLocalProjects(fetchedProjects);
+            setIsLoading(false);
+            
+            // If no project is selected, auto-select the first one
+            if (!selectedProject) {
+              console.log("ProjectSelector - Auto-selecting first project:", fetchedProjects[0]);
+              setSelectedProject(fetchedProjects[0]);
+            }
+          }
+        })
+        .catch(error => {
+          console.error("ProjectSelector - Error fetching projects directly:", error);
+        });
+    }
+  }, [contextLoading, projects.length, selectedProject, setSelectedProject]);
 
   // Simple project selection handler
   const handleSelectProject = (project: Project) => {

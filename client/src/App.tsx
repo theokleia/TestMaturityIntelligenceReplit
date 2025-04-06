@@ -13,6 +13,7 @@ import Settings from "@/pages/settings";
 import ProjectHealth from "@/pages/project-health";
 import TestFetch from "@/pages/test-fetch";
 import Layout from "@/components/layout/layout";
+import { ProjectProvider } from "@/context/ProjectContext";
 
 function Router() {
   return (
@@ -36,7 +37,11 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Router />
+      <ProjectProvider>
+        <Layout>
+          <Router />
+        </Layout>
+      </ProjectProvider>
     </QueryClientProvider>
   );
 }
