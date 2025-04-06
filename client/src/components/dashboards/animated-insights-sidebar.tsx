@@ -119,18 +119,43 @@ interface AIInsightProps {
 
 const AIInsight = ({ text, index }: AIInsightProps) => (
   <motion.div
-    className="p-3 rounded-lg bg-gradient-to-r from-blue-950/50 to-purple-950/50 border border-blue-500/20"
+    className="p-3 rounded-lg bg-gradient-to-r from-blue-950/60 to-purple-950/60 border border-blue-400/30 
+               backdrop-blur-md shadow-lg hover:shadow-blue-500/20"
     variants={insightVariants}
     initial="initial"
     animate="animate"
     exit="exit"
     custom={index}
+    whileHover={{ 
+      scale: 1.02, 
+      transition: { duration: 0.2 },
+      boxShadow: "0 4px 20px rgba(59, 130, 246, 0.3)"
+    }}
   >
     <div className="flex items-center gap-2 mb-2">
-      <Sparkles className="h-4 w-4 text-blue-400" />
+      <div className="p-1 rounded-full bg-blue-400/20">
+        <Sparkles className="h-3.5 w-3.5 text-blue-300" />
+      </div>
       <p className="text-xs text-blue-300 font-medium">AI Insight</p>
     </div>
-    <p className="text-sm text-atmf-muted">{text}</p>
+    <p className="text-sm text-blue-100/90">{text}</p>
+    
+    {/* Animation effect - subtle glowing border */}
+    <motion.div
+      className="absolute inset-0 rounded-lg z-[-1]"
+      style={{ 
+        background: "transparent",
+        boxShadow: "0 0 0 1px rgba(59, 130, 246, 0.1)" 
+      }}
+      animate={{ 
+        boxShadow: ["0 0 0 1px rgba(59, 130, 246, 0.1)", "0 0 0 2px rgba(59, 130, 246, 0.3)", "0 0 0 1px rgba(59, 130, 246, 0.1)"]
+      }}
+      transition={{ 
+        duration: 3,
+        repeat: Infinity,
+        ease: "easeInOut"
+      }}
+    />
   </motion.div>
 );
 
@@ -145,25 +170,30 @@ interface DataPointProps {
 
 const DataPoint = ({ x, y, size, color, delay }: DataPointProps) => (
   <motion.div
-    className={`absolute rounded-full ${color}`}
+    className={`absolute rounded-full ${color} shadow-glow`}
     style={{
       width: size,
       height: size,
       left: `${x}%`,
       top: `${y}%`,
+      // Enhance glow effect with stronger shadow
+      boxShadow: `0 0 ${size * 2}px ${size}px ${color.replace('/80', '')}`,
+      filter: 'blur(0.5px)'
     }}
     initial={{ opacity: 0, scale: 0 }}
     animate={{
-      opacity: [0, 0.7, 0],
-      scale: [0, 1, 0],
-      x: [0, Math.random() * 20 - 10, 0],
-      y: [0, Math.random() * 20 - 10, 0],
+      opacity: [0, 0.9, 0],
+      scale: [0, 1.2, 0],
+      // More dynamic movement
+      x: [0, Math.random() * 40 - 20, 0],
+      y: [0, Math.random() * 40 - 20, 0],
     }}
     transition={{
-      duration: 3,
+      duration: 4, // Longer animation
+      ease: "easeInOut",
       delay: delay,
       repeat: Infinity,
-      repeatDelay: Math.random() * 2,
+      repeatDelay: Math.random() * 1.5,
     }}
   />
 );
@@ -172,7 +202,7 @@ const DataPoint = ({ x, y, size, color, delay }: DataPointProps) => (
 export function AnimatedInsightsSidebar() {
   const { selectedProject } = useProject();
   const [insights, setInsights] = useState<string[]>([]);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(false); // Start expanded by default
   const [dataPoints, setDataPoints] = useState<DataPointProps[]>([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
@@ -194,17 +224,18 @@ export function AnimatedInsightsSidebar() {
     setInsights(shuffled.slice(0, 3));
 
     // Generate dancing data points
-    const newDataPoints = Array.from({ length: 20 }, (_, i) => ({
+    const newDataPoints = Array.from({ length: 30 }, (_, i) => ({
       x: Math.random() * 100,
       y: Math.random() * 100,
-      size: Math.floor(Math.random() * 5) + 3,
+      size: Math.floor(Math.random() * 8) + 4, // Larger data points
       color: [
-        "bg-blue-400/70", 
-        "bg-purple-400/70", 
-        "bg-green-400/70", 
-        "bg-teal-400/70",
-        "bg-indigo-400/70"
-      ][Math.floor(Math.random() * 5)],
+        "bg-blue-500/80", 
+        "bg-purple-500/80", 
+        "bg-green-500/80", 
+        "bg-teal-500/80",
+        "bg-indigo-500/80",
+        "bg-cyan-500/80"
+      ][Math.floor(Math.random() * 6)],
       delay: Math.random() * 2,
     }));
     setDataPoints(newDataPoints);
@@ -222,11 +253,19 @@ export function AnimatedInsightsSidebar() {
   if (!selectedProject) return null;
 
   return (
-    <div
+    <motion.div
       className={cn(
-        "fixed right-0 top-1/2 -translate-y-1/2 z-10 transition-all duration-300",
+        "fixed right-0 top-1/2 -translate-y-1/2 z-50 transition-all duration-300",
         collapsed ? "translate-x-[calc(100%-2.5rem)]" : "translate-x-0"
       )}
+      initial={{ x: 300, opacity: 0 }}
+      animate={{ x: collapsed ? "calc(100% - 2.5rem)" : 0, opacity: 1 }}
+      transition={{ 
+        type: "spring", 
+        duration: 0.8,
+        stiffness: 100,
+        damping: 15
+      }}
     >
       {/* Collapse/Expand Button */}
       <Button
@@ -239,11 +278,23 @@ export function AnimatedInsightsSidebar() {
       </Button>
 
       {/* Main Sidebar Container */}
-      <div className={cn(
-        "w-64 bg-gradient-to-l from-black/80 to-black/50 backdrop-blur-md rounded-l-lg border-l border-y border-white/10",
-        "flex flex-col overflow-hidden",
-        "h-[60vh] max-h-[500px]"
-      )}>
+      <motion.div 
+        className={cn(
+          "w-64 bg-gradient-to-l from-black/80 to-black/50 backdrop-blur-md rounded-l-lg border-l border-y border-white/10",
+          "flex flex-col overflow-hidden",
+          "h-[60vh] max-h-[500px]"
+        )}
+        initial={{ boxShadow: "0 0 0 0 rgba(59, 130, 246, 0)" }}
+        animate={{ 
+          boxShadow: ["0 0 0 0 rgba(59, 130, 246, 0)", "0 0 30px 5px rgba(59, 130, 246, 0.3)", "0 0 0 0 rgba(59, 130, 246, 0)"]
+        }}
+        transition={{
+          duration: 2,
+          times: [0, 0.5, 1],
+          repeat: 3,
+          repeatType: "reverse"
+        }}
+      >
         {/* Header */}
         <div className="p-3 border-b border-white/10 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -313,7 +364,7 @@ export function AnimatedInsightsSidebar() {
             </AnimatePresence>
           </div>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
