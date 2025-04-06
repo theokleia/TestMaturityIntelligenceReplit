@@ -24,8 +24,9 @@ export default function ProjectSelector() {
 
   // Ensure we update our local state when project context changes
   useEffect(() => {
-    // Only update if we have loaded projects
-    if (!isLoading && projects && projects.length > 0) {
+    // Update local projects whenever the projects array changes
+    // We don't need to check for length as we want to reflect empty arrays too
+    if (!isLoading) {
       console.log("Setting local projects:", projects);
       setLocalProjects(projects);
     }
