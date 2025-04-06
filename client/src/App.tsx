@@ -8,6 +8,7 @@ import AiInsights from "@/pages/ai-insights";
 import TestManagement from "@/pages/test-management";
 import DesignSystem from "@/pages/design-system";
 import Documentation from "@/pages/documentation";
+import Projects from "@/pages/projects";
 import Layout from "@/components/layout/layout";
 
 function Router() {
@@ -17,6 +18,7 @@ function Router() {
       <Route path="/assessments" component={Assessments} />
       <Route path="/ai-insights" component={AiInsights} />
       <Route path="/test-management" component={TestManagement} />
+      <Route path="/projects" component={Projects} />
       <Route path="/design-system" component={DesignSystem} />
       <Route path="/documentation" component={Documentation} />
       {/* Additional routes go here */}

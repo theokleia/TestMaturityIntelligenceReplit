@@ -10,10 +10,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { useLocation } from "wouter";
 
 export default function ProjectSelector() {
   const { selectedProject, setSelectedProject, projects } = useProject();
-  
+  const [, navigate] = useLocation();
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -55,7 +57,12 @@ export default function ProjectSelector() {
           </DropdownMenuItem>
         ))}
         <DropdownMenuSeparator className="bg-white/10" />
-        <DropdownMenuItem className="text-muted-foreground flex justify-center hover:text-white">
+        <DropdownMenuItem 
+          className="text-muted-foreground flex justify-center hover:text-white"
+          onClick={() => {
+            navigate("/projects");
+          }}
+        >
           Manage projects
         </DropdownMenuItem>
       </DropdownMenuContent>

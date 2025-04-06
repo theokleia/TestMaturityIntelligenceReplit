@@ -21,6 +21,11 @@ export function Sidebar() {
       icon: "bx-home-alt",
     },
     {
+      title: "Projects",
+      path: "/projects",
+      icon: "bx-folder",
+    },
+    {
       title: "Assessments",
       path: "/assessments",
       icon: "bx-clipboard",
