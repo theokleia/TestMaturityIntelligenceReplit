@@ -79,12 +79,12 @@ const defaultContextValue: ProjectContextType = {
 // Create the context
 const ProjectContext = createContext<ProjectContextType>(defaultContextValue);
 
-// For debugging only - uncomment to reset local storage
-// if (typeof window !== 'undefined') {
-//   console.log("Clearing localStorage for fresh start");
-//   localStorage.removeItem('projects');
-//   localStorage.removeItem('selectedProject');
-// }
+// Force reset local storage to get a fresh start with the default projects
+if (typeof window !== 'undefined') {
+  console.log("Force clearing localStorage for fresh start");
+  localStorage.removeItem('projects');
+  localStorage.removeItem('selectedProject');
+}
 
 // Provider component to wrap the app
 export function ProjectProvider({ children }: { children: ReactNode }) {

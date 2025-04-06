@@ -65,8 +65,8 @@ export default function Projects() {
         const createdProject = addProject(
           newProject.name, 
           newProject.description,
-          projectForm.jiraProjectId.trim(),
-          projectForm.jiraJql.trim()
+          projectForm.jiraProjectId ? projectForm.jiraProjectId.trim() : "",
+          projectForm.jiraJql ? projectForm.jiraJql.trim() : ""
         );
         
         // This next part is a temporary solution until we update the addProject function

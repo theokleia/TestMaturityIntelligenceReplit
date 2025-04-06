@@ -18,7 +18,6 @@ export default function ProjectSelector() {
   
   // Log the current projects and selected project for debugging
   console.log("ProjectSelector - Projects:", projects);
-  console.log("ProjectSelector - Selected project:", selectedProject);
 
   return (
     <DropdownMenu>
