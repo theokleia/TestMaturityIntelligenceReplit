@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
 import { useEffect, useState } from "react";
 import { Project } from "@/context/ProjectContext";
+import { queryClient } from "@/lib/queryClient";
 
 export default function ProjectSelector() {
   const { selectedProject, setSelectedProject } = useProject();
@@ -64,6 +65,10 @@ export default function ProjectSelector() {
         // Ensure we're working with the latest data by keeping existing projects
         return [...prev];
       });
+      
+      // Trigger a re-fetch of data to ensure components update
+      // This helps any components that are dependent on the selectedProject
+      queryClient.invalidateQueries();
     }
   };
 
