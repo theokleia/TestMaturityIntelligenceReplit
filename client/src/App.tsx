@@ -11,6 +11,7 @@ import Documentation from "@/pages/documentation";
 import Projects from "@/pages/projects";
 import Settings from "@/pages/settings";
 import ProjectHealth from "@/pages/project-health";
+import TestFetch from "@/pages/test-fetch";
 import Layout from "@/components/layout/layout";
 
 function Router() {
@@ -25,6 +26,7 @@ function Router() {
       <Route path="/settings" component={Settings} />
       <Route path="/design-system" component={DesignSystem} />
       <Route path="/documentation" component={Documentation} />
+      <Route path="/test-fetch" component={TestFetch} />
       {/* Additional routes go here */}
       <Route component={NotFound} />
     </Switch>
