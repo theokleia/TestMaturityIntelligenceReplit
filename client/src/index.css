@@ -3,55 +3,262 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* Main background colors */
+    --bg-main: #0a1022;
+    --bg-dark: #050914;
+    --bg-card: #0e1529;
+    
+    /* Neon accent colors */
+    --neon-blue: #2E75FF;
+    --neon-purple: #8A56FF;
+    --neon-teal: #2FFFDD;
+    
+    /* State colors */
+    --success: #2FFFAA;
+    --warning: #FFBB3A;
+    --danger: #FF4A6B;
+    
+    /* Button colors */
+    --button-primary: #1a2b4a;
+    
+    /* Text colors */
+    --text-primary: #FFFFFF;
+    --text-secondary: rgba(255, 255, 255, 0.7);
+    --text-muted: rgba(255, 255, 255, 0.5);
+    
+    /* Border colors */
+    --border-color: rgba(255, 255, 255, 0.1);
+    --divider-color: rgba(255, 255, 255, 0.06);
+  }
+  
   * {
     @apply border-border;
   }
 
   body {
-    @apply font-sans antialiased bg-background text-foreground;
-    background-color: #0A0F1F;
-    background-image: radial-gradient(circle at 20% 30%, rgba(46, 117, 255, 0.15) 0%, transparent 30%),
-                      radial-gradient(circle at 80% 70%, rgba(138, 86, 255, 0.1) 0%, transparent 40%);
+    @apply font-sans antialiased text-foreground;
+    background-color: var(--bg-main);
+    background-image: 
+      radial-gradient(circle at 20% 30%, rgba(46, 117, 255, 0.15) 0%, transparent 30%),
+      radial-gradient(circle at 80% 70%, rgba(138, 86, 255, 0.1) 0%, transparent 40%);
     background-size: 100% 100%;
     background-attachment: fixed;
+    color: var(--text-primary);
+  }
+  
+  /* Override button styles */
+  .btn, .button, button[type="submit"], button[type="button"] {
+    background-color: var(--button-primary);
+    color: var(--text-primary);
+  }
+  
+  /* Override link styles */
+  a.link, .link, a {
+    color: var(--neon-blue);
+    text-decoration: none;
+  }
+  
+  a.link:hover, .link:hover, a:hover {
+    text-decoration: underline;
+  }
+  
+  /* Override card styles */
+  .card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
   }
 }
 
 @layer utilities {
+  /* Background utilities */
+  .bg-atmf-main {
+    background-color: var(--bg-main);
+  }
+  
+  .bg-atmf-dark {
+    background-color: var(--bg-dark);
+  }
+  
+  .bg-atmf-card {
+    background-color: var(--bg-card);
+  }
+  
+  /* Text color utilities */
+  .text-atmf-primary {
+    color: var(--text-primary);
+  }
+  
+  .text-atmf-secondary {
+    color: var(--text-secondary);
+  }
+  
+  .text-atmf-muted {
+    color: var(--text-muted);
+  }
+  
+  .text-atmf-blue {
+    color: var(--neon-blue);
+  }
+  
+  .text-atmf-purple {
+    color: var(--neon-purple);
+  }
+  
+  .text-atmf-teal {
+    color: var(--neon-teal);
+  }
+  
+  /* Border utilities */
+  .border-atmf {
+    border: 1px solid var(--border-color);
+  }
+  
+  /* Glassmorphism utilities */
   .glassmorphism {
-    @apply bg-black/30 backdrop-blur-md border border-white/5 shadow-lg;
+    background-color: rgba(14, 21, 41, 0.8);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
   }
   
   .glassmorphism-light {
-    @apply bg-black/20 backdrop-blur-sm border border-white/5 shadow-md;
+    background-color: rgba(14, 21, 41, 0.6);
+    backdrop-filter: blur(5px);
+    border: 1px solid var(--border-color);
   }
   
-  .neon-border {
+  /* Neon effects */
+  .neon-border-blue {
     box-shadow: 0 0 5px rgba(46, 117, 255, 0.5), 
                 0 0 15px rgba(46, 117, 255, 0.3);
+    border-color: rgba(46, 117, 255, 0.4);
   }
   
   .neon-border-purple {
     box-shadow: 0 0 5px rgba(138, 86, 255, 0.5), 
                 0 0 15px rgba(138, 86, 255, 0.3);
+    border-color: rgba(138, 86, 255, 0.4);
   }
   
   .neon-border-teal {
     box-shadow: 0 0 5px rgba(47, 255, 221, 0.5), 
                 0 0 15px rgba(47, 255, 221, 0.3);
+    border-color: rgba(47, 255, 221, 0.4);
   }
   
-  .glow-text {
-    text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+  .neon-text-blue {
+    color: var(--neon-blue);
+    text-shadow: 0 0 10px rgba(46, 117, 255, 0.5);
   }
-
+  
+  .neon-text-purple {
+    color: var(--neon-purple);
+    text-shadow: 0 0 10px rgba(138, 86, 255, 0.5);
+  }
+  
+  .neon-text-teal {
+    color: var(--neon-teal);
+    text-shadow: 0 0 10px rgba(47, 255, 221, 0.5);
+  }
+  
+  /* Button styles */
+  .btn-atmf {
+    background-color: var(--button-primary);
+    color: var(--text-primary);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.2s ease;
+  }
+  
+  .btn-atmf:hover {
+    background-color: rgba(26, 43, 74, 0.8);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+  
+  .btn-atmf-accent {
+    background-color: var(--neon-blue);
+    color: var(--text-primary);
+  }
+  
+  .btn-atmf-accent:hover {
+    background-color: rgba(46, 117, 255, 0.8);
+  }
+  
+  /* Tab styles */
   .tab-indicator {
     height: 3px;
+    background-color: var(--neon-blue);
     transition: all 0.3s ease;
+  }
+  
+  .tab-active {
+    color: var(--neon-blue);
+    border-bottom: 3px solid var(--neon-blue);
   }
 }
 
 @layer components {
+  /* Card component styles */
+  .atmf-card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    overflow: hidden;
+  }
+  
+  .atmf-card-header {
+    padding: 1rem;
+    border-bottom: 1px solid var(--divider-color);
+  }
+  
+  .atmf-card-body {
+    padding: 1rem;
+  }
+  
+  .atmf-card-footer {
+    padding: 1rem;
+    border-top: 1px solid var(--divider-color);
+  }
+  
+  /* Badge component styles */
+  .atmf-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: 0.25rem;
+  }
+  
+  /* Progress bar styles */
+  .atmf-progress-container {
+    width: 100%;
+    height: 0.5rem;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 0.25rem;
+    overflow: hidden;
+  }
+  
+  .atmf-progress-bar {
+    height: 100%;
+    border-radius: 0.25rem;
+    transition: width 0.3s ease;
+  }
+  
+  .atmf-progress-blue {
+    background-color: var(--neon-blue);
+  }
+  
+  .atmf-progress-purple {
+    background-color: var(--neon-purple);
+  }
+  
+  .atmf-progress-teal {
+    background-color: var(--neon-teal);
+  }
+  
+  /* Animations */
   .connection-line {
     stroke-dasharray: 5;
     animation: dash 15s linear infinite;
@@ -68,7 +275,7 @@
     height: 30px;
     border-radius: 50%;
     border: 3px solid rgba(46, 117, 255, 0.1);
-    border-top-color: #2E75FF;
+    border-top-color: var(--neon-blue);
     animation: spinner 0.8s ease-in-out infinite;
   }
   
@@ -76,5 +283,80 @@
     to {
       transform: rotate(360deg);
     }
+  }
+  
+  @keyframes progress-stripes {
+    from {
+      background-position: 1rem 0;
+    }
+    to {
+      background-position: 0 0;
+    }
+  }
+  
+  .animate-progress {
+    animation: progress-stripes 1s linear infinite;
+  }
+  
+  /* Tooltip styles */
+  .atmf-tooltip {
+    position: relative;
+  }
+  
+  .atmf-tooltip:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0.5rem;
+    background-color: var(--bg-dark);
+    color: var(--text-primary);
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    z-index: 10;
+  }
+  
+  /* Glassmorphism styles for panels */
+  .atmf-panel {
+    background-color: rgba(14, 21, 41, 0.7);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    overflow: hidden;
+  }
+  
+  /* Neon text and border effects */
+  .neon-text {
+    animation: pulse 2s infinite alternate;
+  }
+  
+  @keyframes pulse {
+    from {
+      text-shadow: 0 0 5px rgba(46, 117, 255, 0.5), 0 0 10px rgba(46, 117, 255, 0.3);
+    }
+    to {
+      text-shadow: 0 0 10px rgba(46, 117, 255, 0.7), 0 0 20px rgba(46, 117, 255, 0.5);
+    }
+  }
+  
+  .pulsating-border {
+    animation: border-pulse 2s infinite alternate;
+  }
+  
+  @keyframes border-pulse {
+    from {
+      box-shadow: 0 0 5px rgba(46, 117, 255, 0.5), 0 0 10px rgba(46, 117, 255, 0.3);
+    }
+    to {
+      box-shadow: 0 0 10px rgba(46, 117, 255, 0.7), 0 0 20px rgba(46, 117, 255, 0.5);
+    }
+  }
+  
+  /* Focus effects */
+  .atmf-focus:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(46, 117, 255, 0.5);
   }
 }
