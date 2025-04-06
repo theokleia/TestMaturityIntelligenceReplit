@@ -46,26 +46,26 @@ export function Layout({ children }: LayoutProps) {
       setPageActions,
       currentPath: location
     }}>
-      <div className="flex min-h-screen bg-atmf-main bg-dashboard-gradient text-atmf-primary">
-        {/* Sidebar */}
+      <div className="min-h-screen bg-atmf-main bg-dashboard-gradient text-atmf-primary">
+        {/* Sidebar - now positioned with fixed position in its own component */}
         <Sidebar />
         
-        {/* Main Content Container */}
-        <div className="flex flex-col flex-1">
-          {/* Topbar always included */}
-          <Topbar title={pageTitle} actions={pageActions} />
-          
+        {/* Topbar - now positioned with fixed position in its own component */}
+        <Topbar title={pageTitle} actions={pageActions} />
+        
+        {/* Main Content Container - adjusted with proper margins to account for fixed sidebar and topbar */}
+        <div className="ml-64 pt-14 min-h-screen">
           {/* Main Content */}
-          <main className="flex-1 overflow-y-auto">
+          <main className="h-full overflow-y-auto">
             {children}
           </main>
-          
-          {/* AI Assistant Bubble */}
-          <AIAssistantBubble contextPath={location} />
-          
-          {/* Whisper Assistant */}
-          <WhisperAssistant />
         </div>
+        
+        {/* AI Assistant Bubble */}
+        <AIAssistantBubble contextPath={location} />
+        
+        {/* Whisper Assistant */}
+        <WhisperAssistant />
       </div>
     </LayoutContext.Provider>
   );

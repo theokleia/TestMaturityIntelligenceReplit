@@ -61,8 +61,9 @@ export function Sidebar() {
 
   return (
     <div className={cn(
-      "w-64 border-r border-white/5 flex flex-col h-screen",
+      "fixed left-0 top-0 bottom-0 w-64 border-r border-white/5 flex flex-col h-screen",
       glassmorphismStyles.light,
+      "z-30" // Higher z-index to ensure it stays on top
     )}>
       {/* Logo area */}
       <div className="h-14 flex items-center px-6 border-b border-white/5">

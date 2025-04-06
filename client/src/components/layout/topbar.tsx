@@ -13,7 +13,9 @@ interface TopbarProps {
 export default function Topbar({ title, actions }: TopbarProps) {
   return (
     <div className={cn(
-      "w-full px-6 py-4 flex items-center justify-between bg-atmf-dark bg-opacity-80 backdrop-blur-md border-b border-white/10 z-10"
+      "fixed top-0 right-0 left-64 px-6 py-4 flex items-center justify-between",
+      "bg-atmf-dark bg-opacity-80 backdrop-blur-md border-b border-white/10",
+      "z-20 h-14" // Add z-index and fixed height
     )}>
       <div className="flex items-center gap-4">
         <div className="text-xl font-semibold text-white mr-4">
