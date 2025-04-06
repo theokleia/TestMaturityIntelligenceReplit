@@ -48,7 +48,14 @@ export default function ProjectSelector() {
             onClick={() => setSelectedProject(project)}
           >
             <div className="flex flex-col">
-              <span className="font-medium">{project.name}</span>
+              <div className="flex items-center gap-1">
+                <span className="font-medium">{project.name}</span>
+                {project.jiraProjectId && (
+                  <span className="text-xs font-medium bg-emerald-950/50 text-emerald-400 px-1 rounded">
+                    {project.jiraProjectId}
+                  </span>
+                )}
+              </div>
               {project.description && (
                 <span className="text-xs text-muted-foreground truncate max-w-[180px]">
                   {project.description}

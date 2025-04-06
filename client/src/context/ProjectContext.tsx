@@ -7,6 +7,8 @@ export interface Project {
   description?: string;
   createdAt?: string;
   updatedAt?: string;
+  jiraProjectId?: string; // Add Jira Project ID (optional, max 10 chars)
+  jiraJql?: string; // Add Jira JQL search query (optional)
 }
 
 // Default sample projects
@@ -15,6 +17,8 @@ const defaultProjects: Project[] = [
     id: 1, 
     name: "E-Commerce Platform", 
     description: "Modernized test suite for online store",
+    jiraProjectId: "ECOM",
+    jiraJql: "project = ECOM AND issuetype in (Bug, Test) AND status != Closed",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   },
@@ -22,6 +26,8 @@ const defaultProjects: Project[] = [
     id: 2, 
     name: "Banking API", 
     description: "Security and performance test automation",
+    jiraProjectId: "BANK",
+    jiraJql: "project = BANK AND component = API AND priority >= Medium",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString() 
   },
@@ -29,6 +35,8 @@ const defaultProjects: Project[] = [
     id: 3, 
     name: "Healthcare Mobile App", 
     description: "End-to-end testing framework",
+    jiraProjectId: "HEALTH",
+    jiraJql: "project = HEALTH AND labels = mobile",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString() 
   },
@@ -36,6 +44,8 @@ const defaultProjects: Project[] = [
     id: 4, 
     name: "Cloud Infrastructure", 
     description: "DevOps pipeline testing",
+    jiraProjectId: "CLOUD",
+    jiraJql: "project = CLOUD AND component in (AWS, Azure, GCP)",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString() 
   },
@@ -43,6 +53,8 @@ const defaultProjects: Project[] = [
     id: 5, 
     name: "IoT Device Management", 
     description: "Test automation for connected devices",
+    jiraProjectId: "IOT",
+    jiraJql: "project = IOT AND issuetype = Test",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString() 
   }
@@ -53,7 +65,7 @@ interface ProjectContextType {
   selectedProject: Project | null;
   setSelectedProject: (project: Project | null) => void;
   projects: Project[];
-  addProject: (name: string, description?: string) => Project;
+  addProject: (name: string, description?: string, jiraProjectId?: string, jiraJql?: string) => Project;
 }
 
 // Create a default context value
@@ -67,12 +79,12 @@ const defaultContextValue: ProjectContextType = {
 // Create the context
 const ProjectContext = createContext<ProjectContextType>(defaultContextValue);
 
-// Clear localStorage for fresh start (TEMPORARY FIX)
-if (typeof window !== 'undefined') {
-  console.log("Clearing localStorage for fresh start");
-  localStorage.removeItem('projects');
-  localStorage.removeItem('selectedProject');
-}
+// For debugging only - uncomment to reset local storage
+// if (typeof window !== 'undefined') {
+//   console.log("Clearing localStorage for fresh start");
+//   localStorage.removeItem('projects');
+//   localStorage.removeItem('selectedProject');
+// }
 
 // Provider component to wrap the app
 export function ProjectProvider({ children }: { children: ReactNode }) {
@@ -191,8 +203,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Add a new project
-  const addProject = useCallback((name: string, description?: string): Project => {
-    console.log("Adding new project:", { name, description });
+  const addProject = useCallback((name: string, description?: string, jiraProjectId?: string, jiraJql?: string): Project => {
+    console.log("Adding new project:", { name, description, jiraProjectId, jiraJql });
     
     let newProject: Project = { id: 0, name: "" };
     
@@ -207,6 +219,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         id: maxId + 1,
         name: name.trim(),
         description: description ? description.trim() : "",
+        jiraProjectId: jiraProjectId ? jiraProjectId.trim() : "",
+        jiraJql: jiraJql ? jiraJql.trim() : "",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/design-system/status-badge";
 import { TabView } from "@/components/design-system/tab-view";
-import { Plus, Edit, Trash2, Clock, Check, ArrowUpDown, Search } from "lucide-react";
+import { Plus, Edit, Trash2, Clock, Check, ArrowUpDown, Search, Database } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { IconWrapper } from "@/components/design-system/icon-wrapper";
 import { format } from "date-fns";
@@ -20,7 +20,9 @@ export default function Projects() {
   const [filteredProjects, setFilteredProjects] = useState(projects);
   const [projectForm, setProjectForm] = useState({
     name: "",
-    description: ""
+    description: "",
+    jiraProjectId: "",
+    jiraJql: ""
   });
 
   // Log projects when they change
@@ -48,21 +50,39 @@ export default function Projects() {
       
       try {
         // Add the project using the context function with the trimmed values
-        const newProject = addProject(
-          projectForm.name.trim(), 
-          projectForm.description ? projectForm.description.trim() : undefined
+        // We need to update the addProject function definition in ProjectContext
+        const newProject = {
+          id: 0, // Will be replaced by the addProject function
+          name: projectForm.name.trim(),
+          description: projectForm.description ? projectForm.description.trim() : "",
+          jiraProjectId: projectForm.jiraProjectId ? projectForm.jiraProjectId.trim() : "",
+          jiraJql: projectForm.jiraJql ? projectForm.jiraJql.trim() : "",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        
+        // Add the project and get back the updated version with ID assigned
+        const createdProject = addProject(
+          newProject.name, 
+          newProject.description,
+          projectForm.jiraProjectId.trim(),
+          projectForm.jiraJql.trim()
         );
         
-        console.log("Project added successfully:", newProject);
+        // This next part is a temporary solution until we update the addProject function
+        // to accept all fields. For now, we'll just use what we get back.
+        console.log("Project added successfully:", createdProject);
         
         // Update filtered projects immediately to show the new project
-        setFilteredProjects(prev => [...prev, newProject]);
+        setFilteredProjects(prev => [...prev, createdProject]);
         
         // Close the dialog and reset form
         setIsNewProjectOpen(false);
         setProjectForm({
           name: "",
-          description: ""
+          description: "",
+          jiraProjectId: "",
+          jiraJql: ""
         });
         
         // Force a re-fetch of projects from the context
@@ -78,7 +98,9 @@ export default function Projects() {
   const resetForm = () => {
     setProjectForm({
       name: "",
-      description: ""
+      description: "",
+      jiraProjectId: "",
+      jiraJql: ""
     });
   };
 
@@ -139,6 +161,24 @@ export default function Projects() {
                 </ATMFCardHeader>
                 <ATMFCardBody>
                   <p className="text-atmf-muted">{project.description || "No description provided"}</p>
+                  
+                  {/* Jira integration info */}
+                  {project.jiraProjectId && (
+                    <div className="mt-3 flex items-center space-x-2 rounded-md bg-slate-900/30 p-2 text-xs text-atmf-muted border border-white/5">
+                      <div className="text-primary">
+                        <Database className="h-3.5 w-3.5" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-white flex items-center">
+                          <span>Jira Integration:</span>
+                          <span className="ml-1 text-emerald-400">{project.jiraProjectId}</span>
+                        </p>
+                        {project.jiraJql && (
+                          <p className="truncate text-xs text-atmf-muted">{project.jiraJql}</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </ATMFCardBody>
                 <ATMFCardFooter>
                   <div className="flex justify-between items-center">
@@ -257,6 +297,37 @@ export default function Projects() {
                   value={projectForm.description}
                   onChange={handleInputChange}
                 />
+              </div>
+              
+              <div className="space-y-2">
+                <label htmlFor="jiraProjectId" className="text-sm font-medium">
+                  Jira Project ID <span className="text-xs text-atmf-muted">(Optional)</span>
+                </label>
+                <Input
+                  id="jiraProjectId"
+                  name="jiraProjectId"
+                  placeholder="Enter Jira Project ID"
+                  maxLength={10}
+                  className="bg-atmf-main border-white/10 focus:border-white/20"
+                  value={projectForm.jiraProjectId}
+                  onChange={handleInputChange}
+                />
+                <p className="text-xs text-atmf-muted">Max 10 characters</p>
+              </div>
+              
+              <div className="space-y-2">
+                <label htmlFor="jiraJql" className="text-sm font-medium">
+                  Jira JQL Query <span className="text-xs text-atmf-muted">(Optional)</span>
+                </label>
+                <Textarea
+                  id="jiraJql"
+                  name="jiraJql"
+                  placeholder="Enter Jira JQL search query"
+                  className="bg-atmf-main border-white/10 focus:border-white/20 min-h-[80px]"
+                  value={projectForm.jiraJql}
+                  onChange={handleInputChange}
+                />
+                <p className="text-xs text-atmf-muted">JQL query to filter Jira tickets</p>
               </div>
             </div>
             
