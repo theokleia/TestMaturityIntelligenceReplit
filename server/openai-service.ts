@@ -6,6 +6,114 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const MODEL = "gpt-4o";
 
+// Define project contexts to enhance assistant responses
+interface ProjectContext {
+  type: string;
+  focus: string;
+  keyRisks: string[];
+  recommendedPractices: string[];
+}
+
+// Map of project types to their testing contexts
+const PROJECT_CONTEXTS: Record<string, ProjectContext> = {
+  iot: {
+    type: "IoT Device Management",
+    focus: "Embedded systems, connectivity, and firmware testing",
+    keyRisks: [
+      "Device connectivity failures",
+      "Battery optimization issues",
+      "Firmware update problems",
+      "Security vulnerabilities"
+    ],
+    recommendedPractices: [
+      "Device simulation for scale testing",
+      "Power consumption monitoring",
+      "OTA update verification",
+      "Security penetration testing"
+    ]
+  },
+  ecommerce: {
+    type: "E-Commerce Platform",
+    focus: "User experience, payment processing, and catalog management",
+    keyRisks: [
+      "Payment processing errors",
+      "Performance bottlenecks during peak traffic",
+      "Product catalog consistency issues",
+      "Cross-browser compatibility problems"
+    ],
+    recommendedPractices: [
+      "End-to-end transaction testing",
+      "Load testing for sales events",
+      "Automated visual regression testing",
+      "API contract testing"
+    ]
+  },
+  banking: {
+    type: "Banking API",
+    focus: "Security, compliance, and transaction integrity",
+    keyRisks: [
+      "Security breaches",
+      "Data integrity violations",
+      "Compliance failures",
+      "Transaction processing errors"
+    ],
+    recommendedPractices: [
+      "Security penetration testing",
+      "Compliance verification testing",
+      "Transaction integrity validation",
+      "API throttling and rate limit testing"
+    ]
+  },
+  healthcare: {
+    type: "Healthcare Mobile App",
+    focus: "Data privacy, accessibility, and regulatory compliance",
+    keyRisks: [
+      "Patient data privacy breaches",
+      "Accessibility issues",
+      "Regulatory compliance failures",
+      "Cross-device compatibility problems"
+    ],
+    recommendedPractices: [
+      "HIPAA compliance testing",
+      "Accessibility testing",
+      "Offline functionality testing",
+      "Cross-device compatibility testing"
+    ]
+  },
+  cloud: {
+    type: "Cloud Infrastructure",
+    focus: "Scalability, resilience, and cost optimization",
+    keyRisks: [
+      "Infrastructure provisioning failures",
+      "Scaling limitations",
+      "Disaster recovery failures",
+      "Cost overruns"
+    ],
+    recommendedPractices: [
+      "Infrastructure as code testing",
+      "Auto-scaling validation",
+      "Disaster recovery testing",
+      "Cost optimization monitoring"
+    ]
+  },
+  general: {
+    type: "General Software Project",
+    focus: "Quality assurance, test automation, and continuous integration practices",
+    keyRisks: [
+      "Test flakiness",
+      "Insufficient coverage",
+      "Manual testing bottlenecks",
+      "Regression issues"
+    ],
+    recommendedPractices: [
+      "CI/CD integration for automated testing",
+      "Test pyramid implementation",
+      "Test data management strategy",
+      "Quality metrics and dashboards"
+    ]
+  }
+};
+
 // ATMF dimensions from the mindmap
 const ATMF_DIMENSIONS = [
   {
@@ -440,4 +548,92 @@ export async function generateTestStrategy(
       toolRecommendations: []
     };
   }
+}
+
+/**
+ * Generate project-specific assistant responses based on user queries
+ */
+export async function generateAssistantResponse(
+  projectName: string,
+  query: string,
+  contextPath: string
+): Promise<string> {
+  try {
+    // Determine project type based on name for enhanced context
+    const projectType = getProjectTypeFromName(projectName);
+    const projectContext = PROJECT_CONTEXTS[projectType] || null;
+    
+    // Determine page context based on path
+    let pageContext = "";
+    if (contextPath.includes("project-health")) {
+      pageContext = "Project Health Dashboard - Viewing health metrics, indicators, and quality trends";
+    } else if (contextPath.includes("assessments")) {
+      pageContext = "Test Maturity Assessments - Evaluating testing maturity and planning improvements";
+    } else if (contextPath.includes("test-management")) {
+      pageContext = "Test Management - Managing test cases, suites, and execution";
+    } else if (contextPath.includes("ai-insights")) {
+      pageContext = "AI Insights - Analyzing testing data for patterns and recommendations";
+    } else {
+      pageContext = "General project overview and navigation";
+    }
+    
+    // Construct prompt with enhanced context
+    const prompt = `
+      You are an AI testing assistant for the ATMosFera testing platform, helping with the "${projectName}" project.
+      
+      ${projectContext ? `Project Context:
+      - Type: ${projectContext.type}
+      - Focus: ${projectContext.focus}
+      - Key Risks: ${projectContext.keyRisks.join(", ")}
+      - Recommended Practices: ${projectContext.recommendedPractices.join(", ")}` : ""}
+      
+      Current Page Context: ${pageContext}
+      
+      User Query: ${query}
+      
+      Provide a helpful, concise response to assist the user with their testing needs.
+      Focus on practical, actionable advice related to their query.
+      If you don't have enough information, suggest what specific details would help you provide better guidance.
+      Format your response using markdown for better readability. Use bullet points and bold formatting for key points.
+    `;
+
+    const response = await openai.chat.completions.create({
+      model: MODEL,
+      messages: [
+        { 
+          role: "system", 
+          content: "You are ATMosFera Assistant, an expert in test automation, quality engineering, and the Adaptive Testing Maturity Framework (ATMF). You provide concise, practical advice to help testing teams improve their processes and deliverables." 
+        },
+        { role: "user", content: prompt }
+      ],
+      temperature: 0.7,
+      max_tokens: 800
+    });
+
+    return response.choices[0].message.content || "I'm unable to provide a response at this time. Please try again.";
+  } catch (error) {
+    console.error("Error generating assistant response:", error);
+    return "I apologize, but I'm currently experiencing difficulties. Please try again later.";
+  }
+}
+
+/**
+ * Helper function to determine project type from name
+ */
+function getProjectTypeFromName(projectName: string): string {
+  const name = projectName.toLowerCase();
+  
+  if (name.includes("iot") || name.includes("device") || name.includes("embedded")) {
+    return "iot";
+  } else if (name.includes("e-commerce") || name.includes("ecommerce") || name.includes("retail") || name.includes("shop")) {
+    return "ecommerce";
+  } else if (name.includes("bank") || name.includes("finance") || name.includes("payment")) {
+    return "banking";
+  } else if (name.includes("health") || name.includes("medical") || name.includes("care")) {
+    return "healthcare";
+  } else if (name.includes("cloud") || name.includes("infrastructure") || name.includes("platform")) {
+    return "cloud";
+  }
+  
+  return "general";
 }

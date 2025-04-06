@@ -1,13 +1,16 @@
-import { ReactNode, createContext, useContext, useState } from "react";
+import { ReactNode, createContext, useContext, useState, useEffect } from "react";
 import { Sidebar } from "./sidebar";
 import Topbar from "./topbar";
 import { cn } from "@/lib/utils";
+import { AIAssistantBubble } from "@/components/ai/assistant-bubble";
+import { useLocation } from "wouter";
 
 interface LayoutContextType {
   pageTitle: string;
   setPageTitle: (title: string) => void;
   pageActions: ReactNode;
   setPageActions: (actions: ReactNode) => void;
+  currentPath: string;
 }
 
 // Create context for sharing page title and actions with Topbar
@@ -16,6 +19,7 @@ const LayoutContext = createContext<LayoutContextType>({
   setPageTitle: () => {},
   pageActions: null,
   setPageActions: () => {},
+  currentPath: ""
 });
 
 export const useLayout = () => useContext(LayoutContext);
@@ -31,9 +35,16 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   const [pageTitle, setPageTitle] = useState<string>("");
   const [pageActions, setPageActions] = useState<ReactNode>(null);
+  const [location] = useLocation();
   
   return (
-    <LayoutContext.Provider value={{ pageTitle, setPageTitle, pageActions, setPageActions }}>
+    <LayoutContext.Provider value={{ 
+      pageTitle, 
+      setPageTitle, 
+      pageActions, 
+      setPageActions,
+      currentPath: location
+    }}>
       <div className="flex min-h-screen bg-atmf-main bg-dashboard-gradient text-atmf-primary">
         {/* Sidebar */}
         <Sidebar />
@@ -47,6 +58,9 @@ export function Layout({ children }: LayoutProps) {
           <main className="flex-1 overflow-y-auto">
             {children}
           </main>
+          
+          {/* AI Assistant Bubble */}
+          <AIAssistantBubble contextPath={location} />
         </div>
       </div>
     </LayoutContext.Provider>

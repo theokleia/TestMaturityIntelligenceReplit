@@ -19,7 +19,8 @@ import {
   generateMaturityRoadmap,
   analyzeTestPatterns,
   generateTestStrategy,
-  generateTestCases
+  generateTestCases,
+  generateAssistantResponse
 } from "./openai-service";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -704,6 +705,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error generating test cases:", error);
       res.status(500).json({ message: "Failed to generate test cases" });
+    }
+  });
+
+  // AI Assistant endpoint
+  app.post("/api/ai/assistant", async (req, res) => {
+    try {
+      const { projectName, query, contextPath } = req.body;
+      
+      if (!projectName || !query) {
+        return res.status(400).json({ 
+          message: "projectName and query are required" 
+        });
+      }
+      
+      // Generate assistant response
+      const response = await generateAssistantResponse(
+        projectName,
+        query,
+        contextPath || ""
+      );
+      
+      res.json({ response });
+    } catch (error) {
+      console.error("Error generating AI assistant response:", error);
+      res.status(500).json({ message: "Failed to generate AI assistant response" });
     }
   });
 

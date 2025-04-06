@@ -1,6 +1,13 @@
 import { ReactNode, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useLayout } from "@/components/layout/layout";
+import { Link } from "wouter";
+import { ChevronRight } from "lucide-react";
+
+interface BreadcrumbItem {
+  label: string;
+  href: string;
+}
 
 interface PageContainerProps {
   children: ReactNode;
@@ -10,6 +17,7 @@ interface PageContainerProps {
   actions?: ReactNode;
   className?: string;
   withPadding?: boolean;
+  breadcrumb?: BreadcrumbItem[];
 }
 
 interface PageHeaderProps {
@@ -32,6 +40,7 @@ export function PageContainer({
   actions,
   className,
   withPadding = true,
+  breadcrumb
 }: PageContainerProps) {
   // Use the Layout context to set the page title and actions in the Topbar
   const { setPageTitle, setPageActions } = useLayout();
@@ -60,6 +69,27 @@ export function PageContainer({
         className,
       )}
     >
+      {/* Breadcrumb navigation if provided */}
+      {breadcrumb && breadcrumb.length > 0 && (
+        <div className="flex items-center gap-2 text-sm text-atmf-muted mb-4">
+          {breadcrumb.map((item, index) => (
+            <div key={index} className="flex items-center">
+              {index > 0 && <ChevronRight className="h-3 w-3 mx-1 opacity-50" />}
+              {index === breadcrumb.length - 1 ? (
+                <span className="text-white opacity-90">{item.label}</span>
+              ) : (
+                <Link 
+                  href={item.href} 
+                  className="hover:text-white hover:underline transition-colors"
+                >
+                  {item.label}
+                </Link>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      
       {(title || subtitle) && (
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
           <div>
