@@ -1,5 +1,5 @@
 import { useState } from "react";
-import Layout from "@/components/layout/layout";
+
 import { PageContainer } from "@/components/design-system/page-container";
 import { ATMFCard } from "@/components/design-system/atmf-card";
 import { Button } from "@/components/ui/button";
@@ -85,7 +85,7 @@ export default function Documentation() {
   const filteredDocuments = documentSections.find(section => section.id === activeTab)?.documents || [];
   
   return (
-    <Layout>
+    <>
       <PageContainer 
         title="Documentation"
         subtitle="Access comprehensive documentation about the Adaptive Testing Maturity Framework (ATMF)"
@@ -230,6 +230,6 @@ export default function Documentation() {
           onClose={() => setSelectedDocument(null)}
         />
       )}
-    </Layout>
+    </>
   );
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useProject } from "@/context/ProjectContext";
-import Layout from "@/components/layout/layout";
+
 import { PageContainer } from "@/components/design-system/page-container";
 import { ATMFCard, ATMFCardHeader, ATMFCardBody, ATMFCardFooter } from "@/components/design-system/atmf-card";
 import { Button } from "@/components/ui/button";
@@ -84,7 +84,7 @@ export default function ProjectSettings() {
 
   if (!selectedProject) {
     return (
-      <Layout>
+      <>
         <PageContainer
           title="Project Settings"
           subtitle="Configure project-specific options and integrations"
@@ -99,12 +99,12 @@ export default function ProjectSettings() {
             </p>
           </div>
         </PageContainer>
-      </Layout>
+      </>
     );
   }
 
   return (
-    <Layout>
+    <>
       <PageContainer
         title={`${selectedProject.name} Settings`}
         subtitle="Configure project-specific options and integrations"
@@ -373,6 +373,6 @@ export default function ProjectSettings() {
           </Button>
         </div>
       </PageContainer>
-    </Layout>
+    </>
   );
 }

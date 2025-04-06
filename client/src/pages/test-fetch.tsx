@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import Layout from "@/components/layout/layout";
+
 import { PageContainer } from "@/components/design-system/page-container";
 import { ATMFCard, ATMFCardHeader, ATMFCardBody, ATMFCardFooter } from "@/components/design-system/atmf-card";
 import { Button } from "@/components/ui/button";
@@ -57,7 +57,7 @@ export default function TestFetch() {
   };
 
   return (
-    <Layout>
+    <>
       <PageContainer 
         title="API Test" 
         subtitle="Testing direct API fetch for projects"
@@ -94,6 +94,6 @@ export default function TestFetch() {
           </ATMFCardFooter>
         </ATMFCard>
       </PageContainer>
-    </Layout>
+    </>
   );
 }

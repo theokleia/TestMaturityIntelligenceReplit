@@ -1,4 +1,3 @@
-import Layout from "@/components/layout/layout";
 import { PageContainer } from "@/components/design-system/page-container";
 import { ProjectHealthDashboard } from "@/components/dashboards/project-health-dashboard";
 import { AnimatedInsightsSidebar } from "@/components/dashboards/animated-insights-sidebar";
@@ -48,7 +47,7 @@ export default function ProjectHealthPage() {
   };
   
   return (
-    <Layout>
+    <>
       <PageContainer
         title="Project Health"
         subtitle="Monitor project quality, performance and risk factors in real-time"
@@ -80,6 +79,6 @@ export default function ProjectHealthPage() {
       
       {/* Animated Insights Sidebar */}
       {selectedProject && <AnimatedInsightsSidebar />}
-    </Layout>
+    </>
   );
 }

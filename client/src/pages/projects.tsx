@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useProject, Project } from "@/context/ProjectContext";
-import Layout from "@/components/layout/layout";
+
 import { PageContainer } from "@/components/design-system/page-container";
 import { ATMFCard, ATMFCardHeader, ATMFCardBody, ATMFCardFooter } from "@/components/design-system/atmf-card";
 import { Button } from "@/components/ui/button";
@@ -276,7 +276,7 @@ export default function Projects() {
   ];
 
   return (
-    <Layout>
+    <>
       <PageContainer 
         title="Projects" 
         subtitle="Manage your testing projects and control which project you're working with"
@@ -389,6 +389,6 @@ export default function Projects() {
           </DialogContent>
         </Dialog>
       </PageContainer>
-    </Layout>
+    </>
   );
 }
