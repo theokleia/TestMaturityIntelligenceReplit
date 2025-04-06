@@ -15,40 +15,39 @@ import { useEffect, useState } from "react";
 import { Project } from "@/context/ProjectContext";
 
 export default function ProjectSelector() {
-  const { selectedProject, setSelectedProject, projects, isLoading } = useProject();
+  const { selectedProject, setSelectedProject } = useProject();
   const [, navigate] = useLocation();
   const [localProjects, setLocalProjects] = useState<Project[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
-  // Log the current projects and selected project for debugging
-  console.log("ProjectSelector - Projects:", projects);
-
-  // Ensure we update our local state when project context changes
+  // Fetch projects directly
   useEffect(() => {
-    // Always update local projects regardless of loading state
-    // This ensures we always have the latest data
-    console.log("Setting local projects:", projects);
-    setLocalProjects(projects || []);
-
-    // Also debug the loading state
-    console.log("Project selector isLoading:", isLoading);
-  }, [projects, isLoading]);
+    const fetchProjects = async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetch('/api/projects');
+        if (response.ok) {
+          const data = await response.json();
+          setLocalProjects(data);
+        }
+      } catch (error) {
+        console.error("Error fetching projects:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchProjects();
+  }, []);
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button 
           variant="outline" 
-          className={cn(
-            "max-w-[200px] px-3 bg-atmf-card border-white/10 hover:bg-atmf-card/80 hover:border-white/20 flex items-center gap-1",
-            isLoading && "opacity-70"
-          )}
+          className="max-w-[200px] px-3 bg-atmf-card border-white/10 hover:bg-atmf-card/80 hover:border-white/20 flex items-center gap-1"
         >
-          {isLoading ? (
-            <div className="flex items-center gap-1">
-              <div className="h-4 w-24 bg-atmf-main/30 animate-pulse rounded"></div>
-              <ChevronDown className="h-4 w-4 ml-1 opacity-50" />
-            </div>
-          ) : selectedProject ? (
+          {selectedProject ? (
             <>
               <span className="truncate">{selectedProject.name}</span>
               <ChevronDown className="h-4 w-4 ml-1 opacity-50" />
@@ -67,7 +66,7 @@ export default function ProjectSelector() {
         
         {isLoading ? (
           // Loading skeleton items
-          [...Array(3)].map((_, index) => (
+          Array.from({ length: 3 }).map((_, index) => (
             <div 
               key={`loading-${index}`} 
               className="flex items-center justify-between py-2 px-2"
@@ -78,7 +77,7 @@ export default function ProjectSelector() {
               </div>
             </div>
           ))
-        ) : localProjects && localProjects.length > 0 ? (
+        ) : localProjects.length > 0 ? (
           // Project items when loaded
           localProjects.map((project) => (
             <DropdownMenuItem
