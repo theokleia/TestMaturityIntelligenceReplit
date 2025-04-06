@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Book, ArrowRight, FileText, BookOpen, Users, FileCode } from "lucide-react";
 import { IconWrapper } from "@/components/design-system/icon-wrapper";
+import { DocumentViewer } from "@/components/documentation/document-viewer";
 
 interface DocumentCard {
   id: string;
@@ -24,6 +25,7 @@ interface DocumentSection {
 
 export default function Documentation() {
   const [activeTab, setActiveTab] = useState("framework");
+  const [selectedDocument, setSelectedDocument] = useState<{id: string; title: string} | null>(null);
   
   const documentSections: DocumentSection[] = [
     {
@@ -118,7 +120,10 @@ export default function Documentation() {
                       <p className="text-sm text-text-muted mb-4">{doc.description}</p>
                     </div>
                     <div className="px-6 pb-6 mt-auto">
-                      <Button className="w-full justify-between group">
+                      <Button 
+                        className="w-full justify-between group" 
+                        onClick={() => setSelectedDocument({ id: doc.id, title: doc.title })}
+                      >
                         Read Document
                         <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                       </Button>
@@ -179,7 +184,11 @@ export default function Documentation() {
             <div className="glassmorphism border border-white/10 rounded-xl p-6 flex flex-col">
               <h3 className="text-lg font-medium mb-2">Getting Started Guide</h3>
               <p className="text-sm text-text-muted mb-4 flex-1">Quick introduction to ATMF for new practitioners and organizations.</p>
-              <Button variant="outline" className="w-full justify-between">
+              <Button 
+                variant="outline" 
+                className="w-full justify-between"
+                onClick={() => setSelectedDocument({ id: "core-framework", title: "Getting Started with ATMF" })}
+              >
                 View Guide
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
@@ -188,7 +197,11 @@ export default function Documentation() {
             <div className="glassmorphism border border-white/10 rounded-xl p-6 flex flex-col">
               <h3 className="text-lg font-medium mb-2">Assessment Templates</h3>
               <p className="text-sm text-text-muted mb-4 flex-1">Ready-to-use templates for conducting ATMF maturity assessments.</p>
-              <Button variant="outline" className="w-full justify-between">
+              <Button 
+                variant="outline" 
+                className="w-full justify-between"
+                onClick={() => setSelectedDocument({ id: "assessment-templates", title: "Assessment Templates" })}
+              >
                 Download Templates
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
@@ -197,7 +210,11 @@ export default function Documentation() {
             <div className="glassmorphism border border-white/10 rounded-xl p-6 flex flex-col">
               <h3 className="text-lg font-medium mb-2">Certification Guide</h3>
               <p className="text-sm text-text-muted mb-4 flex-1">Information about ATMF certification process for individuals and organizations.</p>
-              <Button variant="outline" className="w-full justify-between">
+              <Button 
+                variant="outline" 
+                className="w-full justify-between"
+                onClick={() => setSelectedDocument({ id: "core-framework", title: "ATMF Certification Guide" })}
+              >
                 Explore Certification
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
@@ -205,6 +222,14 @@ export default function Documentation() {
           </div>
         </div>
       </PageContainer>
+      
+      {selectedDocument && (
+        <DocumentViewer
+          documentId={selectedDocument.id}
+          title={selectedDocument.title}
+          onClose={() => setSelectedDocument(null)}
+        />
+      )}
     </Layout>
   );
 }
