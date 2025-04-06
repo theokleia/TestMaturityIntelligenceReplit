@@ -48,27 +48,14 @@ export default function ProjectSelector() {
     // Remove the dependency on selectedProject to prevent cyclical re-renders
   }, [setSelectedProject]);
 
-  // Handle project selection without page refresh
+  // Simple project selection handler
   const handleSelectProject = (project: Project) => {
     console.log("User selected project:", project);
     
     // Only update if selecting a different project
     if (!selectedProject || selectedProject.id !== project.id) {
-      // Force update localStorage
-      localStorage.setItem('selectedProjectId', project.id.toString());
-      
-      // Set the selected project in the context
+      // Let the context handle localStorage and invalidation
       setSelectedProject(project);
-      
-      // Update the local state to reflect the new selection
-      setLocalProjects(prev => {
-        // Ensure we're working with the latest data by keeping existing projects
-        return [...prev];
-      });
-      
-      // Trigger a re-fetch of data to ensure components update
-      // This helps any components that are dependent on the selectedProject
-      queryClient.invalidateQueries();
     }
   };
 

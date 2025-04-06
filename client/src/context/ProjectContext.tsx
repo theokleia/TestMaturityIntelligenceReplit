@@ -113,28 +113,38 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
   // Set selected project (wrapped to maintain consistency)
   const setSelectedProject = useCallback((project: Project | null) => {
+    console.log("Setting selected project to:", project?.name || "null");
+    
+    if (!project) {
+      // Remove selected project
+      localStorage.removeItem('selectedProjectId');
+      setProjectsState(current => ({
+        ...current,
+        selectedProject: null
+      }));
+      return;
+    }
+    
+    // Save only the ID to localStorage
+    localStorage.setItem('selectedProjectId', project.id.toString());
+    
+    // Always force a refetch to ensure we're working with fresh data
+    fetchProjects();
+    
+    // Update immediately to prevent UI flicker
     setProjectsState(current => {
-      if (!project) {
-        // Remove selected project
-        localStorage.removeItem('selectedProjectId');
-        return {
-          ...current,
-          selectedProject: null
-        };
-      }
-      
       // Find the most up-to-date version of this project
       const updatedProject = current.projects.find(p => p.id === project.id) || project;
-      
-      // Save only the ID to localStorage
-      localStorage.setItem('selectedProjectId', updatedProject.id.toString());
       
       return {
         ...current,
         selectedProject: updatedProject
       };
     });
-  }, []);
+    
+    // Invalidate all queries to force data refresh
+    queryClient.invalidateQueries();
+  }, [fetchProjects]);
 
   // Add a new project
   const addProject = useCallback(async (
