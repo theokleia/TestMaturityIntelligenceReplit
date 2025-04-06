@@ -23,13 +23,22 @@ export default function Projects() {
     description: ""
   });
 
+  // Log projects when they change
+  useEffect(() => {
+    console.log("Projects page - All projects:", projects);
+  }, [projects]);
+  
   // Filter projects when search term changes
   useEffect(() => {
+    console.log("Filtering projects with search term:", searchTerm);
+    
     const filtered = projects.filter(
       project => 
         project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (project.description && project.description.toLowerCase().includes(searchTerm.toLowerCase()))
     );
+    
+    console.log("Projects page - Filtered projects:", filtered);
     setFilteredProjects(filtered);
   }, [searchTerm, projects]);
 
@@ -37,22 +46,20 @@ export default function Projects() {
     if (projectForm.name.trim()) {
       console.log("Creating project with form data:", projectForm);
       
-      // Check if the addProject function exists
-      if (typeof addProject !== 'function') {
-        console.error("addProject is not a function:", addProject);
-        return;
+      try {
+        // Add the project using the context function
+        const newProject = addProject(projectForm.name, projectForm.description);
+        console.log("Project added successfully:", newProject);
+        
+        // Close the dialog and reset form
+        setIsNewProjectOpen(false);
+        setProjectForm({
+          name: "",
+          description: ""
+        });
+      } catch (error) {
+        console.error("Error adding project:", error);
       }
-      
-      // Add the project using the context function
-      addProject(projectForm.name, projectForm.description);
-      console.log("Project should have been added");
-      
-      // Close the dialog and reset form
-      setIsNewProjectOpen(false);
-      setProjectForm({
-        name: "",
-        description: ""
-      });
     }
   };
 

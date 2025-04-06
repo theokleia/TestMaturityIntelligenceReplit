@@ -15,6 +15,10 @@ import { useLocation } from "wouter";
 export default function ProjectSelector() {
   const { selectedProject, setSelectedProject, projects } = useProject();
   const [, navigate] = useLocation();
+  
+  // Log the current projects and selected project for debugging
+  console.log("ProjectSelector - Projects:", projects);
+  console.log("ProjectSelector - Selected project:", selectedProject);
 
   return (
     <DropdownMenu>
