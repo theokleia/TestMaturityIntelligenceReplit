@@ -1,0 +1,78 @@
+Make sure the topbar (containing the page title, optional actions, search box, and icons like notifications/settings) is consistently displayed on all pages.
+
+✅ Instructions:
+
+Move the topbar into the shared <Layout> component located at components/layout/layout.tsx
+
+Ensure that every page uses <Layout> as its outer wrapper
+
+Inside Layout, render the topbar above the <main> content
+
+Topbar must include:
+
+Page title (dynamic, passed from the PageContainer or page itself)
+Optional right-aligned actions like search/settings icons
+Optional ProjectSelector (if enabled)
+Do not hardcode the topbar inside individual pages anymore — it should always be present via Layout.
+
+Allow the page to optionally pass a "title" and "actions" to the Topbar via context or props from PageContainer. The Topbar should display the page title from the current view, like "Dashboard" or "Test Management".
+
+Example topbar.tsx:
+Location: client/src/components/layout/Topbar.tsx
+
+import { ReactNode } from "react";
+import { cn } from "@/lib/utils";
+
+interface TopbarProps {
+title?: string;
+actions?: ReactNode;
+}
+
+export default function Topbar({ title, actions }: TopbarProps) {
+return (
+<div className={cn(
+"w-full px-6 py-4 flex items-center justify-between bg-atmf-dark bg-opacity-80 backdrop-blur border-b border-divider-color"
+)}>
+<div className="text-lg font-semibold text-white">
+{title || "ATMF Insight Navigator"}
+</div>
+
+  <div className="flex items-center gap-4">
+    {/* Page-specific actions (e.g. "Start New Assessment") */}
+    {actions}
+    {/* Icon buttons */}
+    <button className="p-2 hover:bg-atmf-card rounded-md transition">
+      <span className="sr-only">Notifications</span>
+      <i className="fas fa-bell text-atmf-muted" />
+    </button>
+    <button className="p-2 hover:bg-atmf-card rounded-md transition">
+      <span className="sr-only">Settings</span>
+      <i className="fas fa-cog text-atmf-muted" />
+    </button>
+  </div>
+</div>
+);
+}
+
+to add the topbar to the layout.tsx:
+In components/layout/layout.tsx, import and use the Topbar:
+
+import Topbar from "./Topbar";
+
+export default function Layout({ children }: { children: React.ReactNode }) {
+return (
+<div className="flex min-h-screen bg-atmf-dark text-atmf-primary">
+{/* Sidebar */}
+<Sidebar />
+
+  <div className="flex flex-col flex-1">
+    {/* Topbar always included */}
+    <Topbar />
+    {/* Main content */}
+    <main className="flex-1 overflow-y-auto">
+      {children}
+    </main>
+  </div>
+</div>
+);
+}

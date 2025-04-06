@@ -1,0 +1,152 @@
+Goal
+Add multi-project support to your app by introducing a project selector, so that:
+
+All app pages (except Documentation) show data based on the selected project
+
+Documentation stays global/static
+
+The selected project is shared across pages, so navigating doesn't lose context
+
+🔧 Solution Overview
+We’ll implement this using:
+Global context (ProjectContext) to store the selected project
+
+A dropdown/select menu in the sidebar or topbar to switch projects
+
+A wrapper (HOC or layout enhancement) that makes the project available to each page
+
+An update to each page to use the selected project (where applicable)
+
+Exclude Documentation from project context usage
+
+🧱 1. Create the Project Context
+📁 File: src/context/ProjectContext.tsx
+
+tsx
+Copy
+Edit
+import { createContext, useContext, useState, ReactNode } from "react";
+
+type Project = {
+  id: string;
+  name: string;
+};
+
+interface ProjectContextType {
+  selectedProject: Project | null;
+  setSelectedProject: (project: Project) => void;
+}
+
+const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
+
+export function ProjectProvider({ children }: { children: ReactNode }) {
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+
+  return (
+    <ProjectContext.Provider value={{ selectedProject, setSelectedProject }}>
+      {children}
+    </ProjectContext.Provider>
+  );
+}
+
+export function useProject() {
+  const context = useContext(ProjectContext);
+  if (!context) {
+    throw new Error("useProject must be used within a ProjectProvider");
+  }
+  return context;
+}
+📦 2. Wrap Your App with the Provider
+📁 src/main.tsx (or wherever your root <App /> is rendered)
+
+tsx
+Copy
+Edit
+import ReactDOM from "react-dom/client";
+import App from "./App";
+import { ProjectProvider } from "./context/ProjectContext";
+
+ReactDOM.createRoot(document.getElementById("root")!).render(
+  <ProjectProvider>
+    <App />
+  </ProjectProvider>
+);
+🎛 3. Add the Project Selector UI
+Add this to your sidebar or topbar, maybe in Layout.tsx:
+
+tsx
+Copy
+Edit
+import { useProject } from "@/context/ProjectContext";
+
+const ProjectSelector = () => {
+  const { selectedProject, setSelectedProject } = useProject();
+
+  const projects = [
+    { id: "project-1", name: "Project Alpha" },
+    { id: "project-2", name: "Project Beta" },
+    { id: "project-3", name: "Project Gamma" },
+  ];
+
+  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selected = projects.find((p) => p.id === e.target.value);
+    if (selected) setSelectedProject(selected);
+  };
+
+  return (
+    <div className="mb-6">
+      <label className="text-sm text-atmf-muted block mb-1">Project</label>
+      <select
+        value={selectedProject?.id || ""}
+        onChange={handleChange}
+        className="w-full bg-atmf-card text-white border border-border-color rounded px-3 py-2"
+      >
+        <option value="" disabled>Select a project</option>
+        {projects.map((project) => (
+          <option key={project.id} value={project.id}>
+            {project.name}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+};
+📌 Drop <ProjectSelector /> in the sidebar (layout.tsx) above the nav links.
+
+🧠 4. Use the Selected Project in Your Pages
+On pages like dashboard.tsx, assessments.tsx, etc., use the hook like this:
+
+tsx
+Copy
+Edit
+import { useProject } from "@/context/ProjectContext";
+
+export default function DashboardPage() {
+  const { selectedProject } = useProject();
+
+  if (!selectedProject) {
+    return <div className="p-6 text-atmf-muted">Please select a project to continue.</div>;
+  }
+
+  return (
+    <Layout>
+      <PageContainer title={`Dashboard - ${selectedProject.name}`}>
+        {/* Project-specific content */}
+      </PageContainer>
+    </Layout>
+  );
+}
+🛑 5. Skip Project Context in Documentation
+In documentation.tsx, you can skip using useProject() altogether. That page will stay static — no need to change anything unless you want to hide the selector there (you can do that too).
+
+✅ Final Step: Optional System Prompt Update for Replit
+You can tell Replit this for future tasks:
+
+pgsql
+Copy
+Edit
+This app supports multiple projects using a ProjectContext (defined in context/ProjectContext.tsx). Pages should access the selected project using the `useProject()` hook. If no project is selected, they should prompt the user to select one.
+
+The only exception is the Documentation page, which is static and does not depend on the selected project.
+
+ProjectSelector is rendered in the sidebar layout (layout.tsx) to switch between projects. All pages must respect the selected project context.
