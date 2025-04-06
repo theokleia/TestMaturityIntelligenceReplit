@@ -2,6 +2,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
 import { Toaster } from "./components/ui/toaster";
+import { ProjectProvider } from "./context/ProjectContext";
 
 // Add Inter font
 const inter = document.createElement("link");
@@ -32,7 +33,9 @@ document.title = "ATMosFera - ATMF Insight Navigator";
 
 createRoot(document.getElementById("root")!).render(
   <>
-    <App />
-    <Toaster />
+    <ProjectProvider>
+      <App />
+      <Toaster />
+    </ProjectProvider>
   </>
 );

@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import { Bell, Settings, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import ProjectSelector from "./project-selector";
 
 interface TopbarProps {
   title?: string;
@@ -14,8 +15,13 @@ export default function Topbar({ title, actions }: TopbarProps) {
     <div className={cn(
       "w-full px-6 py-4 flex items-center justify-between bg-atmf-dark bg-opacity-80 backdrop-blur-md border-b border-white/10 z-10"
     )}>
-      <div className="text-xl font-semibold text-white">
-        {title || "ATMosFera"}
+      <div className="flex items-center gap-4">
+        <div className="text-xl font-semibold text-white mr-4">
+          {title || "ATMosFera"}
+        </div>
+        
+        {/* Project Selector */}
+        <ProjectSelector />
       </div>
 
       <div className="flex-1 mx-12 max-w-md hidden md:block">

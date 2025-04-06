@@ -1,0 +1,48 @@
+🔧 Multi-Project Support: Add a Project Selector to the App
+
+The app should support multiple projects, where the selected project is accessible across all project-aware pages. We want to show a Project Selector in the topbar (next to the title or before the right-side icons), and make the selected project available to any component using a global context.
+
+✅ Context Setup:
+
+1. Create a new context file at `client/src/context/ProjectContext.tsx` that:
+   - Exports a ProjectProvider to wrap the app
+   - Uses React Context to store `selectedProject` and a `setSelectedProject` method
+   - Accepts a `Project` with at least `id` and `name`
+
+2. Update `main.tsx` to wrap the app in `<ProjectProvider>`
+
+✅ Project Selector Component:
+
+3. Create a new file at `client/src/components/layout/ProjectSelector.tsx`
+   - Renders a <select> or dropdown with mock project options
+   - On selection, calls `setSelectedProject(...)`
+   - Styled to fit into the topbar (compact, dark background, white text)
+
+✅ Topbar Integration:
+
+4. Import and use `<ProjectSelector />` inside the Topbar component (Topbar.tsx)
+   - Position it to the left of the icons but right of the title
+   - Make sure it's aligned vertically with other topbar items
+   - Do not expand it too wide — use a max width and truncate long project names
+
+✅ Page Usage:
+
+5. On pages like Dashboard, Assessments, AI Insights, Test Management:
+   - Use the `useProject()` hook to access the current selected project
+   - If `selectedProject` is `null`, show a friendly prompt like: “Please select a project to continue.”
+
+✅ Static Page Exception:
+
+6. Do NOT require a selected project on the Documentation page.
+   - It should work without `useProject()`
+
+🎨 Style Guidelines:
+
+- Use existing Tailwind classes like `bg-atmf-card`, `text-atmf-primary`, etc.
+- Match the dark/glassy style of the topbar
+- Match spacing and typography in dropdown text
+
+🏁 Goal:
+
+Once complete, the app will support switching between multiple projects, and all project-related views (metrics, assessments, AI insights) will respect the selected context.
+
