@@ -63,14 +63,38 @@ export default function ProjectSettings() {
     setSaveSuccess(false);
   };
 
-  const handleSaveSettings = () => {
+  const handleSaveSettings = async () => {
     setIsSaving(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      // In a real implementation, we would save to the backend
+    try {
+      // Save all general settings
       console.log("Saving settings for project:", selectedProject?.id);
       console.log("Settings data:", settings);
+      
+      // We need to update the project settings in the backend
+      if (selectedProject?.id) {
+        // Construct the update payload
+        const response = await fetch(`/api/projects/${selectedProject.id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            // Extract Jira project ID from the URL - it's typically the last part of the URL path
+            // In a real app, we would validate this properly
+            jiraProjectId: settings.jiraUrl ? settings.jiraUrl.split('/').pop()?.toUpperCase() || "JIRA" : undefined,
+            // Create a simple JQL query based on the extracted project ID
+            jiraJql: settings.jiraUrl ? `project = ${settings.jiraUrl.split('/').pop()?.toUpperCase() || "JIRA"}` : undefined,
+          }),
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to update project settings');
+        }
+        
+        // Refresh the project context after update
+        window.location.reload();
+      }
       
       setIsSaving(false);
       setSaveSuccess(true);
@@ -79,7 +103,12 @@ export default function ProjectSettings() {
       setTimeout(() => {
         setSaveSuccess(false);
       }, 3000);
-    }, 800);
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      setIsSaving(false);
+      // Show error message here
+      alert("Failed to save settings. Please try again.");
+    }
   };
 
   if (!selectedProject) {
@@ -275,7 +304,11 @@ export default function ProjectSettings() {
                   </p>
                 </div>
 
-                <Button className="btn-atmf-secondary w-full mt-2" disabled={!settings.jiraUrl || !settings.jiraApiKey}>
+                <Button 
+                  className="btn-atmf-secondary w-full mt-2" 
+                  disabled={!settings.jiraUrl || !settings.jiraApiKey}
+                  onClick={handleSaveSettings}
+                >
                   <Database className="h-4 w-4 mr-2" />
                   {selectedProject.jiraProjectId ? "Update Jira Connection" : "Connect to Jira"}
                 </Button>
