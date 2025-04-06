@@ -19,6 +19,7 @@ export const projects = pgTable("projects", {
   description: text("description"),
   jiraProjectId: varchar("jira_project_id", { length: 10 }),
   jiraJql: text("jira_jql"),
+  githubRepo: varchar("github_repo", { length: 100 }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

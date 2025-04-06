@@ -45,12 +45,19 @@ export default function ProjectSettings() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // Reset settings when selected project changes
+  // Initialize settings when selected project changes
   useEffect(() => {
     if (selectedProject) {
-      // In a real implementation, we would fetch project settings from the backend
-      // For now, just reset to defaults
-      setSettings(defaultSettings);
+      // Initialize with project values for connections
+      setSettings({
+        ...defaultSettings,
+        // Pre-fill GitHub repo if set
+        githubRepo: selectedProject.githubRepo || '',
+        // For Jira, we would normally get this from a settings API, but for now
+        // just use a placeholder URL with the project ID if it exists
+        jiraUrl: selectedProject.jiraProjectId ? 
+          `https://your-instance.atlassian.net/projects/${selectedProject.jiraProjectId}` : '',
+      });
       setSaveSuccess(false);
     }
   }, [selectedProject?.id]);
@@ -85,6 +92,8 @@ export default function ProjectSettings() {
             jiraProjectId: settings.jiraUrl ? settings.jiraUrl.split('/').pop()?.toUpperCase() || "JIRA" : undefined,
             // Create a simple JQL query based on the extracted project ID
             jiraJql: settings.jiraUrl ? `project = ${settings.jiraUrl.split('/').pop()?.toUpperCase() || "JIRA"}` : undefined,
+            // Add GitHub repo information if provided
+            githubRepo: settings.githubRepo || undefined,
           }),
         });
         
@@ -92,17 +101,24 @@ export default function ProjectSettings() {
           throw new Error('Failed to update project settings');
         }
         
-        // Refresh the project context after update
-        window.location.reload();
+        // Show success message and refresh context with a small delay
+        setIsSaving(false);
+        setSaveSuccess(true);
+        
+        // Add a small delay before reloading to show the success message
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        // For other non-API saves (only if we're not handling a project update)
+        setIsSaving(false);
+        setSaveSuccess(true);
+        
+        // Hide success message after 3 seconds
+        setTimeout(() => {
+          setSaveSuccess(false);
+        }, 3000);
       }
-      
-      setIsSaving(false);
-      setSaveSuccess(true);
-      
-      // Hide success message after 3 seconds
-      setTimeout(() => {
-        setSaveSuccess(false);
-      }, 3000);
     } catch (error) {
       console.error("Error saving settings:", error);
       setIsSaving(false);
@@ -377,10 +393,27 @@ export default function ProjectSettings() {
                   </p>
                 </div>
 
-                <Button className="btn-atmf-secondary w-full mt-2" disabled={!settings.githubToken || !settings.githubRepo}>
+                <Button 
+                  className="btn-atmf-secondary w-full mt-2" 
+                  disabled={!settings.githubToken || !settings.githubRepo}
+                  onClick={handleSaveSettings}
+                >
                   <Github className="h-4 w-4 mr-2" />
-                  Connect to GitHub
+                  {selectedProject.githubRepo ? "Update GitHub Connection" : "Connect to GitHub"}
                 </Button>
+
+                {selectedProject.githubRepo && (
+                  <div className="mt-2 flex items-start space-x-2 rounded-md bg-slate-900/30 p-2 text-xs text-atmf-muted border border-white/5">
+                    <div className="text-emerald-400 mt-0.5">
+                      <CheckSquare className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-white">
+                        Connected to GitHub Repository: <span className="text-emerald-400">{selectedProject.githubRepo}</span>
+                      </p>
+                    </div>
+                  </div>
+                )}
               </ATMFCardBody>
             </ATMFCard>
           </div>
