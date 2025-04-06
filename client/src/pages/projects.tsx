@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useProject } from "@/context/ProjectContext";
+import { useProject, Project } from "@/context/ProjectContext";
 import Layout from "@/components/layout/layout";
 import { PageContainer } from "@/components/design-system/page-container";
 import { ATMFCard, ATMFCardHeader, ATMFCardBody, ATMFCardFooter } from "@/components/design-system/atmf-card";
@@ -17,7 +17,9 @@ export default function Projects() {
   const { projects, selectedProject, setSelectedProject, addProject, isLoading } = useProject();
   const [isNewProjectOpen, setIsNewProjectOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filteredProjects, setFilteredProjects] = useState<typeof projects>([]);
+  const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
+  const [localProjects, setLocalProjects] = useState<Project[]>([]);
+  const [localIsLoading, setLocalIsLoading] = useState(true);
   const [projectForm, setProjectForm] = useState({
     name: "",
     description: "",
@@ -25,28 +27,52 @@ export default function Projects() {
     jiraJql: ""
   });
 
-  // Log projects when they change and update filtered projects
+  // Load projects directly from API if not available in context
   useEffect(() => {
-    console.log("Projects page - All projects:", projects);
-    console.log("Projects page - isLoading:", isLoading);
-    
-    // Only set filtered projects when we have projects and they're loaded
-    if (!isLoading) {
-      setFilteredProjects(projects);
+    const fetchProjectsDirectly = async () => {
+      try {
+        setLocalIsLoading(true);
+        const response = await fetch('/api/projects');
+        if (!response.ok) {
+          throw new Error(`Failed to fetch projects directly: ${response.status}`);
+        }
+        const data = await response.json();
+        console.log("Projects fetched directly:", data);
+        setLocalProjects(data);
+      } catch (error) {
+        console.error("Error fetching projects directly:", error);
+      } finally {
+        setLocalIsLoading(false);
+      }
+    };
+
+    // First try to use projects from context
+    if (!isLoading && projects && projects.length > 0) {
+      console.log("Using projects from context:", projects);
+      setLocalProjects(projects);
+      setLocalIsLoading(false);
+    } else if (!isLoading) {
+      // If context has loaded but has no projects, load directly
+      console.log("No projects in context, fetching directly");
+      fetchProjectsDirectly();
     }
   }, [projects, isLoading]);
-  
-  // Filter projects when search term changes
+
+  // Update filtered projects when local projects or search term changes
   useEffect(() => {
-    // Skip filtering if projects aren't loaded yet
-    if (isLoading || projects.length === 0) {
+    if (localIsLoading || localProjects.length === 0) {
       console.log("No projects to filter or still loading");
       return;
     }
     
     console.log("Filtering projects with search term:", searchTerm);
     
-    const filtered = projects.filter(
+    if (!searchTerm.trim()) {
+      setFilteredProjects(localProjects);
+      return;
+    }
+    
+    const filtered = localProjects.filter(
       project => 
         project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (project.description && project.description.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -54,7 +80,7 @@ export default function Projects() {
     
     console.log("Projects page - Filtered projects:", filtered);
     setFilteredProjects(filtered);
-  }, [searchTerm, projects, isLoading]);
+  }, [searchTerm, localProjects, localIsLoading]);
 
   const handleCreateProject = async () => {
     if (projectForm.name.trim()) {
@@ -134,7 +160,7 @@ export default function Projects() {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {isLoading ? (
+            {localIsLoading ? (
               // Loading state - show 3 loading skeleton cards
               [...Array(3)].map((_, index) => (
                 <ATMFCard key={`loading-${index}`} className="opacity-70">
@@ -158,7 +184,7 @@ export default function Projects() {
                   </ATMFCardFooter>
                 </ATMFCard>
               ))
-            ) : (
+            ) : filteredProjects.length > 0 ? (
               // Actual project cards when loaded
               filteredProjects.map(project => (
                 <ATMFCard 
@@ -213,9 +239,8 @@ export default function Projects() {
                   </ATMFCardFooter>
                 </ATMFCard>
               ))
-            )}
-            
-            {!isLoading && filteredProjects.length === 0 && (
+            ) : (
+              // No projects found
               <div className="col-span-full flex justify-center items-center py-12">
                 <div className="text-center">
                   <IconWrapper variant="blue" size="lg" className="mx-auto mb-4">

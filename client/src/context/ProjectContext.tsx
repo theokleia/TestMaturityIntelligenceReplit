@@ -56,8 +56,18 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         throw new Error(`Failed to fetch projects: ${response.status}`);
       }
       
-      const projects: Project[] = await response.json();
-      console.log("Fetched projects from database:", projects);
+      const fetchedProjects: Project[] = await response.json();
+      console.log("Fetched projects from database:", fetchedProjects);
+      
+      // Check if we actually got projects
+      if (!fetchedProjects || fetchedProjects.length === 0) {
+        console.warn("No projects returned from API");
+        setProjectsState(current => ({ 
+          ...current, 
+          isLoading: false 
+        }));
+        return;
+      }
       
       // Get selected project from localStorage
       const storedSelectedProjectId = localStorage.getItem('selectedProjectId');
@@ -65,7 +75,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       
       if (storedSelectedProjectId) {
         const projectId = parseInt(storedSelectedProjectId);
-        selectedProject = projects.find(p => p.id === projectId) || null;
+        selectedProject = fetchedProjects.find(p => p.id === projectId) || null;
         
         if (!selectedProject) {
           console.log("Selected project no longer exists, clearing selection");
@@ -74,19 +84,23 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       }
       
       // Default to the first project if none is selected
-      if (!selectedProject && projects.length > 0) {
-        selectedProject = projects[0];
+      if (!selectedProject && fetchedProjects.length > 0) {
+        selectedProject = fetchedProjects[0];
         localStorage.setItem('selectedProjectId', selectedProject.id.toString());
       }
       
+      // Log the updated state
+      console.log("Updating ProjectContext with projects:", fetchedProjects);
+      
+      // Update projects state with the fetched projects
       setProjectsState({
-        projects,
+        projects: fetchedProjects,
         selectedProject,
         isLoading: false
       });
       
       console.log("ProjectContext initialized with:", {
-        projects,
+        projects: fetchedProjects,
         selectedProject
       });
       

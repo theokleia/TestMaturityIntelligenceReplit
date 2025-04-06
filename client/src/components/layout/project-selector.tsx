@@ -11,13 +11,25 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
+import { useEffect, useState } from "react";
+import { Project } from "@/context/ProjectContext";
 
 export default function ProjectSelector() {
   const { selectedProject, setSelectedProject, projects, isLoading } = useProject();
   const [, navigate] = useLocation();
+  const [localProjects, setLocalProjects] = useState<Project[]>([]);
   
   // Log the current projects and selected project for debugging
   console.log("ProjectSelector - Projects:", projects);
+
+  // Ensure we update our local state when project context changes
+  useEffect(() => {
+    // Only update if we have loaded projects
+    if (!isLoading && projects && projects.length > 0) {
+      console.log("Setting local projects:", projects);
+      setLocalProjects(projects);
+    }
+  }, [projects, isLoading]);
 
   return (
     <DropdownMenu>
@@ -64,9 +76,9 @@ export default function ProjectSelector() {
               </div>
             </div>
           ))
-        ) : projects.length > 0 ? (
+        ) : localProjects && localProjects.length > 0 ? (
           // Project items when loaded
-          projects.map((project) => (
+          localProjects.map((project) => (
             <DropdownMenuItem
               key={project.id}
               className={cn(
