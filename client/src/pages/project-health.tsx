@@ -1,6 +1,7 @@
 import Layout from "@/components/layout/layout";
 import { PageContainer } from "@/components/design-system/page-container";
 import { ProjectHealthDashboard } from "@/components/dashboards/project-health-dashboard";
+import { AnimatedInsightsSidebar } from "@/components/dashboards/animated-insights-sidebar";
 import { Button } from "@/components/ui/button";
 import { useProject } from "@/context/ProjectContext";
 import { BarChart3, RefreshCw } from "lucide-react";
@@ -76,6 +77,9 @@ export default function ProjectHealthPage() {
           </div>
         </div>
       </PageContainer>
+      
+      {/* Animated Insights Sidebar */}
+      {selectedProject && <AnimatedInsightsSidebar />}
     </Layout>
   );
 }
