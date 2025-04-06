@@ -17,7 +17,7 @@ export default function Projects() {
   const { projects, selectedProject, setSelectedProject, addProject, isLoading } = useProject();
   const [isNewProjectOpen, setIsNewProjectOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filteredProjects, setFilteredProjects] = useState(projects);
+  const [filteredProjects, setFilteredProjects] = useState<typeof projects>([]);
   const [projectForm, setProjectForm] = useState({
     name: "",
     description: "",
@@ -25,13 +25,25 @@ export default function Projects() {
     jiraJql: ""
   });
 
-  // Log projects when they change
+  // Log projects when they change and update filtered projects
   useEffect(() => {
     console.log("Projects page - All projects:", projects);
-  }, [projects]);
+    console.log("Projects page - isLoading:", isLoading);
+    
+    // Only set filtered projects when we have projects and they're loaded
+    if (!isLoading) {
+      setFilteredProjects(projects);
+    }
+  }, [projects, isLoading]);
   
   // Filter projects when search term changes
   useEffect(() => {
+    // Skip filtering if projects aren't loaded yet
+    if (isLoading || projects.length === 0) {
+      console.log("No projects to filter or still loading");
+      return;
+    }
+    
     console.log("Filtering projects with search term:", searchTerm);
     
     const filtered = projects.filter(
@@ -42,7 +54,7 @@ export default function Projects() {
     
     console.log("Projects page - Filtered projects:", filtered);
     setFilteredProjects(filtered);
-  }, [searchTerm, projects]);
+  }, [searchTerm, projects, isLoading]);
 
   const handleCreateProject = async () => {
     if (projectForm.name.trim()) {
@@ -122,61 +134,88 @@ export default function Projects() {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProjects.map(project => (
-              <ATMFCard 
-                key={project.id} 
-                className={selectedProject?.id === project.id ? "neon-border-blue" : ""}
-                neonBorder={selectedProject?.id === project.id ? "blue" : "none"}
-                onClick={() => setSelectedProject(project)}
-              >
-                <ATMFCardHeader>
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-medium">{project.name}</h3>
-                    {selectedProject?.id === project.id && (
-                      <StatusBadge variant="blue" dot>Active</StatusBadge>
+            {isLoading ? (
+              // Loading state - show 3 loading skeleton cards
+              [...Array(3)].map((_, index) => (
+                <ATMFCard key={`loading-${index}`} className="opacity-70">
+                  <ATMFCardHeader>
+                    <div className="flex items-center justify-between">
+                      <div className="h-6 w-40 bg-atmf-card animate-pulse rounded"></div>
+                    </div>
+                  </ATMFCardHeader>
+                  <ATMFCardBody>
+                    <div className="h-4 w-full bg-atmf-card animate-pulse rounded mb-2"></div>
+                    <div className="h-4 w-3/4 bg-atmf-card animate-pulse rounded"></div>
+                  </ATMFCardBody>
+                  <ATMFCardFooter>
+                    <div className="flex justify-between items-center">
+                      <div className="h-4 w-24 bg-atmf-card animate-pulse rounded"></div>
+                      <div className="flex gap-2">
+                        <div className="h-8 w-8 bg-atmf-card animate-pulse rounded-full"></div>
+                        <div className="h-8 w-8 bg-atmf-card animate-pulse rounded-full"></div>
+                      </div>
+                    </div>
+                  </ATMFCardFooter>
+                </ATMFCard>
+              ))
+            ) : (
+              // Actual project cards when loaded
+              filteredProjects.map(project => (
+                <ATMFCard 
+                  key={project.id} 
+                  className={selectedProject?.id === project.id ? "neon-border-blue" : ""}
+                  neonBorder={selectedProject?.id === project.id ? "blue" : "none"}
+                  onClick={() => setSelectedProject(project)}
+                >
+                  <ATMFCardHeader>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-medium">{project.name}</h3>
+                      {selectedProject?.id === project.id && (
+                        <StatusBadge variant="blue" dot>Active</StatusBadge>
+                      )}
+                    </div>
+                  </ATMFCardHeader>
+                  <ATMFCardBody>
+                    <p className="text-atmf-muted">{project.description || "No description provided"}</p>
+                    
+                    {/* Jira integration info */}
+                    {project.jiraProjectId && (
+                      <div className="mt-3 flex items-center space-x-2 rounded-md bg-slate-900/30 p-2 text-xs text-atmf-muted border border-white/5">
+                        <div className="text-primary">
+                          <Database className="h-3.5 w-3.5" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-white flex items-center">
+                            <span>Jira Integration:</span>
+                            <span className="ml-1 text-emerald-400">{project.jiraProjectId}</span>
+                          </p>
+                          {project.jiraJql && (
+                            <p className="truncate text-xs text-atmf-muted">{project.jiraJql}</p>
+                          )}
+                        </div>
+                      </div>
                     )}
-                  </div>
-                </ATMFCardHeader>
-                <ATMFCardBody>
-                  <p className="text-atmf-muted">{project.description || "No description provided"}</p>
-                  
-                  {/* Jira integration info */}
-                  {project.jiraProjectId && (
-                    <div className="mt-3 flex items-center space-x-2 rounded-md bg-slate-900/30 p-2 text-xs text-atmf-muted border border-white/5">
-                      <div className="text-primary">
-                        <Database className="h-3.5 w-3.5" />
+                  </ATMFCardBody>
+                  <ATMFCardFooter>
+                    <div className="flex justify-between items-center">
+                      <div className="text-sm text-atmf-muted">
+                        {project.createdAt ? `Created ${format(new Date(project.createdAt), 'MMM d, yyyy')}` : "Recently added"}
                       </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-white flex items-center">
-                          <span>Jira Integration:</span>
-                          <span className="ml-1 text-emerald-400">{project.jiraProjectId}</span>
-                        </p>
-                        {project.jiraJql && (
-                          <p className="truncate text-xs text-atmf-muted">{project.jiraJql}</p>
-                        )}
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="icon" className="rounded-full hover:bg-atmf-card">
+                          <Edit className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="rounded-full hover:bg-atmf-card hover:text-red-400">
+                          <Trash2 className="h-4 w-4 text-muted-foreground" />
+                        </Button>
                       </div>
                     </div>
-                  )}
-                </ATMFCardBody>
-                <ATMFCardFooter>
-                  <div className="flex justify-between items-center">
-                    <div className="text-sm text-atmf-muted">
-                      {project.createdAt ? `Created ${format(new Date(project.createdAt), 'MMM d, yyyy')}` : "Recently added"}
-                    </div>
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="icon" className="rounded-full hover:bg-atmf-card">
-                        <Edit className="h-4 w-4 text-muted-foreground" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="rounded-full hover:bg-atmf-card hover:text-red-400">
-                        <Trash2 className="h-4 w-4 text-muted-foreground" />
-                      </Button>
-                    </div>
-                  </div>
-                </ATMFCardFooter>
-              </ATMFCard>
-            ))}
+                  </ATMFCardFooter>
+                </ATMFCard>
+              ))
+            )}
             
-            {filteredProjects.length === 0 && (
+            {!isLoading && filteredProjects.length === 0 && (
               <div className="col-span-full flex justify-center items-center py-12">
                 <div className="text-center">
                   <IconWrapper variant="blue" size="lg" className="mx-auto mb-4">
