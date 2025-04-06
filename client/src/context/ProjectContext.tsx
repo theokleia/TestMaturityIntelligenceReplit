@@ -62,28 +62,46 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       // Always update the state with fetched projects, even if empty
       // This ensures we're not keeping stale data in the state
       
-      // Get selected project from localStorage
-      const storedSelectedProjectId = localStorage.getItem('selectedProjectId');
-      let selectedProject = null;
+      // Check if we already have a selected project
+      let selectedProject = projectsState.selectedProject;
       
-      if (storedSelectedProjectId && fetchedProjects.length > 0) {
-        const projectId = parseInt(storedSelectedProjectId);
-        selectedProject = fetchedProjects.find(p => p.id === projectId) || null;
+      // If we have a selected project, make sure it's still in the fetched projects
+      if (selectedProject) {
+        // Find updated version of the current project
+        const updatedProject = fetchedProjects.find(p => p.id === selectedProject?.id);
         
-        if (!selectedProject) {
-          console.log("Selected project no longer exists, clearing selection");
+        if (updatedProject) {
+          // Update with latest data
+          selectedProject = updatedProject;
+        } else {
+          // Project was deleted, reset selection
+          selectedProject = null;
           localStorage.removeItem('selectedProjectId');
+        }
+      } else {
+        // No selected project, try to get from localStorage
+        const storedSelectedProjectId = localStorage.getItem('selectedProjectId');
+        
+        if (storedSelectedProjectId && fetchedProjects.length > 0) {
+          const projectId = parseInt(storedSelectedProjectId);
+          selectedProject = fetchedProjects.find(p => p.id === projectId) || null;
+          
+          if (!selectedProject) {
+            console.log("Stored project no longer exists, clearing selection");
+            localStorage.removeItem('selectedProjectId');
+          }
+        }
+        
+        // Default to the first project if no selection and projects exist
+        if (!selectedProject && fetchedProjects.length > 0) {
+          selectedProject = fetchedProjects[0];
+          console.log("Auto-selecting first project:", selectedProject);
+          localStorage.setItem('selectedProjectId', selectedProject.id.toString());
         }
       }
       
-      // Default to the first project if none is selected and projects exist
-      if (!selectedProject && fetchedProjects.length > 0) {
-        selectedProject = fetchedProjects[0];
-        localStorage.setItem('selectedProjectId', selectedProject.id.toString());
-      }
-      
       // Log the updated state
-      console.log("Updating ProjectContext with projects:", fetchedProjects);
+      console.log("Updating projects state with:", fetchedProjects.length, "projects and selected:", selectedProject?.name || "none");
       
       // Update projects state with the fetched projects
       setProjectsState({
@@ -91,12 +109,6 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         selectedProject,
         isLoading: false
       });
-      
-      console.log("ProjectContext initialized with:", {
-        projects: fetchedProjects,
-        selectedProject
-      });
-      
     } catch (error) {
       console.error("Error fetching projects:", error);
       setProjectsState(current => ({ 
@@ -104,6 +116,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         isLoading: false 
       }));
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Load projects on mount
@@ -122,16 +135,21 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         ...current,
         selectedProject: null
       }));
+      
+      // Force a refresh of relevant queries
+      queryClient.invalidateQueries({ queryKey: ['/api/metrics'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/recommendations'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dimensions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/levels'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/ai/roadmap'] });
+      
       return;
     }
     
     // Save only the ID to localStorage
     localStorage.setItem('selectedProjectId', project.id.toString());
     
-    // Always force a refetch to ensure we're working with fresh data
-    fetchProjects();
-    
-    // Update immediately to prevent UI flicker
+    // Update immediately with current project data
     setProjectsState(current => {
       // Find the most up-to-date version of this project
       const updatedProject = current.projects.find(p => p.id === project.id) || project;
@@ -142,9 +160,14 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       };
     });
     
-    // Invalidate all queries to force data refresh
-    queryClient.invalidateQueries();
-  }, [fetchProjects]);
+    // Force a refresh of relevant queries
+    queryClient.invalidateQueries({ queryKey: ['/api/metrics'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/recommendations'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/dimensions'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/levels'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/ai/roadmap'] });
+    
+  }, []);
 
   // Add a new project
   const addProject = useCallback(async (

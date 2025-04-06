@@ -1,4 +1,5 @@
 import { useProject } from "@/context/ProjectContext";
+import type { Project } from "@/context/ProjectContext";
 import { Check, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,7 +13,6 @@ import {
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
 import { useEffect, useState } from "react";
-import { Project } from "@/context/ProjectContext";
 import { queryClient } from "@/lib/queryClient";
 
 export default function ProjectSelector() {
@@ -21,32 +21,21 @@ export default function ProjectSelector() {
   const [localProjects, setLocalProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Fetch projects directly and select one if needed
+  // Use the projects from context instead of fetching them directly
+  const { projects } = useProject();
+  
+  // Sync projects from context to local state
   useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        setIsLoading(true);
-        const response = await fetch('/api/projects');
-        if (response.ok) {
-          const data = await response.json();
-          setLocalProjects(data);
-          
-          // If no project is selected, but we have projects, select the first one
-          if (!selectedProject && data.length > 0) {
-            console.log("Auto-selecting first project:", data[0]);
-            setSelectedProject(data[0]);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching projects:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchProjects();
-    // Remove the dependency on selectedProject to prevent cyclical re-renders
-  }, [setSelectedProject]);
+    if (projects && projects.length > 0) {
+      setLocalProjects(projects);
+      setIsLoading(false);
+    }
+  }, [projects]);
+  
+  // Basic initialization of loading state (can be removed if causing issues)
+  useEffect(() => {
+    setIsLoading(projects.length === 0);
+  }, [projects.length]);
 
   // Simple project selection handler
   const handleSelectProject = (project: Project) => {
