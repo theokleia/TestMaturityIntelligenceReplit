@@ -39,6 +39,9 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const [projects, setProjects] = useState<Project[]>(mockProjects);
   
   const addProject = (name: string, description?: string) => {
+    console.log("Adding project:", name, description);
+    console.log("Current projects:", projects);
+    
     // Generate a new unique ID (in a real app, this would come from the backend)
     const maxId = projects.reduce((max, project) => Math.max(max, project.id), 0);
     const newId = maxId + 1;
@@ -52,11 +55,15 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       updatedAt: new Date().toISOString()
     };
     
+    console.log("New project to add:", newProject);
+    
     // Add the new project to the list
     setProjects([...projects, newProject]);
     
     // Optionally select the new project
     setSelectedProject(newProject);
+    
+    console.log("Updated projects list should be:", [...projects, newProject]);
     
     return newProject;
   };

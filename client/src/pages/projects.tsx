@@ -35,8 +35,17 @@ export default function Projects() {
 
   const handleCreateProject = () => {
     if (projectForm.name.trim()) {
+      console.log("Creating project with form data:", projectForm);
+      
+      // Check if the addProject function exists
+      if (typeof addProject !== 'function') {
+        console.error("addProject is not a function:", addProject);
+        return;
+      }
+      
       // Add the project using the context function
       addProject(projectForm.name, projectForm.description);
+      console.log("Project should have been added");
       
       // Close the dialog and reset form
       setIsNewProjectOpen(false);
