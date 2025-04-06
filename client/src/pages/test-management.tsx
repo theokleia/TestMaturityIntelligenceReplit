@@ -75,7 +75,7 @@ import { useGenerateTestCases } from "@/hooks/use-ai-recommendations";
 import { ATMFCard, ATMFCardHeader } from "@/components/design-system/atmf-card";
 import { StatusBadge } from "@/components/design-system/status-badge";
 import { IconWrapper } from "@/components/design-system/icon-wrapper";
-import { PageContainer, PageHeader, PageBody } from "@/components/design-system/page-container";
+import { PageContainer, PageHeader, PageContent } from "@/components/design-system/page-container";
 
 // Schema for creating a test suite
 const createTestSuiteSchema = z.object({
@@ -285,7 +285,7 @@ export default function TestManagement() {
           }
         />
         
-        <PageBody>
+        <PageContent>
           <div className="grid grid-cols-12 gap-6">
             {/* Test Suites Column */}
             <div className="col-span-12 md:col-span-4 lg:col-span-3 flex flex-col space-y-4">
@@ -485,7 +485,7 @@ export default function TestManagement() {
               </ATMFCard>
             </div>
           </div>
-        </PageBody>
+        </PageContent>
       </PageContainer>
       
       {/* Create Test Suite Dialog */}

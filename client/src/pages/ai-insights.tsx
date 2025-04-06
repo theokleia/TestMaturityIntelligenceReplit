@@ -19,8 +19,7 @@ import { ProgressBar } from "@/components/design-system/progress-bar";
 import { 
   PageContainer, 
   PageHeader, 
-  PageBody, 
-  PageSection 
+  PageContent 
 } from "@/components/design-system/page-container";
 
 // Define interfaces for data structures
@@ -412,7 +411,7 @@ export default function AiInsights() {
           }
         />
         
-        <PageBody>
+        <PageContent>
           <TabView 
             tabs={tabs} 
             activeTab={activeTab} 
@@ -425,7 +424,7 @@ export default function AiInsights() {
             {activeTab === "predictions" && <PredictionsTab />}
             {activeTab === "activity" && <ActivityTab />}
           </div>
-        </PageBody>
+        </PageContent>
       </PageContainer>
     </AppLayout>
   );

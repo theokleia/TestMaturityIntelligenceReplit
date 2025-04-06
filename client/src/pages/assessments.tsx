@@ -7,7 +7,7 @@ import { StatusBadge } from "@/components/design-system/status-badge";
 import { TabView } from "@/components/design-system/tab-view";
 import { IconWrapper } from "@/components/design-system/icon-wrapper";
 import { ProgressBar } from "@/components/design-system/progress-bar";
-import { PageContainer, PageHeader, PageBody } from "@/components/design-system/page-container";
+import { PageContainer, PageHeader, PageContent } from "@/components/design-system/page-container";
 
 // Sample assessment data - in a real app this would come from an API call
 const upcomingAssessments = [
@@ -71,7 +71,7 @@ export default function Assessments() {
           }
         />
         
-        <PageBody>
+        <PageContent>
           <TabView 
             tabs={tabs} 
             activeTab={activeTab} 
@@ -158,7 +158,7 @@ export default function Assessments() {
               ))}
             </div>
           )}
-        </PageBody>
+        </PageContent>
       </PageContainer>
     </AppLayout>
   );

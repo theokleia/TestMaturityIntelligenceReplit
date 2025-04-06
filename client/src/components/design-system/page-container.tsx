@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 interface PageContainerProps {
   children: ReactNode;
   className?: string;
+  withPadding?: boolean;
 }
 
 interface PageHeaderProps {
@@ -18,13 +19,19 @@ interface PageContentProps {
   className?: string;
 }
 
+// Alias for PageContent to maintain compatibility with existing code
+interface PageBodyProps {
+  children: ReactNode;
+  className?: string;
+}
+
 /**
  * PageContainer component for consistent page layout structure
  * based on the ATMosFera design system
  */
-export function PageContainer({ children, className }: PageContainerProps) {
+export function PageContainer({ children, className, withPadding = false }: PageContainerProps) {
   return (
-    <div className={cn("p-6 space-y-8", className)}>
+    <div className={cn("space-y-8", withPadding ? "p-6" : "", className)}>
       {children}
     </div>
   );
@@ -61,6 +68,18 @@ export function PageHeader({
  * PageContent component for the main content area
  */
 export function PageContent({ children, className }: PageContentProps) {
+  return (
+    <div className={cn("space-y-6", className)}>
+      {children}
+    </div>
+  );
+}
+
+/**
+ * PageBody component - alias for PageContent to maintain
+ * compatibility with existing code
+ */
+export function PageBody({ children, className }: PageBodyProps) {
   return (
     <div className={cn("space-y-6", className)}>
       {children}
