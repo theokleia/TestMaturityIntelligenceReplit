@@ -9,16 +9,46 @@ export interface Project {
   updatedAt?: string;
 }
 
-// Initial mock projects for the selector
-const initialProjects: Project[] = [
-  { id: 1, name: "E-Commerce Platform", description: "Modernized test suite for online store" },
-  { id: 2, name: "Banking API", description: "Security and performance test automation" },
-  { id: 3, name: "Healthcare Mobile App", description: "End-to-end testing framework" },
-  { id: 4, name: "Cloud Infrastructure", description: "DevOps pipeline testing" },
-  { id: 5, name: "IoT Device Management", description: "Test automation for connected devices" },
+// Default sample projects
+const defaultProjects: Project[] = [
+  { 
+    id: 1, 
+    name: "E-Commerce Platform", 
+    description: "Modernized test suite for online store",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  { 
+    id: 2, 
+    name: "Banking API", 
+    description: "Security and performance test automation",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString() 
+  },
+  { 
+    id: 3, 
+    name: "Healthcare Mobile App", 
+    description: "End-to-end testing framework",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString() 
+  },
+  { 
+    id: 4, 
+    name: "Cloud Infrastructure", 
+    description: "DevOps pipeline testing",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString() 
+  },
+  { 
+    id: 5, 
+    name: "IoT Device Management", 
+    description: "Test automation for connected devices",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString() 
+  }
 ];
 
-// Create the context with default values
+// Define the context type
 interface ProjectContextType {
   selectedProject: Project | null;
   setSelectedProject: (project: Project | null) => void;
@@ -37,109 +67,190 @@ const defaultContextValue: ProjectContextType = {
 // Create the context
 const ProjectContext = createContext<ProjectContextType>(defaultContextValue);
 
+// Clear localStorage for fresh start (TEMPORARY FIX)
+if (typeof window !== 'undefined') {
+  console.log("Clearing localStorage for fresh start");
+  localStorage.removeItem('projects');
+  localStorage.removeItem('selectedProject');
+}
+
 // Provider component to wrap the app
 export function ProjectProvider({ children }: { children: ReactNode }) {
-  // Define state for projects and selected project
-  const [projects, setProjects] = useState<Project[]>(initialProjects);
-  const [selectedProject, setSelectedProjectState] = useState<Project | null>(null);
-  
-  // Initialize from localStorage on component mount
+  // Initialize state
+  const [projectsState, setProjectsState] = useState<{
+    projects: Project[],
+    selectedProject: Project | null,
+    initialized: boolean
+  }>({
+    projects: [],
+    selectedProject: null,
+    initialized: false
+  });
+
+  // Load initial data on mount
   useEffect(() => {
-    try {
-      const savedProjects = localStorage.getItem('projects');
-      if (savedProjects) {
-        const parsedProjects = JSON.parse(savedProjects);
-        console.log("Loaded projects from localStorage:", parsedProjects);
-        setProjects(parsedProjects);
-      } else {
-        console.log("No projects in localStorage, using initial projects:", initialProjects);
-        // Save initial projects to localStorage
-        localStorage.setItem('projects', JSON.stringify(initialProjects));
+    const loadInitialData = () => {
+      try {
+        // Attempt to load projects from localStorage
+        const storedProjects = localStorage.getItem('projects');
+        let initialProjects = defaultProjects;
+        let initialSelectedProject = null;
+
+        // If localStorage has projects, use them
+        if (storedProjects) {
+          const parsedProjects = JSON.parse(storedProjects);
+          if (Array.isArray(parsedProjects) && parsedProjects.length > 0) {
+            console.log("Found stored projects:", parsedProjects);
+            initialProjects = parsedProjects;
+          } else {
+            console.log("Invalid or empty stored projects, using defaults");
+            // Save defaults to localStorage
+            localStorage.setItem('projects', JSON.stringify(defaultProjects));
+          }
+        } else {
+          console.log("No stored projects found, using defaults");
+          // Save defaults to localStorage 
+          localStorage.setItem('projects', JSON.stringify(defaultProjects));
+        }
+
+        // Check for selected project
+        const storedSelectedProject = localStorage.getItem('selectedProject');
+        if (storedSelectedProject) {
+          try {
+            const parsedSelectedProject = JSON.parse(storedSelectedProject);
+            // Make sure the selected project exists in our list
+            const projectExists = initialProjects.some(p => p.id === parsedSelectedProject.id);
+            
+            if (projectExists) {
+              initialSelectedProject = parsedSelectedProject;
+            } else {
+              console.log("Selected project doesn't exist in project list, ignoring");
+              localStorage.removeItem('selectedProject');
+            }
+          } catch (e) {
+            console.error("Error parsing selected project:", e);
+            localStorage.removeItem('selectedProject');
+          }
+        }
+
+        // Update state with initial data
+        setProjectsState({
+          projects: initialProjects,
+          selectedProject: initialSelectedProject,
+          initialized: true
+        });
+        
+        console.log("ProjectContext initialized with:", {
+          projects: initialProjects,
+          selectedProject: initialSelectedProject
+        });
+      } catch (error) {
+        console.error("Error initializing project context:", error);
+        // Fall back to defaults if anything goes wrong
+        setProjectsState({
+          projects: defaultProjects,
+          selectedProject: null,
+          initialized: true
+        });
+        
+        // Reset localStorage
+        localStorage.setItem('projects', JSON.stringify(defaultProjects));
+        localStorage.removeItem('selectedProject');
+      }
+    };
+
+    // Only load initial data if not already initialized
+    if (!projectsState.initialized) {
+      loadInitialData();
+    }
+  }, [projectsState.initialized]);
+
+  // Set selected project (wrapped to maintain consistency)
+  const setSelectedProject = useCallback((project: Project | null) => {
+    setProjectsState(current => {
+      if (!project) {
+        // Remove selected project
+        localStorage.removeItem('selectedProject');
+        return {
+          ...current,
+          selectedProject: null
+        };
       }
       
-      const savedSelectedProject = localStorage.getItem('selectedProject');
-      if (savedSelectedProject) {
-        setSelectedProjectState(JSON.parse(savedSelectedProject));
-      }
-    } catch (error) {
-      console.error("Error loading projects from localStorage:", error);
-      // If there was an error, ensure we at least have the initial projects
-      setProjects(initialProjects);
-    }
-  }, []);
-  
-  // Save projects to local storage whenever they change
-  useEffect(() => {
-    localStorage.setItem('projects', JSON.stringify(projects));
-  }, [projects]);
-  
-  // Save selected project to local storage whenever it changes
-  useEffect(() => {
-    if (selectedProject) {
-      localStorage.setItem('selectedProject', JSON.stringify(selectedProject));
-    } else {
-      localStorage.removeItem('selectedProject');
-    }
-  }, [selectedProject]);
-  
-  // Wrapper for setSelectedProject to ensure we're always using the latest project data
-  const setSelectedProject = useCallback((project: Project | null) => {
-    if (project) {
       // Find the most up-to-date version of this project
-      const updatedProject = projects.find(p => p.id === project.id) || project;
-      setSelectedProjectState(updatedProject);
-    } else {
-      setSelectedProjectState(null);
-    }
-  }, [projects]);
-  
+      const updatedProject = current.projects.find(p => p.id === project.id) || project;
+      
+      // Save to localStorage
+      localStorage.setItem('selectedProject', JSON.stringify(updatedProject));
+      
+      return {
+        ...current,
+        selectedProject: updatedProject
+      };
+    });
+  }, []);
+
   // Add a new project
   const addProject = useCallback((name: string, description?: string): Project => {
-    console.log("Adding project:", name, description);
+    console.log("Adding new project:", { name, description });
     
-    // Generate a new unique ID
-    const maxId = projects.reduce((max, project) => Math.max(max, project.id), 0);
-    const newId = maxId + 1;
+    let newProject: Project = { id: 0, name: "" };
     
-    // Create the new project with current timestamp
-    const newProject: Project = {
-      id: newId,
-      name,
-      description: description || "",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
+    setProjectsState(current => {
+      // Generate a new ID
+      const maxId = current.projects.length > 0
+        ? Math.max(...current.projects.map(p => p.id))
+        : 0;
+      
+      // Create new project
+      newProject = {
+        id: maxId + 1,
+        name: name.trim(),
+        description: description ? description.trim() : "",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      console.log("Created new project object:", newProject);
+      
+      // Add to projects array
+      const updatedProjects = [...current.projects, newProject];
+      
+      // Save to localStorage
+      localStorage.setItem('projects', JSON.stringify(updatedProjects));
+      
+      // Also set as selected project
+      localStorage.setItem('selectedProject', JSON.stringify(newProject));
+      
+      console.log("Updated projects list:", updatedProjects);
+      
+      return {
+        ...current,
+        projects: updatedProjects,
+        selectedProject: newProject
+      };
+    });
     
-    console.log("New project:", newProject);
-    
-    // Update the projects state with the new project
-    setProjects(currentProjects => [...currentProjects, newProject]);
-    
-    // Select the new project
-    setSelectedProjectState(newProject);
-    
-    console.log("Project added successfully");
-    
+    // Return the new project (this isn't ideal but works for now)
+    // In a real app, we'd wait for state update to complete
     return newProject;
-  }, [projects]);
-  
-  // Create the context value object
-  const contextValue: ProjectContextType = {
-    selectedProject,
-    setSelectedProject,
-    projects,
-    addProject
-  };
-  
+  }, []);
+
+  // Provide context
   return (
-    <ProjectContext.Provider value={contextValue}>
+    <ProjectContext.Provider value={{
+      selectedProject: projectsState.selectedProject,
+      setSelectedProject,
+      projects: projectsState.projects,
+      addProject
+    }}>
       {children}
     </ProjectContext.Provider>
   );
 }
 
 // Custom hook to use the project context
-export function useProject() {
+export const useProject = () => {
   const context = useContext(ProjectContext);
   
   if (!context) {

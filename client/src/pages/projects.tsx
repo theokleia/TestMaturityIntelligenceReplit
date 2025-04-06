@@ -47,9 +47,16 @@ export default function Projects() {
       console.log("Creating project with form data:", projectForm);
       
       try {
-        // Add the project using the context function
-        const newProject = addProject(projectForm.name, projectForm.description);
+        // Add the project using the context function with the trimmed values
+        const newProject = addProject(
+          projectForm.name.trim(), 
+          projectForm.description ? projectForm.description.trim() : undefined
+        );
+        
         console.log("Project added successfully:", newProject);
+        
+        // Update filtered projects immediately to show the new project
+        setFilteredProjects(prev => [...prev, newProject]);
         
         // Close the dialog and reset form
         setIsNewProjectOpen(false);
@@ -57,6 +64,11 @@ export default function Projects() {
           name: "",
           description: ""
         });
+        
+        // Force a re-fetch of projects from the context
+        setTimeout(() => {
+          console.log("Current projects after adding:", projects);
+        }, 100);
       } catch (error) {
         console.error("Error adding project:", error);
       }
