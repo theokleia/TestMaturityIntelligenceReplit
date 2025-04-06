@@ -9,6 +9,7 @@ export interface TestSuite {
   projectArea: string;
   priority: string;
   status: string;
+  type: string;
   userId: number;
   aiGenerated: boolean;
   createdAt: string;
@@ -21,6 +22,7 @@ export interface CreateTestSuiteRequest {
   projectArea: string;
   priority: string;
   status: string;
+  type: string;
   aiGenerated?: boolean;
 }
 
@@ -30,6 +32,7 @@ export interface UpdateTestSuiteRequest {
   projectArea?: string;
   priority?: string;
   status?: string;
+  type?: string;
 }
 
 export interface CreateTestCaseRequest {

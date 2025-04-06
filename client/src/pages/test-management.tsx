@@ -84,6 +84,7 @@ const createTestSuiteSchema = z.object({
   projectArea: z.string().min(1, "Project area is required"),
   priority: z.string().min(1, "Priority is required"),
   status: z.string().min(1, "Status is required"),
+  type: z.string().default("functional"),
 });
 
 // Schema for creating a test case
@@ -144,6 +145,7 @@ export default function TestManagement() {
       projectArea: "",
       priority: "medium",
       status: "active",
+      type: "functional",
     },
   });
   
