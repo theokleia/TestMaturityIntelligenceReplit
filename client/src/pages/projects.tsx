@@ -46,17 +46,11 @@ export default function Projects() {
       }
     };
 
-    // First try to use projects from context
-    if (!isLoading && projects && projects.length > 0) {
-      console.log("Using projects from context:", projects);
-      setLocalProjects(projects);
-      setLocalIsLoading(false);
-    } else if (!isLoading) {
-      // If context has loaded but has no projects, load directly
-      console.log("No projects in context, fetching directly");
-      fetchProjectsDirectly();
-    }
-  }, [projects, isLoading]);
+    // Always fetch projects directly to ensure we have the latest data
+    // This is a workaround for any potential context issues
+    console.log("Projects page - Fetching projects directly");
+    fetchProjectsDirectly();
+  }, []);
 
   // Update filtered projects when local projects or search term changes
   useEffect(() => {

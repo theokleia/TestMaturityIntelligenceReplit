@@ -59,21 +59,14 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       const fetchedProjects: Project[] = await response.json();
       console.log("Fetched projects from database:", fetchedProjects);
       
-      // Check if we actually got projects
-      if (!fetchedProjects || fetchedProjects.length === 0) {
-        console.warn("No projects returned from API");
-        setProjectsState(current => ({ 
-          ...current, 
-          isLoading: false 
-        }));
-        return;
-      }
+      // Always update the state with fetched projects, even if empty
+      // This ensures we're not keeping stale data in the state
       
       // Get selected project from localStorage
       const storedSelectedProjectId = localStorage.getItem('selectedProjectId');
       let selectedProject = null;
       
-      if (storedSelectedProjectId) {
+      if (storedSelectedProjectId && fetchedProjects.length > 0) {
         const projectId = parseInt(storedSelectedProjectId);
         selectedProject = fetchedProjects.find(p => p.id === projectId) || null;
         
@@ -83,7 +76,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         }
       }
       
-      // Default to the first project if none is selected
+      // Default to the first project if none is selected and projects exist
       if (!selectedProject && fetchedProjects.length > 0) {
         selectedProject = fetchedProjects[0];
         localStorage.setItem('selectedProjectId', selectedProject.id.toString());
