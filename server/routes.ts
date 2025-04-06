@@ -9,7 +9,8 @@ import {
   insertAssessmentTemplateSchema,
   insertAssessmentSchema,
   insertTestSuiteSchema,
-  insertTestCaseSchema
+  insertTestCaseSchema,
+  insertProjectSchema
 } from "@shared/schema";
 import { 
   generateMaturityInsights, 
@@ -703,6 +704,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error generating test cases:", error);
       res.status(500).json({ message: "Failed to generate test cases" });
+    }
+  });
+
+  // Projects API endpoints
+  app.get("/api/projects", async (req, res) => {
+    try {
+      const projects = await storage.getProjects();
+      res.json(projects);
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+      res.status(500).json({ message: "Failed to fetch projects" });
+    }
+  });
+
+  app.get("/api/projects/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const project = await storage.getProject(id);
+      
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      res.json(project);
+    } catch (error) {
+      console.error("Error fetching project:", error);
+      res.status(500).json({ message: "Failed to fetch project" });
+    }
+  });
+
+  app.post("/api/projects", async (req, res) => {
+    try {
+      const projectData = insertProjectSchema.parse(req.body);
+      const newProject = await storage.createProject(projectData);
+      res.status(201).json(newProject);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data format", errors: error.errors });
+      }
+      console.error("Error creating project:", error);
+      res.status(500).json({ message: "Failed to create project" });
+    }
+  });
+
+  app.patch("/api/projects/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updateData = insertProjectSchema.partial().parse(req.body);
+      
+      const updatedProject = await storage.updateProject(id, updateData);
+      
+      if (!updatedProject) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      res.json(updatedProject);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data format", errors: error.errors });
+      }
+      console.error("Error updating project:", error);
+      res.status(500).json({ message: "Failed to update project" });
     }
   });
 

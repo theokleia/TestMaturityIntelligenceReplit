@@ -2,7 +2,7 @@ import { useProject } from "@/context/ProjectContext";
 import { ATMFCard, ATMFCardBody, ATMFCardHeader } from "@/components/design-system/atmf-card";
 import { HealthIndicator, HealthIndicatorGroup, HealthStatus } from "@/components/design-system/health-indicator";
 import { useState, useEffect } from "react";
-import { AlertCircle, ShieldAlert, Activity, Bug, Code, ClipboardCheck, GitBranch, Clock, Gauge, Zap, Upload, Server, BarChart } from "lucide-react";
+import { AlertCircle, ShieldAlert, Activity, Bug, Code, ClipboardCheck, GitBranch, Clock, Gauge, Zap, Upload, Server, BarChart, Check } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Types for health data

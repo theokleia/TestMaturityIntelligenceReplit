@@ -7,7 +7,8 @@ import {
   assessments, type Assessment, type InsertAssessment,
   assessmentTemplates, type AssessmentTemplate, type InsertAssessmentTemplate,
   testSuites, type TestSuite, type InsertTestSuite,
-  testCases, type TestCase, type InsertTestCase
+  testCases, type TestCase, type InsertTestCase,
+  projects, type Project, type InsertProject
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc, or, inArray, lt, gte, isNull } from "drizzle-orm";
@@ -17,6 +18,12 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+
+  // Projects
+  getProjects(): Promise<Project[]>;
+  getProject(id: number): Promise<Project | undefined>;
+  createProject(project: InsertProject): Promise<Project>;
+  updateProject(id: number, project: Partial<InsertProject>): Promise<Project | undefined>;
 
   // Maturity Dimensions
   getMaturityDimensions(): Promise<MaturityDimension[]>;
@@ -101,6 +108,30 @@ export class DatabaseStorage implements IStorage {
   async createUser(insertUser: InsertUser): Promise<User> {
     const [user] = await db.insert(users).values(insertUser).returning();
     return user;
+  }
+
+  // Projects
+  async getProjects(): Promise<Project[]> {
+    return db.select().from(projects).orderBy(desc(projects.createdAt));
+  }
+
+  async getProject(id: number): Promise<Project | undefined> {
+    const [project] = await db.select().from(projects).where(eq(projects.id, id));
+    return project || undefined;
+  }
+
+  async createProject(project: InsertProject): Promise<Project> {
+    const [newProject] = await db.insert(projects).values(project).returning();
+    return newProject;
+  }
+
+  async updateProject(id: number, project: Partial<InsertProject>): Promise<Project | undefined> {
+    const [updatedProject] = await db
+      .update(projects)
+      .set({ ...project, updatedAt: new Date() })
+      .where(eq(projects.id, id))
+      .returning();
+    return updatedProject || undefined;
   }
 
   // Maturity Dimensions
@@ -472,6 +503,50 @@ export class DatabaseStorage implements IStorage {
         fullName: "Tecla Reitzi",
         email: "teclareitzi@example.com",
         role: "admin"
+      });
+    }
+    
+    // Create sample projects if none exist
+    const existingProjects = await this.getProjects();
+    if (existingProjects.length === 0) {
+      // Sample project 1
+      await this.createProject({
+        name: "E-Commerce Platform",
+        description: "Modernized test suite for online store",
+        jiraProjectId: "ECOM",
+        jiraJql: "project = ECOM AND issuetype in (Bug, Test) AND status != Closed"
+      });
+      
+      // Sample project 2
+      await this.createProject({
+        name: "Banking API",
+        description: "Security and performance test automation",
+        jiraProjectId: "BANK",
+        jiraJql: "project = BANK AND component = API AND priority >= Medium"
+      });
+      
+      // Sample project 3
+      await this.createProject({
+        name: "Healthcare Mobile App",
+        description: "End-to-end testing framework",
+        jiraProjectId: "HEALTH",
+        jiraJql: "project = HEALTH AND labels = mobile"
+      });
+      
+      // Sample project 4
+      await this.createProject({
+        name: "Cloud Infrastructure",
+        description: "DevOps pipeline testing",
+        jiraProjectId: "CLOUD",
+        jiraJql: "project = CLOUD AND component in (AWS, Azure, GCP)"
+      });
+      
+      // Sample project 5
+      await this.createProject({
+        name: "IoT Device Management",
+        description: "Test automation for connected devices",
+        jiraProjectId: "IOT",
+        jiraJql: "project = IOT AND issuetype = Test"
       });
     }
 

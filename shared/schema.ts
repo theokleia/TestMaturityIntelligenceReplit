@@ -116,6 +116,16 @@ export const testCases = pgTable("test_cases", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const projects = pgTable("projects", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  jiraProjectId: varchar("jira_project_id", { length: 10 }),
+  jiraJql: text("jira_jql"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Insert Schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -133,6 +143,7 @@ export const insertAssessmentTemplateSchema = createInsertSchema(assessmentTempl
 export const insertAssessmentSchema = createInsertSchema(assessments);
 export const insertTestSuiteSchema = createInsertSchema(testSuites);
 export const insertTestCaseSchema = createInsertSchema(testCases);
+export const insertProjectSchema = createInsertSchema(projects);
 
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -161,6 +172,9 @@ export type TestSuite = typeof testSuites.$inferSelect;
 
 export type InsertTestCase = z.infer<typeof insertTestCaseSchema>;
 export type TestCase = typeof testCases.$inferSelect;
+
+export type InsertProject = z.infer<typeof insertProjectSchema>;
+export type Project = typeof projects.$inferSelect;
 
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({

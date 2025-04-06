@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, ReactNode, useCallback, useEffect } from "react";
+import { queryClient } from "@/lib/queryClient";
 
 // Define the Project interface
 export interface Project {
@@ -11,61 +12,13 @@ export interface Project {
   jiraJql?: string; // Add Jira JQL search query (optional)
 }
 
-// Default sample projects
-const defaultProjects: Project[] = [
-  { 
-    id: 1, 
-    name: "E-Commerce Platform", 
-    description: "Modernized test suite for online store",
-    jiraProjectId: "ECOM",
-    jiraJql: "project = ECOM AND issuetype in (Bug, Test) AND status != Closed",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  { 
-    id: 2, 
-    name: "Banking API", 
-    description: "Security and performance test automation",
-    jiraProjectId: "BANK",
-    jiraJql: "project = BANK AND component = API AND priority >= Medium",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString() 
-  },
-  { 
-    id: 3, 
-    name: "Healthcare Mobile App", 
-    description: "End-to-end testing framework",
-    jiraProjectId: "HEALTH",
-    jiraJql: "project = HEALTH AND labels = mobile",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString() 
-  },
-  { 
-    id: 4, 
-    name: "Cloud Infrastructure", 
-    description: "DevOps pipeline testing",
-    jiraProjectId: "CLOUD",
-    jiraJql: "project = CLOUD AND component in (AWS, Azure, GCP)",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString() 
-  },
-  { 
-    id: 5, 
-    name: "IoT Device Management", 
-    description: "Test automation for connected devices",
-    jiraProjectId: "IOT",
-    jiraJql: "project = IOT AND issuetype = Test",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString() 
-  }
-];
-
 // Define the context type
 interface ProjectContextType {
   selectedProject: Project | null;
   setSelectedProject: (project: Project | null) => void;
   projects: Project[];
-  addProject: (name: string, description?: string, jiraProjectId?: string, jiraJql?: string) => Project;
+  addProject: (name: string, description?: string, jiraProjectId?: string, jiraJql?: string) => Promise<Project>;
+  isLoading: boolean;
 }
 
 // Create a default context value
@@ -73,19 +26,12 @@ const defaultContextValue: ProjectContextType = {
   selectedProject: null,
   setSelectedProject: () => {},
   projects: [],
-  addProject: () => ({ id: 0, name: "" })
+  addProject: async () => ({ id: 0, name: "" }),
+  isLoading: true
 };
 
 // Create the context
 const ProjectContext = createContext<ProjectContextType>(defaultContextValue);
-
-// Removed forced reset to allow persistent storage
-// If you want to reset, uncomment these lines
-// if (typeof window !== 'undefined') {
-//   console.log("Force clearing localStorage for fresh start");
-//   localStorage.removeItem('projects');
-//   localStorage.removeItem('selectedProject');
-// }
 
 // Provider component to wrap the app
 export function ProjectProvider({ children }: { children: ReactNode }) {
@@ -93,97 +39,77 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const [projectsState, setProjectsState] = useState<{
     projects: Project[],
     selectedProject: Project | null,
-    initialized: boolean
+    isLoading: boolean
   }>({
     projects: [],
     selectedProject: null,
-    initialized: false
+    isLoading: true
   });
 
-  // Load initial data on mount
-  useEffect(() => {
-    const loadInitialData = () => {
-      try {
-        // Attempt to load projects from localStorage
-        const storedProjects = localStorage.getItem('projects');
-        let initialProjects = defaultProjects;
-        let initialSelectedProject = null;
-
-        // If localStorage has projects, use them
-        if (storedProjects) {
-          const parsedProjects = JSON.parse(storedProjects);
-          if (Array.isArray(parsedProjects) && parsedProjects.length > 0) {
-            console.log("Found stored projects:", parsedProjects);
-            initialProjects = parsedProjects;
-          } else {
-            console.log("Invalid or empty stored projects, using defaults");
-            // Save defaults to localStorage
-            localStorage.setItem('projects', JSON.stringify(defaultProjects));
-          }
-        } else {
-          console.log("No stored projects found, using defaults");
-          // Save defaults to localStorage 
-          localStorage.setItem('projects', JSON.stringify(defaultProjects));
-        }
-
-        // Check for selected project
-        const storedSelectedProject = localStorage.getItem('selectedProject');
-        if (storedSelectedProject) {
-          try {
-            const parsedSelectedProject = JSON.parse(storedSelectedProject);
-            // Make sure the selected project exists in our list
-            const projectExists = initialProjects.some(p => p.id === parsedSelectedProject.id);
-            
-            if (projectExists) {
-              initialSelectedProject = parsedSelectedProject;
-            } else {
-              console.log("Selected project doesn't exist in project list, ignoring");
-              localStorage.removeItem('selectedProject');
-            }
-          } catch (e) {
-            console.error("Error parsing selected project:", e);
-            localStorage.removeItem('selectedProject');
-          }
-        }
-
-        // Update state with initial data
-        setProjectsState({
-          projects: initialProjects,
-          selectedProject: initialSelectedProject,
-          initialized: true
-        });
-        
-        console.log("ProjectContext initialized with:", {
-          projects: initialProjects,
-          selectedProject: initialSelectedProject
-        });
-      } catch (error) {
-        console.error("Error initializing project context:", error);
-        // Fall back to defaults if anything goes wrong
-        setProjectsState({
-          projects: defaultProjects,
-          selectedProject: null,
-          initialized: true
-        });
-        
-        // Reset localStorage
-        localStorage.setItem('projects', JSON.stringify(defaultProjects));
-        localStorage.removeItem('selectedProject');
+  // Function to fetch projects from API
+  const fetchProjects = useCallback(async () => {
+    try {
+      setProjectsState(current => ({ ...current, isLoading: true }));
+      const response = await fetch('/api/projects');
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch projects: ${response.status}`);
       }
-    };
-
-    // Only load initial data if not already initialized
-    if (!projectsState.initialized) {
-      loadInitialData();
+      
+      const projects: Project[] = await response.json();
+      console.log("Fetched projects from database:", projects);
+      
+      // Get selected project from localStorage
+      const storedSelectedProjectId = localStorage.getItem('selectedProjectId');
+      let selectedProject = null;
+      
+      if (storedSelectedProjectId) {
+        const projectId = parseInt(storedSelectedProjectId);
+        selectedProject = projects.find(p => p.id === projectId) || null;
+        
+        if (!selectedProject) {
+          console.log("Selected project no longer exists, clearing selection");
+          localStorage.removeItem('selectedProjectId');
+        }
+      }
+      
+      // Default to the first project if none is selected
+      if (!selectedProject && projects.length > 0) {
+        selectedProject = projects[0];
+        localStorage.setItem('selectedProjectId', selectedProject.id.toString());
+      }
+      
+      setProjectsState({
+        projects,
+        selectedProject,
+        isLoading: false
+      });
+      
+      console.log("ProjectContext initialized with:", {
+        projects,
+        selectedProject
+      });
+      
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+      setProjectsState(current => ({ 
+        ...current, 
+        isLoading: false 
+      }));
     }
-  }, [projectsState.initialized]);
+  }, []);
+
+  // Load projects on mount
+  useEffect(() => {
+    fetchProjects();
+  }, [fetchProjects]);
 
   // Set selected project (wrapped to maintain consistency)
   const setSelectedProject = useCallback((project: Project | null) => {
     setProjectsState(current => {
       if (!project) {
         // Remove selected project
-        localStorage.removeItem('selectedProject');
+        localStorage.removeItem('selectedProjectId');
         return {
           ...current,
           selectedProject: null
@@ -193,8 +119,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       // Find the most up-to-date version of this project
       const updatedProject = current.projects.find(p => p.id === project.id) || project;
       
-      // Save to localStorage
-      localStorage.setItem('selectedProject', JSON.stringify(updatedProject));
+      // Save only the ID to localStorage
+      localStorage.setItem('selectedProjectId', updatedProject.id.toString());
       
       return {
         ...current,
@@ -204,51 +130,57 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Add a new project
-  const addProject = useCallback((name: string, description?: string, jiraProjectId?: string, jiraJql?: string): Project => {
+  const addProject = useCallback(async (
+    name: string, 
+    description?: string, 
+    jiraProjectId?: string, 
+    jiraJql?: string
+  ): Promise<Project> => {
     console.log("Adding new project:", { name, description, jiraProjectId, jiraJql });
     
-    let newProject: Project = { id: 0, name: "" };
-    
-    setProjectsState(current => {
-      // Generate a new ID
-      const maxId = current.projects.length > 0
-        ? Math.max(...current.projects.map(p => p.id))
-        : 0;
+    try {
+      const response = await fetch('/api/projects', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: name.trim(),
+          description: description ? description.trim() : "",
+          jiraProjectId: jiraProjectId ? jiraProjectId.trim() : "",
+          jiraJql: jiraJql ? jiraJql.trim() : "",
+        })
+      });
       
-      // Create new project
-      newProject = {
-        id: maxId + 1,
-        name: name.trim(),
-        description: description ? description.trim() : "",
-        jiraProjectId: jiraProjectId ? jiraProjectId.trim() : "",
-        jiraJql: jiraJql ? jiraJql.trim() : "",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
+      if (!response.ok) {
+        throw new Error(`Failed to create project: ${response.status}`);
+      }
       
-      console.log("Created new project object:", newProject);
+      const newProject: Project = await response.json();
+      console.log("Created new project:", newProject);
       
-      // Add to projects array
-      const updatedProjects = [...current.projects, newProject];
+      // Update projects state
+      setProjectsState(current => {
+        const updatedProjects = [...current.projects, newProject];
+        
+        // Set as the selected project
+        localStorage.setItem('selectedProjectId', newProject.id.toString());
+        
+        return {
+          projects: updatedProjects,
+          selectedProject: newProject,
+          isLoading: false
+        };
+      });
       
-      // Save to localStorage
-      localStorage.setItem('projects', JSON.stringify(updatedProjects));
+      // Invalidate projects query cache
+      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
       
-      // Also set as selected project
-      localStorage.setItem('selectedProject', JSON.stringify(newProject));
-      
-      console.log("Updated projects list:", updatedProjects);
-      
-      return {
-        ...current,
-        projects: updatedProjects,
-        selectedProject: newProject
-      };
-    });
-    
-    // Return the new project (this isn't ideal but works for now)
-    // In a real app, we'd wait for state update to complete
-    return newProject;
+      return newProject;
+    } catch (error) {
+      console.error("Error creating project:", error);
+      throw error;
+    }
   }, []);
 
   // Provide context
@@ -257,7 +189,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       selectedProject: projectsState.selectedProject,
       setSelectedProject,
       projects: projectsState.projects,
-      addProject
+      addProject,
+      isLoading: projectsState.isLoading
     }}>
       {children}
     </ProjectContext.Provider>

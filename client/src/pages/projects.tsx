@@ -14,7 +14,7 @@ import { IconWrapper } from "@/components/design-system/icon-wrapper";
 import { format } from "date-fns";
 
 export default function Projects() {
-  const { projects, selectedProject, setSelectedProject, addProject } = useProject();
+  const { projects, selectedProject, setSelectedProject, addProject, isLoading } = useProject();
   const [isNewProjectOpen, setIsNewProjectOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredProjects, setFilteredProjects] = useState(projects);
@@ -44,37 +44,20 @@ export default function Projects() {
     setFilteredProjects(filtered);
   }, [searchTerm, projects]);
 
-  const handleCreateProject = () => {
+  const handleCreateProject = async () => {
     if (projectForm.name.trim()) {
       console.log("Creating project with form data:", projectForm);
       
       try {
         // Add the project using the context function with the trimmed values
-        // We need to update the addProject function definition in ProjectContext
-        const newProject = {
-          id: 0, // Will be replaced by the addProject function
-          name: projectForm.name.trim(),
-          description: projectForm.description ? projectForm.description.trim() : "",
-          jiraProjectId: projectForm.jiraProjectId ? projectForm.jiraProjectId.trim() : "",
-          jiraJql: projectForm.jiraJql ? projectForm.jiraJql.trim() : "",
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-        
-        // Add the project and get back the updated version with ID assigned
-        const createdProject = addProject(
-          newProject.name, 
-          newProject.description,
+        const createdProject = await addProject(
+          projectForm.name.trim(), 
+          projectForm.description ? projectForm.description.trim() : "",
           projectForm.jiraProjectId ? projectForm.jiraProjectId.trim() : "",
           projectForm.jiraJql ? projectForm.jiraJql.trim() : ""
         );
         
-        // This next part is a temporary solution until we update the addProject function
-        // to accept all fields. For now, we'll just use what we get back.
         console.log("Project added successfully:", createdProject);
-        
-        // Update filtered projects immediately to show the new project
-        setFilteredProjects(prev => [...prev, createdProject]);
         
         // Close the dialog and reset form
         setIsNewProjectOpen(false);
@@ -84,11 +67,6 @@ export default function Projects() {
           jiraProjectId: "",
           jiraJql: ""
         });
-        
-        // Force a re-fetch of projects from the context
-        setTimeout(() => {
-          console.log("Current projects after adding:", projects);
-        }, 100);
       } catch (error) {
         console.error("Error adding project:", error);
       }
@@ -134,32 +112,13 @@ export default function Projects() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                className="border-white/10 hover:bg-atmf-card hover:border-white/20"
-                onClick={() => {
-                  // Create a quick test project with pre-filled values
-                  const testProject = addProject(
-                    "Test Project " + new Date().toLocaleTimeString(),
-                    "This is an auto-generated test project for demonstration purposes",
-                    "TEST",
-                    "project = TEST AND component = Demo"
-                  );
-                  setSelectedProject(testProject);
-                }}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Create Test Project
-              </Button>
-              <Button 
-                className="btn-atmf-accent"
-                onClick={() => setIsNewProjectOpen(true)}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                New Project
-              </Button>
-            </div>
+            <Button 
+              className="btn-atmf-accent"
+              onClick={() => setIsNewProjectOpen(true)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              New Project
+            </Button>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -264,32 +223,13 @@ export default function Projects() {
         title="Projects" 
         subtitle="Manage your testing projects and control which project you're working with"
         actions={
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              className="border-white/10 hover:bg-atmf-card hover:border-white/20"
-              onClick={() => {
-                // Create a quick test project with pre-filled values
-                const testProject = addProject(
-                  "Test Project " + new Date().toLocaleTimeString(),
-                  "This is an auto-generated test project for demonstration purposes",
-                  "TEST",
-                  "project = TEST AND component = Demo"
-                );
-                setSelectedProject(testProject);
-              }}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Create Test Project
-            </Button>
-            <Button 
-              className="btn-atmf-accent"
-              onClick={() => setIsNewProjectOpen(true)}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              New Project
-            </Button>
-          </div>
+          <Button 
+            className="btn-atmf-accent"
+            onClick={() => setIsNewProjectOpen(true)}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            New Project
+          </Button>
         }
       >
         <ATMFCard>
