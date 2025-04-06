@@ -26,6 +26,12 @@ export function Sidebar() {
       icon: "bx-folder",
     },
     {
+      title: "Project Health",
+      path: "/project-health",
+      icon: "bx-line-chart",
+      badge: "New",
+    },
+    {
       title: "Assessments",
       path: "/assessments",
       icon: "bx-clipboard",
@@ -40,7 +46,6 @@ export function Sidebar() {
       title: "AI Insights",
       path: "/ai-insights",
       icon: "bx-bulb",
-      badge: "New",
     },
     {
       title: "Documentation",
