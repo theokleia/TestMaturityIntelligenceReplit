@@ -1,6 +1,6 @@
 import { PageContainer } from "@/components/design-system/page-container";
 import { ProjectHealthDashboard } from "@/components/dashboards/project-health-dashboard";
-import { AnimatedInsightsSidebar } from "@/components/dashboards/animated-insights-sidebar";
+import { ProjectInsights } from "@/components/dashboards/project-insights";
 import { Button } from "@/components/ui/button";
 import { useProject } from "@/context/ProjectContext";
 import { BarChart3, RefreshCw } from "lucide-react";
@@ -71,14 +71,12 @@ export default function ProjectHealthPage() {
         <div className="space-y-6">
           <ProjectHealthDashboard />
           
-          <div className="flex flex-col md:flex-row items-start gap-6">
-            {/* Additional content can be added here in the future */}
-          </div>
+          {/* Project Insights Section */}
+          {selectedProject && (
+            <ProjectInsights />
+          )}
         </div>
       </PageContainer>
-      
-      {/* Animated Insights Sidebar */}
-      {selectedProject && <AnimatedInsightsSidebar />}
     </>
   );
 }
