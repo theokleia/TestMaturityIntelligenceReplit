@@ -134,13 +134,32 @@ export default function Projects() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <Button 
-              className="btn-atmf-accent"
-              onClick={() => setIsNewProjectOpen(true)}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              New Project
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                className="border-white/10 hover:bg-atmf-card hover:border-white/20"
+                onClick={() => {
+                  // Create a quick test project with pre-filled values
+                  const testProject = addProject(
+                    "Test Project " + new Date().toLocaleTimeString(),
+                    "This is an auto-generated test project for demonstration purposes",
+                    "TEST",
+                    "project = TEST AND component = Demo"
+                  );
+                  setSelectedProject(testProject);
+                }}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create Test Project
+              </Button>
+              <Button 
+                className="btn-atmf-accent"
+                onClick={() => setIsNewProjectOpen(true)}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                New Project
+              </Button>
+            </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -245,13 +264,32 @@ export default function Projects() {
         title="Projects" 
         subtitle="Manage your testing projects and control which project you're working with"
         actions={
-          <Button 
-            className="btn-atmf-accent"
-            onClick={() => setIsNewProjectOpen(true)}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            New Project
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              className="border-white/10 hover:bg-atmf-card hover:border-white/20"
+              onClick={() => {
+                // Create a quick test project with pre-filled values
+                const testProject = addProject(
+                  "Test Project " + new Date().toLocaleTimeString(),
+                  "This is an auto-generated test project for demonstration purposes",
+                  "TEST",
+                  "project = TEST AND component = Demo"
+                );
+                setSelectedProject(testProject);
+              }}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create Test Project
+            </Button>
+            <Button 
+              className="btn-atmf-accent"
+              onClick={() => setIsNewProjectOpen(true)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              New Project
+            </Button>
+          </div>
         }
       >
         <ATMFCard>

@@ -2,7 +2,7 @@ import { useProject } from "@/context/ProjectContext";
 import { ATMFCard, ATMFCardBody, ATMFCardHeader } from "@/components/design-system/atmf-card";
 import { HealthIndicator, HealthIndicatorGroup, HealthStatus } from "@/components/design-system/health-indicator";
 import { useState, useEffect } from "react";
-import { AlertCircle, ShieldAlert, Activity, Bug, Code, ClipboardCheck, GitBranch, Clock } from "lucide-react";
+import { AlertCircle, ShieldAlert, Activity, Bug, Code, ClipboardCheck, GitBranch, Clock, Gauge, Zap, Upload, Server, BarChart } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Types for health data
@@ -348,7 +348,25 @@ export function ProjectHealthDashboard() {
                   <div key={metricIdx} className="flex justify-between items-center">
                     <div className="flex items-center">
                       <HealthIndicator status={metric.status} size="sm" className="mr-2" />
-                      <span className="text-sm">{metric.name}</span>
+                      <span className="text-sm flex items-center">
+                        {/* Add icons for each metric type */}
+                        {metric.name.includes("Coverage") && <Gauge className="h-3 w-3 mr-1 text-blue-400" />}
+                        {metric.name.includes("Quality") && <BarChart className="h-3 w-3 mr-1 text-purple-400" />}
+                        {metric.name.includes("Documentation") && <Code className="h-3 w-3 mr-1 text-green-400" />}
+                        {metric.name.includes("Pipeline") && <GitBranch className="h-3 w-3 mr-1 text-blue-400" />}
+                        {metric.name.includes("Build") && <Clock className="h-3 w-3 mr-1 text-amber-400" />}
+                        {metric.name.includes("Deployment") && <Upload className="h-3 w-3 mr-1 text-emerald-400" />}
+                        {metric.name.includes("Vulnerability") && <ShieldAlert className="h-3 w-3 mr-1 text-red-400" />}
+                        {metric.name.includes("Threat") && <AlertCircle className="h-3 w-3 mr-1 text-red-400" />}
+                        {metric.name.includes("Compliance") && <Check className="h-3 w-3 mr-1 text-emerald-400" />}
+                        {metric.name.includes("Load") && <Gauge className="h-3 w-3 mr-1 text-amber-400" />}
+                        {metric.name.includes("Response") && <Zap className="h-3 w-3 mr-1 text-teal-400" />}
+                        {metric.name.includes("Uptime") && <Server className="h-3 w-3 mr-1 text-blue-400" />}
+                        {metric.name.includes("Bug") && <Bug className="h-3 w-3 mr-1 text-orange-400" />}
+                        {metric.name.includes("Issues") && <Bug className="h-3 w-3 mr-1 text-red-400" />}
+                        {metric.name.includes("Resolution") && <Clock className="h-3 w-3 mr-1 text-teal-400" />}
+                        {metric.name}
+                      </span>
                     </div>
                     <div className="text-sm flex items-center">
                       {metric.value !== undefined && (
