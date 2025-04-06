@@ -20,7 +20,7 @@ export default function ProjectSelector() {
   const [localProjects, setLocalProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Fetch projects directly
+  // Fetch projects directly and select one if needed
   useEffect(() => {
     const fetchProjects = async () => {
       try {
@@ -29,6 +29,12 @@ export default function ProjectSelector() {
         if (response.ok) {
           const data = await response.json();
           setLocalProjects(data);
+          
+          // If no project is selected, but we have projects, select the first one
+          if (!selectedProject && data.length > 0) {
+            console.log("Auto-selecting first project:", data[0]);
+            setSelectedProject(data[0]);
+          }
         }
       } catch (error) {
         console.error("Error fetching projects:", error);
@@ -38,7 +44,21 @@ export default function ProjectSelector() {
     };
     
     fetchProjects();
-  }, []);
+  }, [selectedProject, setSelectedProject]);
+
+  // Handle project selection with forceful update
+  const handleSelectProject = (project: Project) => {
+    console.log("User selected project:", project);
+    
+    // Force update localStorage
+    localStorage.setItem('selectedProjectId', project.id.toString());
+    
+    // Update context
+    setSelectedProject(project);
+    
+    // Force reload current page to ensure context changes propagate
+    window.location.reload();
+  };
 
   return (
     <DropdownMenu>
@@ -86,7 +106,7 @@ export default function ProjectSelector() {
                 "flex items-center justify-between cursor-pointer",
                 selectedProject?.id === project.id && "bg-primary/10"
               )}
-              onClick={() => setSelectedProject(project)}
+              onClick={() => handleSelectProject(project)}
             >
               <div className="flex flex-col">
                 <div className="flex items-center gap-1">

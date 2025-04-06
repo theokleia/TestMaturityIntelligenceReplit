@@ -4,14 +4,42 @@ import { ProjectHealthDashboard } from "@/components/dashboards/project-health-d
 import { Button } from "@/components/ui/button";
 import { useProject } from "@/context/ProjectContext";
 import { BarChart3, RefreshCw } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ProjectHealthPage() {
-  const { selectedProject } = useProject();
+  const { selectedProject, projects } = useProject();
   const [refreshing, setRefreshing] = useState(false);
+  const { toast } = useToast();
+  
+  // If no project is selected but projects exist, auto-select the first one
+  useEffect(() => {
+    // Check localStorage first
+    const storedProjectId = localStorage.getItem('selectedProjectId');
+    
+    if (storedProjectId) {
+      console.log("Found stored project ID:", storedProjectId);
+    } else if (projects && projects.length > 0 && !selectedProject) {
+      console.log("No project selected but projects exist, auto-refreshing");
+      // Force a page reload after a short delay to ensure context updates properly
+      const timer = setTimeout(() => {
+        window.location.reload();
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [selectedProject, projects]);
   
   const handleRefresh = () => {
     setRefreshing(true);
+    
+    // Show toast notification
+    toast({
+      title: "Refreshing health data",
+      description: "Updating project metrics and status indicators...",
+      duration: 1500
+    });
+    
     // Simulate refresh - in a real app this would trigger an API call
     setTimeout(() => {
       setRefreshing(false);
