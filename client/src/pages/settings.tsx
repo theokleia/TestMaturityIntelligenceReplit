@@ -53,10 +53,11 @@ export default function ProjectSettings() {
         ...defaultSettings,
         // Pre-fill GitHub repo if set
         githubRepo: selectedProject.githubRepo || '',
-        // For Jira, we would normally get this from a settings API, but for now
-        // just use a placeholder URL with the project ID if it exists
+        // For Jira, if project ID exists, create a placeholder URL
         jiraUrl: selectedProject.jiraProjectId ? 
           `https://your-instance.atlassian.net/projects/${selectedProject.jiraProjectId}` : '',
+        // For API key, if stored, initialize it (masked for security)
+        jiraApiKey: selectedProject.jiraApiKey ? '••••••••••••••••' : '',
       });
       setSaveSuccess(false);
     }
@@ -92,6 +93,8 @@ export default function ProjectSettings() {
             jiraProjectId: settings.jiraUrl ? settings.jiraUrl.split('/').pop()?.toUpperCase() || "JIRA" : undefined,
             // Create a simple JQL query based on the extracted project ID
             jiraJql: settings.jiraUrl ? `project = ${settings.jiraUrl.split('/').pop()?.toUpperCase() || "JIRA"}` : undefined,
+            // Store the API key (in a real app, we would encrypt this)
+            jiraApiKey: settings.jiraApiKey || undefined,
             // Add GitHub repo information if provided
             githubRepo: settings.githubRepo || undefined,
           }),

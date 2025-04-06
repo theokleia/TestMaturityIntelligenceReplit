@@ -10,6 +10,8 @@ export interface Project {
   updatedAt?: string;
   jiraProjectId?: string; // Add Jira Project ID (optional, max 10 chars)
   jiraJql?: string; // Add Jira JQL search query (optional)
+  jiraApiKey?: string; // Add Jira API key (optional)
+  githubRepo?: string; // Add GitHub repository (optional)
 }
 
 // Define the context type
