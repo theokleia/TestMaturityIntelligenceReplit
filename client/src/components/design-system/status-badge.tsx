@@ -1,129 +1,89 @@
-import { Badge } from "@/components/ui/badge";
+import { ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import { COLORS } from "@/lib/colors";
+
+export type StatusBadgeVariant = 
+  | "blue"
+  | "purple"
+  | "teal"
+  | "success"
+  | "warning"
+  | "danger"
+  | "muted";
+
+export type StatusBadgeSize = "sm" | "md" | "lg";
 
 interface StatusBadgeProps {
-  status: string;
+  children: ReactNode;
+  variant?: StatusBadgeVariant;
+  size?: StatusBadgeSize;
   className?: string;
-  variant?: 'test' | 'assessment' | 'automation' | 'priority' | 'severity';
-  size?: 'sm' | 'md' | 'lg';
-  showIcon?: boolean;
+  dot?: boolean;
 }
 
+/**
+ * StatusBadge component for displaying statuses with consistent styling
+ * based on the ATMosFera design system.
+ */
 export function StatusBadge({ 
-  status, 
-  className, 
-  variant = 'test', 
-  size = 'md',
-  showIcon = false 
+  children, 
+  variant = "blue", 
+  size = "md",
+  dot = false,
+  className 
 }: StatusBadgeProps) {
-  // Test status colors
-  const testStatusColors = {
-    draft: "bg-slate-800 border-slate-600 text-slate-300",
-    active: "bg-emerald-900/60 border-emerald-600 text-emerald-300",
-    inactive: "bg-amber-900/60 border-amber-600 text-amber-300",
-    deprecated: "bg-red-900/60 border-red-600 text-red-300",
-    completed: "bg-sky-900/60 border-sky-600 text-sky-300",
-    "in-review": "bg-purple-900/60 border-purple-600 text-purple-300",
+  // Determine background color class based on variant
+  const bgColorClass = {
+    blue: "bg-neon-blue/20 text-neon-blue",
+    purple: "bg-neon-purple/20 text-neon-purple",
+    teal: "bg-neon-teal/20 text-neon-teal",
+    success: "bg-success/20 text-success",
+    warning: "bg-warning/20 text-warning",
+    danger: "bg-danger/20 text-danger",
+    muted: "bg-white/10 text-text-muted"
   };
-
-  // Assessment status colors
-  const assessmentStatusColors = {
-    scheduled: "bg-sky-900/60 border-sky-600 text-sky-300",
-    "in_progress": "bg-amber-900/60 border-amber-600 text-amber-300",
-    completed: "bg-emerald-900/60 border-emerald-600 text-emerald-300",
+  
+  // Determine size class
+  const sizeClass = {
+    sm: "px-1.5 py-0.5 text-xs",
+    md: "px-2 py-0.5 text-xs",
+    lg: "px-2.5 py-1 text-sm"
   };
-
-  // Automation status colors
-  const automationStatusColors = {
-    automated: "bg-emerald-900/60 border-emerald-600 text-emerald-300",
-    "in-progress": "bg-amber-900/60 border-amber-600 text-amber-300",
-    "not-automated": "bg-slate-800 border-slate-600 text-slate-300",
+  
+  // Determine dot size
+  const dotSize = {
+    sm: "w-1.5 h-1.5",
+    md: "w-2 h-2",
+    lg: "w-2.5 h-2.5"
   };
-
-  // Priority colors
-  const priorityColors = {
-    high: "bg-red-900/60 border-red-600 text-red-300",
-    medium: "bg-amber-900/60 border-amber-600 text-amber-300",
-    low: "bg-sky-900/60 border-sky-600 text-sky-300",
+  
+  // Determine dot color
+  const dotColor = {
+    blue: "bg-neon-blue",
+    purple: "bg-neon-purple",
+    teal: "bg-neon-teal",
+    success: "bg-success",
+    warning: "bg-warning",
+    danger: "bg-danger",
+    muted: "bg-white/40"
   };
-
-  // Severity colors
-  const severityColors = {
-    critical: "bg-rose-900/60 border-rose-600 text-rose-300",
-    high: "bg-red-900/60 border-red-600 text-red-300",
-    normal: "bg-amber-900/60 border-amber-600 text-amber-300",
-    low: "bg-sky-900/60 border-sky-600 text-sky-300",
-  };
-
-  // Icons for statuses
-  const getStatusIcon = () => {
-    if (!showIcon) return null;
-    
-    // Map status to appropriate icon
-    switch (statusKey) {
-      case 'active':
-      case 'automated':
-      case 'completed':
-        return "✓ ";
-      case 'in-progress':
-      case 'in_progress':
-      case 'scheduled':
-        return "⟳ ";
-      case 'high':
-      case 'critical':
-        return "! ";
-      case 'draft':
-      case 'low':
-        return "○ ";
-      case 'inactive':
-      case 'not-automated':
-      case 'deprecated':
-        return "× ";
-      default:
-        return "• ";
-    }
-  };
-
-  // Size variants
-  const sizeStyles = {
-    sm: "text-xs px-2 py-0.5",
-    md: "text-sm px-2.5 py-1",
-    lg: "text-base px-3 py-1.5"
-  };
-
-  // Select the appropriate color map based on variant
-  const getColorMap = () => {
-    switch (variant) {
-      case 'test':
-        return testStatusColors;
-      case 'assessment':
-        return assessmentStatusColors;
-      case 'automation':
-        return automationStatusColors;
-      case 'priority':
-        return priorityColors;
-      case 'severity':
-        return severityColors;
-      default:
-        return testStatusColors;
-    }
-  };
-
-  const colorMap = getColorMap();
-  const statusKey = status.toLowerCase() as keyof typeof colorMap;
-  const statusStyle = colorMap[statusKey] || "bg-slate-800 border-slate-600 text-slate-300";
-  const icon = getStatusIcon();
-
+  
   return (
-    <Badge className={cn(
-      statusStyle, 
-      "font-medium border",
-      sizeStyles[size],
-      "shadow-sm backdrop-blur-sm",
-      className
-    )}>
-      {icon}{status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ').replace(/-/g, ' ')}
-    </Badge>
+    <span 
+      className={cn(
+        "inline-flex items-center font-medium rounded-full",
+        bgColorClass[variant],
+        sizeClass[size],
+        className
+      )}
+    >
+      {dot && (
+        <span className={cn(
+          "mr-1.5 rounded-full",
+          dotSize[size],
+          dotColor[variant]
+        )} />
+      )}
+      {children}
+    </span>
   );
 }

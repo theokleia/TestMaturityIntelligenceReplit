@@ -126,19 +126,19 @@
   }
   
   /* Text color utilities */
-  .text-atmf-primary {
+  .text-atmf-primary, .text-text-primary {
     color: var(--text-primary);
   }
   
-  .text-atmf-secondary {
+  .text-atmf-secondary, .text-text-secondary {
     color: var(--text-secondary);
   }
   
-  .text-atmf-muted {
+  .text-atmf-muted, .text-text-muted {
     color: var(--text-muted);
   }
   
-  .text-atmf-blue {
+  .text-atmf-blue, .text-neon-blue {
     color: var(--neon-blue);
   }
   

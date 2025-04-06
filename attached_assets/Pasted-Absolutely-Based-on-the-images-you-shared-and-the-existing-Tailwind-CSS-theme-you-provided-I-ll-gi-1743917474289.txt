@@ -1,0 +1,251 @@
+Absolutely! Based on the images you shared and the existing Tailwind CSS theme you provided, I'll give you a comprehensive **design system definition** with reusable elements and implementation guidelines. This will ensure that **all your future pages follow a consistent structure, style, and behavior** like the UI you've shown.
+
+---
+
+# 🧩 ATMF/ATMosFera Design System Guide (Tailwind-Based)
+
+---
+
+## 🎨 1. **Design Tokens** (`:root`)
+Your foundation already includes these — ensure they remain centralized:
+
+```css
+:root {
+  /* Backgrounds */
+  --bg-main: #0a1022;
+  --bg-dark: #050914;
+  --bg-card: #0e1529;
+
+  /* Accents */
+  --neon-blue: #2E75FF;
+  --neon-purple: #8A56FF;
+  --neon-teal: #2FFFDD;
+
+  /* Status colors */
+  --success: #2FFFAA;
+  --warning: #FFBB3A;
+  --danger: #FF4A6B;
+
+  /* Text */
+  --text-primary: #FFFFFF;
+  --text-secondary: rgba(255, 255, 255, 0.7);
+  --text-muted: rgba(255, 255, 255, 0.5);
+
+  /* Borders */
+  --border-color: rgba(255, 255, 255, 0.1);
+  --divider-color: rgba(255, 255, 255, 0.06);
+}
+```
+
+---
+
+## 🧱 2. **Reusable Layout Components**
+
+### ✅ `Sidebar`
+Use for navigation with hover/active state support.
+
+```html
+<aside class="bg-atmf-dark w-60 p-4 text-atmf-primary h-full flex flex-col justify-between">
+  <div>
+    <div class="text-xl font-bold mb-6">ATMosFera</div>
+    <nav class="space-y-2">
+      <a class="block px-3 py-2 rounded hover:bg-atmf-card active:bg-atmf-card text-atmf-secondary">Dashboard</a>
+      <a class="block px-3 py-2 rounded hover:bg-atmf-card text-atmf-secondary">Assessments</a>
+      <!-- ... -->
+    </nav>
+  </div>
+  <div class="flex items-center gap-2 text-sm mt-8">
+    <div class="bg-atmf-card p-2 rounded-full">AJ</div>
+    <div>
+      <strong>Alice Johnson</strong><br />
+      <span class="text-atmf-muted">Test Manager</span>
+    </div>
+  </div>
+</aside>
+```
+
+---
+
+### ✅ `Top Header`
+```html
+<header class="flex justify-between items-center px-6 py-4 bg-atmf-main border-b border-divider-color">
+  <div>
+    <h1 class="text-2xl font-semibold">ATMF Dashboard</h1>
+    <p class="text-atmf-muted">Track and improve your testing maturity</p>
+  </div>
+  <div class="flex items-center gap-4">
+    <input type="text" placeholder="Search..." class="bg-atmf-dark px-3 py-2 rounded text-atmf-primary" />
+    <button class="text-atmf-muted"><i class="icon-bell"></i></button>
+    <button class="text-atmf-muted"><i class="icon-settings"></i></button>
+  </div>
+</header>
+```
+
+---
+
+### ✅ `Main Layout`
+```html
+<div class="flex min-h-screen bg-atmf-main text-atmf-primary">
+  <!-- Sidebar -->
+  <Sidebar />
+
+  <!-- Content -->
+  <main class="flex-1 p-6 space-y-8 overflow-auto">
+    <!-- Page content goes here -->
+  </main>
+</div>
+```
+
+---
+
+## 🧩 3. **Reusable Components**
+
+---
+
+### 📘 **Card**
+```html
+<div class="atmf-card p-4 rounded border border-border-color shadow">
+  <h2 class="text-lg font-semibold mb-1">Card Title</h2>
+  <p class="text-atmf-muted">Supporting content goes here.</p>
+</div>
+```
+
+---
+
+### 🟢 **Status Badge**
+```html
+<span class="text-sm font-medium text-success">● Completed</span>
+<span class="text-sm font-medium text-warning">● In Progress</span>
+<span class="text-sm font-medium text-danger">● Not Started</span>
+```
+
+---
+
+### 🧠 **AI Insight Box**
+```html
+<div class="glassmorphism p-4 rounded border border-border-color">
+  <h3 class="text-lg font-semibold mb-2">AI Recommendation</h3>
+  <p class="text-atmf-muted mb-3">Based on your results, implement regression tests for better coverage.</p>
+  <div class="flex gap-2">
+    <button class="btn-atmf bg-success">Implement</button>
+    <button class="btn-atmf border border-divider-color">Dismiss</button>
+  </div>
+</div>
+```
+
+---
+
+### 📊 **Progress Metrics**
+```html
+<div class="atmf-card p-4">
+  <h4 class="text-sm text-atmf-muted">Test Automation Coverage</h4>
+  <p class="text-2xl font-bold">68%</p>
+  <div class="atmf-progress-container">
+    <div class="atmf-progress-bar atmf-progress-blue" style="width: 68%"></div>
+  </div>
+  <p class="text-xs text-atmf-muted mt-1">Previous: 56% • Target: 80%</p>
+</div>
+```
+
+---
+
+### 🧭 **Tabs Navigation**
+```html
+<div class="flex border-b border-divider-color gap-6">
+  <button class="tab-active">Automation Intelligence</button>
+  <button class="text-atmf-muted hover:text-atmf-primary">Development-Testing Synergy</button>
+  <!-- ... -->
+</div>
+```
+
+Use this style:
+```css
+.tab-active {
+  @apply text-atmf-blue border-b-2 border-atmf-blue font-semibold pb-2;
+}
+```
+
+---
+
+### 📈 **Roadmap Placeholder**
+```html
+<div class="atmf-card p-6 text-center text-atmf-muted">
+  <p>Unable to load roadmap.</p>
+  <button class="btn-atmf mt-4">Retry</button>
+</div>
+```
+
+---
+
+## 🔧 4. **Utility Classes Summary**
+
+| Utility Class         | Purpose                           |
+|-----------------------|-----------------------------------|
+| `bg-atmf-main`        | Page background                   |
+| `bg-atmf-card`        | Panel/card backgrounds            |
+| `text-atmf-primary`   | Main text                         |
+| `text-atmf-muted`     | Muted/subtle text                 |
+| `glassmorphism`       | Frosted glass look (AI section)   |
+| `atmf-card`           | Card component wrapper            |
+| `atmf-progress-bar`   | Inner progress fill               |
+| `tab-active`          | Active tab style                  |
+| `btn-atmf`            | Generic button style              |
+
+---
+
+## ⚙️ 5. **Folder Structure Proposal**
+
+```plaintext
+src/
+├── components/
+│   ├── Sidebar.vue / Sidebar.jsx
+│   ├── Card.vue
+│   └── TabNav.vue
+├── styles/
+│   ├── index.css
+│   ├── components.css
+│   ├── utilities.css
+│   └── tokens.css
+├── layouts/
+│   ├── DashboardLayout.vue
+├── pages/
+│   ├── Dashboard.vue
+│   ├── Roadmap.vue
+```
+
+---
+
+## 🧪 6. **Start a Style Guide Page**
+Create a `components/StyleGuide.vue` or `StyleGuide.html` to visualize your system:
+
+```html
+<h2 class="text-xl font-bold mb-4">Buttons</h2>
+<button class="btn-atmf">Default</button>
+<button class="btn-atmf-accent ml-2">Accent</button>
+
+<h2 class="text-xl font-bold mt-6 mb-4">Cards</h2>
+<div class="atmf-card p-4">Example Card</div>
+
+<h2 class="text-xl font-bold mt-6 mb-4">Progress</h2>
+<div class="atmf-progress-container w-64">
+  <div class="atmf-progress-bar atmf-progress-blue" style="width: 68%"></div>
+</div>
+```
+
+---
+
+## ✅ Final Thoughts
+
+With this design system, every screen in your app will:
+- Maintain a consistent dark/modern visual style.
+- Reuse atomic components and classes.
+- Be easy to theme or extend (e.g., light mode later).
+- Be maintainable across teams and scale.
+
+---
+
+Would you like me to generate:
+- 🔧 A full `style-guide.html` file with all these components?
+- 📦 A downloadable starter Tailwind project with your design system pre-installed?
+
+Let me know how you'd like to continue!

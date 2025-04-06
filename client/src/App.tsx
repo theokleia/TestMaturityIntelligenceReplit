@@ -6,17 +6,18 @@ import Dashboard from "@/pages/dashboard";
 import Assessments from "@/pages/assessments";
 import AiInsights from "@/pages/ai-insights";
 import TestManagement from "@/pages/test-management";
-import { Background } from "@/components/design-system/background";
+import DesignSystem from "@/pages/design-system";
+import { PageBackground } from "@/components/design-system/background";
 
 // Layout component that includes the app's main background and navigation
 function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <Background variant="default">
+    <PageBackground variant="default">
       {/* Navigation could be added here */}
       <div className="min-h-screen">
         {children}
       </div>
-    </Background>
+    </PageBackground>
   );
 }
 
@@ -28,6 +29,7 @@ function Router() {
         <Route path="/assessments" component={Assessments} />
         <Route path="/ai-insights" component={AiInsights} />
         <Route path="/test-management" component={TestManagement} />
+        <Route path="/design-system" component={DesignSystem} />
         {/* Additional routes go here */}
         <Route component={NotFound} />
       </Switch>
