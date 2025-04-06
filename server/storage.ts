@@ -26,31 +26,31 @@ export interface IStorage {
   updateProject(id: number, project: Partial<InsertProject>): Promise<Project | undefined>;
 
   // Maturity Dimensions
-  getMaturityDimensions(): Promise<MaturityDimension[]>;
+  getMaturityDimensions(projectId?: number): Promise<MaturityDimension[]>;
   getMaturityDimension(id: number): Promise<MaturityDimension | undefined>;
   createMaturityDimension(dimension: InsertMaturityDimension): Promise<MaturityDimension>;
   updateMaturityDimension(id: number, dimension: Partial<InsertMaturityDimension>): Promise<MaturityDimension | undefined>;
 
   // Maturity Levels
-  getMaturityLevels(dimensionId?: number): Promise<MaturityLevel[]>;
+  getMaturityLevels(dimensionId?: number, projectId?: number): Promise<MaturityLevel[]>;
   getMaturityLevel(id: number): Promise<MaturityLevel | undefined>;
   createMaturityLevel(level: InsertMaturityLevel): Promise<MaturityLevel>;
   updateMaturityLevel(id: number, level: Partial<InsertMaturityLevel>): Promise<MaturityLevel | undefined>;
 
   // Metrics
-  getMetrics(dimensionId?: number): Promise<Metric[]>;
+  getMetrics(dimensionId?: number, projectId?: number): Promise<Metric[]>;
   getMetric(id: number): Promise<Metric | undefined>;
   createMetric(metric: InsertMetric): Promise<Metric>;
   updateMetric(id: number, metric: Partial<InsertMetric>): Promise<Metric | undefined>;
 
   // Recommendations
-  getRecommendations(dimensionId?: number, levelId?: number): Promise<Recommendation[]>;
+  getRecommendations(dimensionId?: number, levelId?: number, projectId?: number): Promise<Recommendation[]>;
   getRecommendation(id: number): Promise<Recommendation | undefined>;
   createRecommendation(recommendation: InsertRecommendation): Promise<Recommendation>;
   updateRecommendation(id: number, recommendation: Partial<InsertRecommendation>): Promise<Recommendation | undefined>;
   
   // Assessment Templates
-  getAssessmentTemplates(dimensionId?: number): Promise<AssessmentTemplate[]>;
+  getAssessmentTemplates(dimensionId?: number, projectId?: number): Promise<AssessmentTemplate[]>;
   getAssessmentTemplate(id: number): Promise<AssessmentTemplate | undefined>;
   createAssessmentTemplate(template: InsertAssessmentTemplate): Promise<AssessmentTemplate>;
   updateAssessmentTemplate(id: number, template: Partial<InsertAssessmentTemplate>): Promise<AssessmentTemplate | undefined>;
@@ -61,6 +61,7 @@ export interface IStorage {
     templateId?: number;
     userId?: number;
     status?: string;
+    projectId?: number;
   }): Promise<Assessment[]>;
   getAssessment(id: number): Promise<Assessment | undefined>;
   createAssessment(assessment: InsertAssessment): Promise<Assessment>;
@@ -73,6 +74,7 @@ export interface IStorage {
     priority?: string;
     projectArea?: string;
     aiGenerated?: boolean;
+    projectId?: number;
   }): Promise<TestSuite[]>;
   getTestSuite(id: number): Promise<TestSuite | undefined>;
   createTestSuite(testSuite: InsertTestSuite): Promise<TestSuite>;
@@ -87,6 +89,7 @@ export interface IStorage {
     severity?: string;
     aiGenerated?: boolean;
     automatable?: boolean;
+    projectId?: number;
   }): Promise<TestCase[]>;
   getTestCase(id: number): Promise<TestCase | undefined>;
   createTestCase(testCase: InsertTestCase): Promise<TestCase>;
@@ -135,7 +138,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Maturity Dimensions
-  async getMaturityDimensions(): Promise<MaturityDimension[]> {
+  async getMaturityDimensions(projectId?: number): Promise<MaturityDimension[]> {
+    if (projectId) {
+      return db
+        .select()
+        .from(maturityDimensions)
+        .where(eq(maturityDimensions.projectId, projectId))
+        .orderBy(asc(maturityDimensions.order));
+    }
     return db.select().from(maturityDimensions).orderBy(asc(maturityDimensions.order));
   }
 
@@ -159,12 +169,29 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Maturity Levels
-  async getMaturityLevels(dimensionId?: number): Promise<MaturityLevel[]> {
-    if (dimensionId) {
+  async getMaturityLevels(dimensionId?: number, projectId?: number): Promise<MaturityLevel[]> {
+    if (dimensionId && projectId) {
+      return db
+        .select()
+        .from(maturityLevels)
+        .where(
+          and(
+            eq(maturityLevels.dimensionId, dimensionId),
+            eq(maturityLevels.projectId, projectId)
+          )
+        )
+        .orderBy(asc(maturityLevels.level));
+    } else if (dimensionId) {
       return db
         .select()
         .from(maturityLevels)
         .where(eq(maturityLevels.dimensionId, dimensionId))
+        .orderBy(asc(maturityLevels.level));
+    } else if (projectId) {
+      return db
+        .select()
+        .from(maturityLevels)
+        .where(eq(maturityLevels.projectId, projectId))
         .orderBy(asc(maturityLevels.level));
     }
     return db.select().from(maturityLevels).orderBy(asc(maturityLevels.level));
@@ -190,9 +217,27 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Metrics
-  async getMetrics(dimensionId?: number): Promise<Metric[]> {
-    if (dimensionId) {
-      return db.select().from(metrics).where(eq(metrics.dimensionId, dimensionId));
+  async getMetrics(dimensionId?: number, projectId?: number): Promise<Metric[]> {
+    if (dimensionId && projectId) {
+      return db
+        .select()
+        .from(metrics)
+        .where(
+          and(
+            eq(metrics.dimensionId, dimensionId),
+            eq(metrics.projectId, projectId)
+          )
+        );
+    } else if (dimensionId) {
+      return db
+        .select()
+        .from(metrics)
+        .where(eq(metrics.dimensionId, dimensionId));
+    } else if (projectId) {
+      return db
+        .select()
+        .from(metrics)
+        .where(eq(metrics.projectId, projectId));
     }
     return db.select().from(metrics);
   }
@@ -217,33 +262,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Recommendations
-  async getRecommendations(dimensionId?: number, levelId?: number): Promise<Recommendation[]> {
-    if (dimensionId && levelId) {
-      return db
-        .select()
-        .from(recommendations)
-        .where(
-          and(
-            eq(recommendations.dimensionId, dimensionId),
-            eq(recommendations.levelId, levelId)
-          )
-        )
-        .orderBy(desc(recommendations.createdAt));
-    }
+  async getRecommendations(dimensionId?: number, levelId?: number, projectId?: number): Promise<Recommendation[]> {
+    const conditions = [];
     
     if (dimensionId) {
-      return db
-        .select()
-        .from(recommendations)
-        .where(eq(recommendations.dimensionId, dimensionId))
-        .orderBy(desc(recommendations.createdAt));
+      conditions.push(eq(recommendations.dimensionId, dimensionId));
     }
     
     if (levelId) {
+      conditions.push(eq(recommendations.levelId, levelId));
+    }
+    
+    if (projectId) {
+      conditions.push(eq(recommendations.projectId, projectId));
+    }
+    
+    if (conditions.length > 0) {
       return db
         .select()
         .from(recommendations)
-        .where(eq(recommendations.levelId, levelId))
+        .where(and(...conditions))
         .orderBy(desc(recommendations.createdAt));
     }
     
@@ -273,14 +311,25 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Assessment Templates
-  async getAssessmentTemplates(dimensionId?: number): Promise<AssessmentTemplate[]> {
+  async getAssessmentTemplates(dimensionId?: number, projectId?: number): Promise<AssessmentTemplate[]> {
+    const conditions = [];
+    
     if (dimensionId) {
+      conditions.push(eq(assessmentTemplates.dimensionId, dimensionId));
+    }
+    
+    if (projectId) {
+      conditions.push(eq(assessmentTemplates.projectId, projectId));
+    }
+    
+    if (conditions.length > 0) {
       return db
         .select()
         .from(assessmentTemplates)
-        .where(eq(assessmentTemplates.dimensionId, dimensionId))
+        .where(and(...conditions))
         .orderBy(desc(assessmentTemplates.createdAt));
     }
+    
     return db
       .select()
       .from(assessmentTemplates)
@@ -312,6 +361,7 @@ export class DatabaseStorage implements IStorage {
     templateId?: number;
     userId?: number;
     status?: string;
+    projectId?: number;
   }): Promise<Assessment[]> {
     let queryBuilder = db.select().from(assessments);
     
@@ -333,6 +383,10 @@ export class DatabaseStorage implements IStorage {
       
       if (filters.status !== undefined) {
         conditions.push(eq(assessments.status, filters.status));
+      }
+      
+      if (filters.projectId !== undefined) {
+        conditions.push(eq(assessments.projectId, filters.projectId));
       }
       
       if (conditions.length > 0) {
@@ -369,6 +423,7 @@ export class DatabaseStorage implements IStorage {
     priority?: string;
     projectArea?: string;
     aiGenerated?: boolean;
+    projectId?: number;
   }): Promise<TestSuite[]> {
     let queryBuilder = db.select().from(testSuites);
     
@@ -393,6 +448,10 @@ export class DatabaseStorage implements IStorage {
       
       if (filters.aiGenerated !== undefined) {
         conditions.push(eq(testSuites.aiGenerated, filters.aiGenerated));
+      }
+      
+      if (filters.projectId !== undefined) {
+        conditions.push(eq(testSuites.projectId, filters.projectId));
       }
       
       if (conditions.length > 0) {
@@ -431,6 +490,7 @@ export class DatabaseStorage implements IStorage {
     severity?: string;
     aiGenerated?: boolean;
     automatable?: boolean;
+    projectId?: number;
   }): Promise<TestCase[]> {
     let queryBuilder = db.select().from(testCases);
     
@@ -463,6 +523,10 @@ export class DatabaseStorage implements IStorage {
       
       if (filters.automatable !== undefined) {
         conditions.push(eq(testCases.automatable, filters.automatable));
+      }
+      
+      if (filters.projectId !== undefined) {
+        conditions.push(eq(testCases.projectId, filters.projectId));
       }
       
       if (conditions.length > 0) {

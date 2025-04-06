@@ -13,12 +13,23 @@ export const users = pgTable("users", {
   role: text("role").default("user"),
 });
 
+export const projects = pgTable("projects", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  jiraProjectId: varchar("jira_project_id", { length: 10 }),
+  jiraJql: text("jira_jql"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const maturityDimensions = pgTable("maturity_dimensions", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description").notNull(),
   color: text("color").notNull(),
   order: integer("order").notNull(),
+  projectId: integer("project_id").references(() => projects.id, { onDelete: "cascade" }),
 });
 
 export const maturityLevels = pgTable("maturity_levels", {
@@ -28,6 +39,7 @@ export const maturityLevels = pgTable("maturity_levels", {
   name: text("name").notNull(),
   description: text("description").notNull(),
   status: text("status").notNull(), // 'completed', 'in_progress', 'not_started'
+  projectId: integer("project_id").references(() => projects.id, { onDelete: "cascade" }),
 });
 
 export const metrics = pgTable("metrics", {
@@ -41,6 +53,7 @@ export const metrics = pgTable("metrics", {
   isPositive: boolean("is_positive").default(true),
   color: text("color"),
   dimensionId: integer("dimension_id").references(() => maturityDimensions.id, { onDelete: "set null" }),
+  projectId: integer("project_id").references(() => projects.id, { onDelete: "cascade" }),
 });
 
 export const recommendations = pgTable("recommendations", {
@@ -54,6 +67,7 @@ export const recommendations = pgTable("recommendations", {
   actions: jsonb("actions").default([]),
   status: text("status").default("active"), // 'active', 'dismissed', 'implemented'
   createdAt: timestamp("created_at").defaultNow(),
+  projectId: integer("project_id").references(() => projects.id, { onDelete: "cascade" }),
 });
 
 export const assessmentTemplates = pgTable("assessment_templates", {
@@ -63,6 +77,7 @@ export const assessmentTemplates = pgTable("assessment_templates", {
   dimensionId: integer("dimension_id").references(() => maturityDimensions.id),
   criteria: jsonb("criteria").default([]),
   createdAt: timestamp("created_at").defaultNow(),
+  projectId: integer("project_id").references(() => projects.id, { onDelete: "cascade" }),
 });
 
 export const assessments = pgTable("assessments", {
@@ -78,6 +93,7 @@ export const assessments = pgTable("assessments", {
   userId: integer("user_id").references(() => users.id),
   results: jsonb("results").default({}),
   createdAt: timestamp("created_at").defaultNow(),
+  projectId: integer("project_id").references(() => projects.id, { onDelete: "cascade" }),
 });
 
 export const testSuites = pgTable("test_suites", {
@@ -93,6 +109,7 @@ export const testSuites = pgTable("test_suites", {
   tags: jsonb("tags").default([]),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+  projectId: integer("project_id").references(() => projects.id, { onDelete: "cascade" }),
 });
 
 export const testCases = pgTable("test_cases", {
@@ -114,16 +131,7 @@ export const testCases = pgTable("test_cases", {
   testData: jsonb("test_data").default({}),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export const projects = pgTable("projects", {
-  id: serial("id").primaryKey(),
-  name: varchar("name", { length: 100 }).notNull(),
-  description: text("description"),
-  jiraProjectId: varchar("jira_project_id", { length: 10 }),
-  jiraJql: text("jira_jql"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  projectId: integer("project_id").references(() => projects.id, { onDelete: "cascade" }),
 });
 
 // Insert Schemas
@@ -183,10 +191,25 @@ export const usersRelations = relations(users, ({ many }) => ({
   assessments: many(assessments),
 }));
 
-export const maturityDimensionsRelations = relations(maturityDimensions, ({ many }) => ({
+export const projectsRelations = relations(projects, ({ many }) => ({
+  maturityDimensions: many(maturityDimensions),
+  maturityLevels: many(maturityLevels),
+  metrics: many(metrics),
+  recommendations: many(recommendations),
+  assessmentTemplates: many(assessmentTemplates),
+  assessments: many(assessments),
+  testSuites: many(testSuites),
+  testCases: many(testCases),
+}));
+
+export const maturityDimensionsRelations = relations(maturityDimensions, ({ one, many }) => ({
   levels: many(maturityLevels),
   metrics: many(metrics),
   recommendations: many(recommendations),
+  project: one(projects, {
+    fields: [maturityDimensions.projectId],
+    references: [projects.id],
+  }),
 }));
 
 export const maturityLevelsRelations = relations(maturityLevels, ({ one, many }) => ({
@@ -195,12 +218,20 @@ export const maturityLevelsRelations = relations(maturityLevels, ({ one, many })
     references: [maturityDimensions.id],
   }),
   recommendations: many(recommendations),
+  project: one(projects, {
+    fields: [maturityLevels.projectId],
+    references: [projects.id],
+  }),
 }));
 
 export const metricsRelations = relations(metrics, ({ one }) => ({
   dimension: one(maturityDimensions, {
     fields: [metrics.dimensionId],
     references: [maturityDimensions.id],
+  }),
+  project: one(projects, {
+    fields: [metrics.projectId],
+    references: [projects.id],
   }),
 }));
 
@@ -213,6 +244,10 @@ export const recommendationsRelations = relations(recommendations, ({ one }) => 
     fields: [recommendations.levelId],
     references: [maturityLevels.id],
   }),
+  project: one(projects, {
+    fields: [recommendations.projectId],
+    references: [projects.id],
+  }),
 }));
 
 export const assessmentTemplatesRelations = relations(assessmentTemplates, ({ one, many }) => ({
@@ -221,6 +256,10 @@ export const assessmentTemplatesRelations = relations(assessmentTemplates, ({ on
     references: [maturityDimensions.id],
   }),
   assessments: many(assessments),
+  project: one(projects, {
+    fields: [assessmentTemplates.projectId],
+    references: [projects.id],
+  }),
 }));
 
 export const assessmentsRelations = relations(assessments, ({ one }) => ({
@@ -236,6 +275,10 @@ export const assessmentsRelations = relations(assessments, ({ one }) => ({
     fields: [assessments.userId],
     references: [users.id],
   }),
+  project: one(projects, {
+    fields: [assessments.projectId],
+    references: [projects.id],
+  }),
 }));
 
 export const testSuitesRelations = relations(testSuites, ({ one, many }) => ({
@@ -244,6 +287,10 @@ export const testSuitesRelations = relations(testSuites, ({ one, many }) => ({
     references: [users.id],
   }),
   testCases: many(testCases),
+  project: one(projects, {
+    fields: [testSuites.projectId],
+    references: [projects.id],
+  }),
 }));
 
 export const testCasesRelations = relations(testCases, ({ one }) => ({
@@ -254,5 +301,9 @@ export const testCasesRelations = relations(testCases, ({ one }) => ({
   user: one(users, {
     fields: [testCases.userId],
     references: [users.id],
+  }),
+  project: one(projects, {
+    fields: [testCases.projectId],
+    references: [projects.id],
   }),
 }));
