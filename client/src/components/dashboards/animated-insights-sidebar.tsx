@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Sparkles, TrendingUp, BarChart, Brain, Zap, BarChart3, ArrowUpRight, Maximize2, Minimize2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { useProject } from "@/context/ProjectContext";
+import { useProject, Project } from "@/context/ProjectContext";
 
 // Animation variants for the data points
 const dataPointVariants = {
@@ -205,14 +205,28 @@ export function AnimatedInsightsSidebar() {
   const [collapsed, setCollapsed] = useState(false); // Start expanded by default
   const [dataPoints, setDataPoints] = useState<DataPointProps[]>([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [localSelectedProject, setLocalSelectedProject] = useState<Project | null>(null);
+  
+  // Keep a local copy of the selected project to prevent issues with context changes
+  useEffect(() => {
+    if (selectedProject) {
+      setLocalSelectedProject(selectedProject);
+    }
+  }, [selectedProject]);
 
   // Generate insights based on the current project
   useEffect(() => {
-    if (!selectedProject) return;
+    if (!selectedProject && !localSelectedProject) return;
+    
+    // Use local copy if available for stability
+    const currentProject = localSelectedProject || selectedProject;
+    
+    // Safety check
+    if (!currentProject) return;
 
-    // Generate insights
+    // Generate insights with non-null assertion since we've checked already
     const projectInsights = [
-      `Test coverage for the ${selectedProject.name} project has increased by 12% this month.`,
+      `Test coverage for the ${currentProject!.name} project has increased by 12% this month.`,
       `AI analysis suggests automating the checkout flow tests could reduce test execution time by 40%.`,
       `Recent test failures exhibit patterns related to network connectivity. Consider improving resilience testing.`,
       `Based on historical data, feature X has a 75% higher defect rate than other areas. Consider increasing test coverage.`,
@@ -239,7 +253,7 @@ export function AnimatedInsightsSidebar() {
       delay: Math.random() * 2,
     }));
     setDataPoints(newDataPoints);
-  }, [selectedProject, refreshTrigger]);
+  }, [selectedProject, localSelectedProject, refreshTrigger]);
 
   // Auto-refresh insights every 30 seconds
   useEffect(() => {
@@ -250,7 +264,9 @@ export function AnimatedInsightsSidebar() {
     return () => clearInterval(timer);
   }, []);
 
-  if (!selectedProject) return null;
+  // Use either the selected project from context or our local copy
+  const currentProject = localSelectedProject || selectedProject;
+  if (!currentProject) return null;
 
   return (
     <motion.div

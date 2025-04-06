@@ -44,20 +44,27 @@ export default function ProjectSelector() {
     };
     
     fetchProjects();
-  }, [selectedProject, setSelectedProject]);
+    // Remove the dependency on selectedProject to prevent cyclical re-renders
+  }, [setSelectedProject]);
 
-  // Handle project selection with forceful update
+  // Handle project selection without page refresh
   const handleSelectProject = (project: Project) => {
     console.log("User selected project:", project);
     
-    // Force update localStorage
-    localStorage.setItem('selectedProjectId', project.id.toString());
-    
-    // Update context
-    setSelectedProject(project);
-    
-    // Force reload current page to ensure context changes propagate
-    window.location.reload();
+    // Only update if selecting a different project
+    if (!selectedProject || selectedProject.id !== project.id) {
+      // Force update localStorage
+      localStorage.setItem('selectedProjectId', project.id.toString());
+      
+      // Set the selected project in the context
+      setSelectedProject(project);
+      
+      // Update the local state to reflect the new selection
+      setLocalProjects(prev => {
+        // Ensure we're working with the latest data by keeping existing projects
+        return [...prev];
+      });
+    }
   };
 
   return (
