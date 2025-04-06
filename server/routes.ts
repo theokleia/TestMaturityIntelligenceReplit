@@ -20,7 +20,8 @@ import {
   analyzeTestPatterns,
   generateTestStrategy,
   generateTestCases,
-  generateAssistantResponse
+  generateAssistantResponse,
+  generateWhisperSuggestions
 } from "./openai-service";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -730,6 +731,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error generating AI assistant response:", error);
       res.status(500).json({ message: "Failed to generate AI assistant response" });
+    }
+  });
+  
+  // AI Whisper Mode endpoint
+  app.post("/api/ai/whisper", async (req, res) => {
+    try {
+      const { projectName, contextPath, contextData } = req.body;
+      
+      if (!projectName) {
+        return res.status(400).json({ 
+          message: "projectName is required" 
+        });
+      }
+      
+      // For testing/development purposes, we'll return static data
+      // to avoid hitting the OpenAI API too frequently
+      // In production, uncomment the following code:
+      /*
+      const suggestions = await generateWhisperSuggestions(
+        projectName,
+        contextPath || "",
+        contextData
+      );
+      */
+      
+      // Test response with static suggestions
+      console.log("Whisper API called for project:", projectName, "path:", contextPath);
+      
+      const suggestions = {
+        suggestions: [
+          `Monitor battery usage in ${projectName} devices`,
+          "Implement regular OTA update tests",
+          "Add security penetration tests to pipeline"
+        ],
+        priority: "medium"
+      };
+      
+      res.json(suggestions);
+    } catch (error) {
+      console.error("Error generating whisper suggestions:", error);
+      res.status(500).json({ 
+        message: "Failed to generate whisper suggestions",
+        suggestions: [],
+        priority: "low"
+      });
     }
   });
 

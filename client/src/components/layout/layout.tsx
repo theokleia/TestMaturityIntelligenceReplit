@@ -3,6 +3,7 @@ import { Sidebar } from "./sidebar";
 import Topbar from "./topbar";
 import { cn } from "@/lib/utils";
 import { AIAssistantBubble } from "@/components/ai/assistant-bubble";
+import { WhisperAssistant } from "@/components/ai/whisper-assistant";
 import { useLocation } from "wouter";
 
 interface LayoutContextType {
@@ -61,6 +62,9 @@ export function Layout({ children }: LayoutProps) {
           
           {/* AI Assistant Bubble */}
           <AIAssistantBubble contextPath={location} />
+          
+          {/* Whisper Assistant */}
+          <WhisperAssistant />
         </div>
       </div>
     </LayoutContext.Provider>

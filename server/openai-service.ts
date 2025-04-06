@@ -618,6 +618,94 @@ export async function generateAssistantResponse(
 }
 
 /**
+ * Generate contextual whisper mode suggestions based on user's current activity
+ */
+export async function generateWhisperSuggestions(
+  projectName: string,
+  contextPath: string,
+  contextData?: any
+): Promise<{ suggestions: string[]; priority: "low" | "medium" | "high" }> {
+  try {
+    // Determine project type from the project name
+    const projectType = getProjectTypeFromName(projectName);
+    
+    // Use the project context to enhance the suggestions
+    const context = PROJECT_CONTEXTS[projectType] || PROJECT_CONTEXTS.general;
+    
+    // Format contextData if provided
+    const contextDataStr = contextData 
+      ? `\nContext data: ${JSON.stringify(contextData)}`
+      : '';
+    
+    // Determine page context based on path
+    let pageContext = "";
+    if (contextPath.includes("project-health")) {
+      pageContext = "Project Health Dashboard - Viewing health metrics, indicators, and quality trends";
+    } else if (contextPath.includes("assessments")) {
+      pageContext = "Test Maturity Assessments - Evaluating testing maturity and planning improvements";
+    } else if (contextPath.includes("test-management")) {
+      pageContext = "Test Management - Managing test cases, suites, and execution";
+    } else if (contextPath.includes("ai-insights")) {
+      pageContext = "AI Insights - Analyzing testing data for patterns and recommendations";
+    } else {
+      pageContext = "General project overview and navigation";
+    }
+    
+    // Build a context-aware prompt
+    let prompt = `
+      You are providing quiet whisper suggestions for someone working on a "${projectName}" project (${context.type}) focused on ${context.focus}.
+      
+      Key risks in this type of project include: ${context.keyRisks.join(", ")}.
+      Recommended practices include: ${context.recommendedPractices.join(", ")}.
+      
+      Current page context: ${pageContext}
+      ${contextDataStr}
+      
+      Provide 1-3 brief, helpful whisper suggestions that would be valuable for someone working on this page in this kind of project. 
+      These should be non-intrusive tips that appear in a small floating card.
+      Keep each suggestion under 80 characters.
+      Format your response as JSON.
+    `;
+    
+    const response = await openai.chat.completions.create({
+      model: MODEL,
+      messages: [
+        { 
+          role: "system", 
+          content: "You are ATMosFera WhisperMode, a non-intrusive assistant that provides short, timely, contextual suggestions for software testing activities. You provide brief, actionable tips without being asked." 
+        },
+        { role: "user", content: prompt }
+      ],
+      temperature: 0.7,
+      max_tokens: 500,
+      response_format: { type: "json_object" }
+    });
+
+    const responseContent = response.choices[0].message.content || '{"suggestions": ["Unable to generate suggestions"], "priority": "low"}';
+    
+    try {
+      const parsedResponse = JSON.parse(responseContent);
+      return {
+        suggestions: Array.isArray(parsedResponse.suggestions) ? parsedResponse.suggestions : ["Unable to parse suggestions"],
+        priority: ["low", "medium", "high"].includes(parsedResponse.priority) ? parsedResponse.priority : "low"
+      };
+    } catch (parseError) {
+      console.error("Error parsing whisper response:", parseError);
+      return {
+        suggestions: ["Unable to parse suggestion response"],
+        priority: "low"
+      };
+    }
+  } catch (error) {
+    console.error("Error generating whisper suggestions:", error);
+    return {
+      suggestions: ["Currently unable to provide suggestions"],
+      priority: "low"
+    };
+  }
+}
+
+/**
  * Helper function to determine project type from name
  */
 function getProjectTypeFromName(projectName: string): string {
