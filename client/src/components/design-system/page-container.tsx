@@ -27,11 +27,17 @@ interface PageBodyProps {
 
 /**
  * PageContainer component for consistent page layout structure
- * based on the ATMosFera design system
+ * based on the ATMosFera design system with background gradient
  */
 export function PageContainer({ children, className, withPadding = false }: PageContainerProps) {
   return (
-    <div className={cn("space-y-8", withPadding ? "p-6" : "", className)}>
+    <div className={cn(
+      "space-y-8 min-h-screen w-full",
+      "bg-dashboard-gradient", 
+      "bg-atmf-main text-atmf-primary",
+      withPadding ? "p-6" : "", 
+      className
+    )}>
       {children}
     </div>
   );
