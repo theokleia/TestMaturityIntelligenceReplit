@@ -11,6 +11,7 @@ export type IconWrapperVariant =
   | "muted";    // Gray/muted background
 
 export type IconWrapperSize =
+  | "xs"      // Extra small icon (h-5 w-5)
   | "sm"      // Small icon (h-6 w-6)
   | "md"      // Medium icon (h-8 w-8)
   | "lg"      // Large icon (h-10 w-10)
@@ -19,6 +20,7 @@ export type IconWrapperSize =
 interface IconWrapperProps {
   children: ReactNode;
   variant?: IconWrapperVariant;
+  color?: string;  // Alternative to variant for backward compatibility
   size?: IconWrapperSize;
   className?: string;
   rounded?: "full" | "lg" | "md";
@@ -31,12 +33,14 @@ interface IconWrapperProps {
 export function IconWrapper({
   children,
   variant = "blue",
+  color,
   size = "md",
   rounded = "full",
   className
 }: IconWrapperProps) {
   // Size classes
   const sizeClasses = {
+    xs: "h-5 w-5 text-xs",
     sm: "h-6 w-6 text-sm",
     md: "h-8 w-8 text-base",
     lg: "h-10 w-10 text-lg",
@@ -61,11 +65,34 @@ export function IconWrapper({
     md: "rounded-md"
   };
   
+  // Handle the color prop (used as an alternative to variant)
+  let variantClass = null;
+  
+  if (color) {
+    // If color is provided, map it to a variant if possible
+    const knownColorMapping: Record<string, IconWrapperVariant> = {
+      blue: "blue",
+      purple: "purple",
+      teal: "teal",
+      success: "success", 
+      warning: "warning",
+      danger: "danger",
+      muted: "muted"
+    };
+    
+    // Use mapped variant if it exists, otherwise use default variant
+    variantClass = knownColorMapping[color] 
+      ? variantClasses[knownColorMapping[color]] 
+      : variantClasses[variant];
+  } else {
+    variantClass = variantClasses[variant];
+  }
+  
   return (
     <div className={cn(
       "flex items-center justify-center flex-shrink-0",
       sizeClasses[size],
-      variantClasses[variant],
+      variantClass,
       roundedClasses[rounded],
       className
     )}>

@@ -369,9 +369,21 @@ export default function AiInsights() {
   const [activeTab, setActiveTab] = useState("key-insights");
   
   const tabs = [
-    { id: "key-insights", label: "Key Insights" },
-    { id: "predictions", label: "Predictions" },
-    { id: "activity", label: "Recent Activity" }
+    { 
+      id: "key-insights", 
+      label: "Key Insights",
+      content: <KeyInsightsTab />
+    },
+    { 
+      id: "predictions", 
+      label: "Predictions",
+      content: <PredictionsTab />
+    },
+    { 
+      id: "activity", 
+      label: "Recent Activity",
+      content: <ActivityTab />
+    }
   ];
   
   const handleRefresh = () => {
@@ -418,12 +430,6 @@ export default function AiInsights() {
             onChange={setActiveTab} 
             variant="underline"
           />
-          
-          <div className="mt-6">
-            {activeTab === "key-insights" && <KeyInsightsTab />}
-            {activeTab === "predictions" && <PredictionsTab />}
-            {activeTab === "activity" && <ActivityTab />}
-          </div>
         </PageContent>
       </PageContainer>
     </AppLayout>

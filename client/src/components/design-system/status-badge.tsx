@@ -8,16 +8,22 @@ export type StatusBadgeVariant =
   | "success"
   | "warning"
   | "danger"
-  | "muted";
+  | "muted"
+  | "test"
+  | "priority"
+  | "severity"
+  | "automation"
+  | "assessment";
 
 export type StatusBadgeSize = "sm" | "md" | "lg";
 
 interface StatusBadgeProps {
-  children: ReactNode;
+  children?: ReactNode;
   variant?: StatusBadgeVariant;
   size?: StatusBadgeSize;
   className?: string;
   dot?: boolean;
+  status?: string;
 }
 
 /**
@@ -29,7 +35,8 @@ export function StatusBadge({
   variant = "blue", 
   size = "md",
   dot = false,
-  className 
+  className,
+  status
 }: StatusBadgeProps) {
   // Determine background color class based on variant
   const bgColorClass = {
@@ -39,7 +46,12 @@ export function StatusBadge({
     success: "bg-success/20 text-success",
     warning: "bg-warning/20 text-warning",
     danger: "bg-danger/20 text-danger",
-    muted: "bg-white/10 text-text-muted"
+    muted: "bg-white/10 text-text-muted",
+    test: "bg-sky-500/20 text-sky-400",
+    priority: "bg-amber-500/20 text-amber-400",
+    severity: "bg-rose-500/20 text-rose-400",
+    automation: "bg-emerald-500/20 text-emerald-400",
+    assessment: "bg-violet-500/20 text-violet-400"
   };
   
   // Determine size class
@@ -64,8 +76,16 @@ export function StatusBadge({
     success: "bg-success",
     warning: "bg-warning",
     danger: "bg-danger",
-    muted: "bg-white/40"
+    muted: "bg-white/40",
+    test: "bg-sky-400",
+    priority: "bg-amber-400",
+    severity: "bg-rose-400",
+    automation: "bg-emerald-400",
+    assessment: "bg-violet-400"
   };
+  
+  // Use status as children if provided and no children
+  const content = children || status;
   
   return (
     <span 
@@ -83,7 +103,7 @@ export function StatusBadge({
           dotColor[variant]
         )} />
       )}
-      {children}
+      {content}
     </span>
   );
 }
