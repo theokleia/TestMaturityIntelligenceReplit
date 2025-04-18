@@ -99,6 +99,7 @@ export interface GenerateTestCasesRequest {
   requirements: string;
   complexity: string;
   testSuiteId: number;
+  projectId?: number;
 }
 
 export interface TestCaseStep {

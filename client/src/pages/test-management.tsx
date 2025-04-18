@@ -232,6 +232,7 @@ export default function TestManagement() {
       steps: [{ step: "Initialize test", expected: "Test is ready to run" }],
       aiGenerated: false,
       automationStatus: "not-automated",
+      projectId
     };
     
     createTestCaseMutation.mutate(testCaseData, {
@@ -259,7 +260,10 @@ export default function TestManagement() {
   
   // Handle generating AI test cases
   function onGenerateAiTestCases(data: z.infer<typeof generateTestCasesSchema>) {
-    generateTestCasesMutation.mutate(data, {
+    generateTestCasesMutation.mutate({
+      ...data,
+      projectId
+    }, {
       onSuccess: (result) => {
         toast({
           title: "Success",
