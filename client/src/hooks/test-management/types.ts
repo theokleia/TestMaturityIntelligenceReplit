@@ -1,4 +1,8 @@
-import { TestCaseStep } from "../use-ai-recommendations";
+// Include TestCaseStep type directly to avoid circular dependencies
+export interface TestCaseStep {
+  step: string;
+  expected: string;
+}
 
 export interface TestSuite {
   id: number;

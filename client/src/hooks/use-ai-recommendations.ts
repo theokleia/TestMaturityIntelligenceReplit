@@ -1,5 +1,8 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { invalidateResource } from "@/lib/queryUtils";
+// Import TestCase and TestCaseStep types from our refactored module
+import { TestCase, TestCaseStep } from "./test-management";
 
 export interface AiInsight {
   insights: string;
@@ -102,30 +105,6 @@ export interface GenerateTestCasesRequest {
   projectId?: number;
 }
 
-export interface TestCaseStep {
-  step: string;
-  expected: string;
-}
-
-export interface TestCase {
-  id: number;
-  title: string;
-  description: string;
-  preconditions: string;
-  steps: TestCaseStep[];
-  expectedResults: string;
-  priority: string;
-  severity: string;
-  status: string;
-  suiteId: number;
-  userId: number;
-  aiGenerated: boolean;
-  automatable: boolean;
-  automationStatus: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
 // Hook to fetch AI insights for a specific dimension
 export function useAiInsights(dimensionId: number, projectId?: number) {
   return useQuery<AiInsight>({
@@ -145,7 +124,7 @@ export function useGenerateRecommendation() {
     },
     onSuccess: () => {
       // Invalidate recommendations cache when a new one is created
-      queryClient.invalidateQueries({ queryKey: ['/api/recommendations'] });
+      invalidateResource('/api/recommendations');
     },
   });
 }
@@ -202,7 +181,7 @@ export function useGenerateTestCases() {
     },
     onSuccess: () => {
       // Invalidate test cases cache when new ones are created
-      queryClient.invalidateQueries({ queryKey: ['/api/test-cases'] });
+      invalidateResource('/api/test-cases');
     },
   });
 }

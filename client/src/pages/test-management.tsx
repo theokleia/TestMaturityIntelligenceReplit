@@ -68,9 +68,9 @@ import {
   useCreateTestSuite, 
   useTestCases, 
   useCreateTestCase,
-  TestSuite
-} from "@/hooks/use-test-management";
-import type { TestCase } from "@/hooks/use-ai-recommendations";
+  TestSuite,
+  TestCase
+} from "@/hooks/test-management";
 import { useGenerateTestCases } from "@/hooks/use-ai-recommendations";
 import { ATMFCard, ATMFCardHeader } from "@/components/design-system/atmf-card";
 import { StatusBadge } from "@/components/design-system/status-badge";
