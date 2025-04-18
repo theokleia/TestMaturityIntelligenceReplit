@@ -24,6 +24,7 @@ export interface CreateTestSuiteRequest {
   status: string;
   type: string;
   aiGenerated?: boolean;
+  projectId?: number;
 }
 
 export interface UpdateTestSuiteRequest {
@@ -48,6 +49,7 @@ export interface CreateTestCaseRequest {
   aiGenerated?: boolean;
   automatable?: boolean;
   automationStatus?: string;
+  projectId?: number;
 }
 
 export interface UpdateTestCaseRequest {
@@ -70,6 +72,7 @@ export function useTestSuites(filters?: {
   priority?: string;
   projectArea?: string;
   aiGenerated?: boolean;
+  projectId?: number;
 }) {
   const queryParams = new URLSearchParams();
   
@@ -79,6 +82,7 @@ export function useTestSuites(filters?: {
     if (filters.priority) queryParams.append('priority', filters.priority);
     if (filters.projectArea) queryParams.append('projectArea', filters.projectArea);
     if (filters.aiGenerated !== undefined) queryParams.append('aiGenerated', filters.aiGenerated.toString());
+    if (filters.projectId) queryParams.append('projectId', filters.projectId.toString());
   }
   
   const url = `/api/test-suites${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
@@ -134,6 +138,7 @@ export function useTestCases(filters?: {
   severity?: string;
   aiGenerated?: boolean;
   automatable?: boolean;
+  projectId?: number;
 }) {
   const queryParams = new URLSearchParams();
   
@@ -145,6 +150,7 @@ export function useTestCases(filters?: {
     if (filters.severity) queryParams.append('severity', filters.severity);
     if (filters.aiGenerated !== undefined) queryParams.append('aiGenerated', filters.aiGenerated.toString());
     if (filters.automatable !== undefined) queryParams.append('automatable', filters.automatable.toString());
+    if (filters.projectId) queryParams.append('projectId', filters.projectId.toString());
   }
   
   const url = `/api/test-cases${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;

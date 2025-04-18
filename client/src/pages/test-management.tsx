@@ -76,6 +76,7 @@ import { ATMFCard, ATMFCardHeader } from "@/components/design-system/atmf-card";
 import { StatusBadge } from "@/components/design-system/status-badge";
 import { IconWrapper } from "@/components/design-system/icon-wrapper";
 import { PageContainer, PageHeader, PageContent } from "@/components/design-system/page-container";
+import { useProject } from "@/context/ProjectContext";
 
 // Schema for creating a test suite
 const createTestSuiteSchema = z.object({
@@ -113,6 +114,8 @@ export default function TestManagement() {
   const { toast } = useToast();
   const [selectedSuite, setSelectedSuite] = useState<TestSuite | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const { selectedProject } = useProject();
+  const projectId = selectedProject?.id;
   
   // Dialogs state
   const [newSuiteDialogOpen, setNewSuiteDialogOpen] = useState(false);
@@ -120,11 +123,14 @@ export default function TestManagement() {
   const [aiGenerateDialogOpen, setAiGenerateDialogOpen] = useState(false);
   
   // Fetch test suites
-  const { data: testSuites, isLoading: isLoadingTestSuites } = useTestSuites();
+  const { data: testSuites, isLoading: isLoadingTestSuites } = useTestSuites({
+    projectId
+  });
   
   // Fetch test cases for the selected suite
   const { data: testCases, isLoading: isLoadingTestCases } = useTestCases({
     suiteId: selectedSuite?.id,
+    projectId
   });
   
   // Create test suite mutation
@@ -194,7 +200,10 @@ export default function TestManagement() {
   
   // Handle creating a new test suite
   function onCreateSuite(data: z.infer<typeof createTestSuiteSchema>) {
-    createTestSuiteMutation.mutate(data, {
+    createTestSuiteMutation.mutate({
+      ...data,
+      projectId
+    }, {
       onSuccess: (newSuite) => {
         toast({
           title: "Success",
