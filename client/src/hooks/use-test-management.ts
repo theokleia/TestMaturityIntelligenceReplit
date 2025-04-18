@@ -88,7 +88,7 @@ export function useTestSuites(filters?: {
   const url = `/api/test-suites${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
   
   return useQuery<TestSuite[]>({
-    queryKey: ['/api/test-suites', filters],
+    queryKey: [url, filters],
     refetchOnWindowFocus: false,
   });
 }
@@ -110,7 +110,13 @@ export function useCreateTestSuite() {
       return res.json() as Promise<TestSuite>;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/test-suites'] });
+      // Invalidate all test suite queries
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const queryKey = query.queryKey[0] as string;
+          return queryKey.startsWith('/api/test-suites');
+        }
+      });
     },
   });
 }
@@ -123,8 +129,13 @@ export function useUpdateTestSuite(id: number) {
       return res.json() as Promise<TestSuite>;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/test-suites'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/test-suites', id] });
+      // Invalidate all test suite queries
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const queryKey = query.queryKey[0] as string;
+          return queryKey.startsWith('/api/test-suites');
+        }
+      });
     },
   });
 }
@@ -156,7 +167,7 @@ export function useTestCases(filters?: {
   const url = `/api/test-cases${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
   
   return useQuery<TestCase[]>({
-    queryKey: ['/api/test-cases', filters],
+    queryKey: [url, filters],
     refetchOnWindowFocus: false,
   });
 }
@@ -178,8 +189,21 @@ export function useCreateTestCase() {
       return res.json() as Promise<TestCase>;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/test-cases'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/test-suites', variables.suiteId] });
+      // Invalidate all test case queries
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const queryKey = query.queryKey[0] as string;
+          return queryKey.startsWith('/api/test-cases');
+        }
+      });
+      
+      // Invalidate all test suite queries
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const queryKey = query.queryKey[0] as string;
+          return queryKey.startsWith('/api/test-suites');
+        }
+      });
     },
   });
 }
@@ -192,11 +216,21 @@ export function useUpdateTestCase(id: number, suiteId?: number) {
       return res.json() as Promise<TestCase>;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/test-cases'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/test-cases', id] });
-      if (suiteId) {
-        queryClient.invalidateQueries({ queryKey: ['/api/test-suites', suiteId] });
-      }
+      // Invalidate all test case queries
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const queryKey = query.queryKey[0] as string;
+          return queryKey.startsWith('/api/test-cases');
+        }
+      });
+      
+      // Invalidate all test suite queries
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const queryKey = query.queryKey[0] as string;
+          return queryKey.startsWith('/api/test-suites');
+        }
+      });
     },
   });
 }
