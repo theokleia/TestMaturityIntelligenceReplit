@@ -28,7 +28,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all maturity dimensions
   app.get("/api/dimensions", async (req, res) => {
     try {
-      const dimensions = await storage.getMaturityDimensions();
+      const projectId = req.query.projectId ? parseInt(req.query.projectId as string) : undefined;
+      const dimensions = await storage.getMaturityDimensions(projectId);
       res.json(dimensions);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch maturity dimensions" });
@@ -55,7 +56,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/levels", async (req, res) => {
     try {
       const dimensionId = req.query.dimensionId ? parseInt(req.query.dimensionId as string) : undefined;
-      const levels = await storage.getMaturityLevels(dimensionId);
+      const projectId = req.query.projectId ? parseInt(req.query.projectId as string) : undefined;
+      const levels = await storage.getMaturityLevels(dimensionId, projectId);
       res.json(levels);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch maturity levels" });
@@ -87,7 +89,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/metrics", async (req, res) => {
     try {
       const dimensionId = req.query.dimensionId ? parseInt(req.query.dimensionId as string) : undefined;
-      const metrics = await storage.getMetrics(dimensionId);
+      const projectId = req.query.projectId ? parseInt(req.query.projectId as string) : undefined;
+      const metrics = await storage.getMetrics(dimensionId, projectId);
       res.json(metrics);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch metrics" });
@@ -120,8 +123,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const dimensionId = req.query.dimensionId ? parseInt(req.query.dimensionId as string) : undefined;
       const levelId = req.query.levelId ? parseInt(req.query.levelId as string) : undefined;
+      const projectId = req.query.projectId ? parseInt(req.query.projectId as string) : undefined;
       
-      const recommendations = await storage.getRecommendations(dimensionId, levelId);
+      const recommendations = await storage.getRecommendations(dimensionId, levelId, projectId);
       res.json(recommendations);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch recommendations" });
@@ -357,7 +361,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/assessment-templates", async (req, res) => {
     try {
       const dimensionId = req.query.dimensionId ? parseInt(req.query.dimensionId as string) : undefined;
-      const templates = await storage.getAssessmentTemplates(dimensionId);
+      const projectId = req.query.projectId ? parseInt(req.query.projectId as string) : undefined;
+      const templates = await storage.getAssessmentTemplates(dimensionId, projectId);
       res.json(templates);
     } catch (error) {
       console.error("Error fetching assessment templates:", error);
@@ -423,7 +428,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         dimensionId: req.query.dimensionId ? parseInt(req.query.dimensionId as string) : undefined,
         templateId: req.query.templateId ? parseInt(req.query.templateId as string) : undefined,
         userId: req.query.userId ? parseInt(req.query.userId as string) : undefined,
-        status: req.query.status ? (req.query.status as string) : undefined
+        status: req.query.status ? (req.query.status as string) : undefined,
+        projectId: req.query.projectId ? parseInt(req.query.projectId as string) : undefined
       };
       
       const assessments = await storage.getAssessments(filters);
@@ -493,7 +499,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: req.query.status ? (req.query.status as string) : undefined,
         priority: req.query.priority ? (req.query.priority as string) : undefined,
         projectArea: req.query.projectArea ? (req.query.projectArea as string) : undefined,
-        aiGenerated: req.query.aiGenerated ? (req.query.aiGenerated === 'true') : undefined
+        aiGenerated: req.query.aiGenerated ? (req.query.aiGenerated === 'true') : undefined,
+        projectId: req.query.projectId ? parseInt(req.query.projectId as string) : undefined
       };
       
       const testSuites = await storage.getTestSuites(filters);
@@ -565,7 +572,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         priority: req.query.priority ? (req.query.priority as string) : undefined,
         severity: req.query.severity ? (req.query.severity as string) : undefined,
         aiGenerated: req.query.aiGenerated ? (req.query.aiGenerated === 'true') : undefined,
-        automatable: req.query.automatable ? (req.query.automatable === 'true') : undefined
+        automatable: req.query.automatable ? (req.query.automatable === 'true') : undefined,
+        projectId: req.query.projectId ? parseInt(req.query.projectId as string) : undefined
       };
       
       const testCases = await storage.getTestCases(filters);
