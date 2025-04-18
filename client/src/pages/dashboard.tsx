@@ -10,30 +10,33 @@ import { InteractiveMindmap } from "@/components/dashboard/interactive-mindmap";
 import { MaturityRoadmap } from "@/components/dashboard/maturity-roadmap";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { useProject } from "@/context/ProjectContext";
 
 export default function Dashboard() {
   const [activeDimension, setActiveDimension] = useState<number>(1); // Default to first dimension
   const [activeSecondaryTab, setActiveSecondaryTab] = useState<string>("maturity"); // Default to maturity levels
+  const { selectedProject } = useProject();
+  const projectId = selectedProject?.id;
   
   // Fetch maturity dimensions
   const { data: dimensions } = useQuery<MaturityDimension[]>({
-    queryKey: ['/api/dimensions'],
+    queryKey: ['/api/dimensions', { projectId }],
   });
   
   // Fetch maturity levels for the active dimension
   const { data: levels } = useQuery<MaturityLevel[]>({
-    queryKey: ['/api/levels', { dimensionId: activeDimension }],
+    queryKey: ['/api/levels', { dimensionId: activeDimension, projectId }],
     enabled: !!activeDimension,
   });
   
   // Fetch metrics
   const { data: metricsData } = useQuery<Metric[]>({
-    queryKey: ['/api/metrics'],
+    queryKey: ['/api/metrics', { projectId }],
   });
   
   // Fetch recommendations
   const { data: recommendationsData } = useQuery<Recommendation[]>({
-    queryKey: ['/api/recommendations'],
+    queryKey: ['/api/recommendations', { projectId }],
   });
 
   const activeDimensionData = dimensions?.find(d => d.id === activeDimension);

@@ -21,6 +21,7 @@ export interface AiInsight {
 export interface GenerateRecommendationRequest {
   dimensionId: number;
   levelId?: number;
+  projectId?: number;
 }
 
 export interface TestDataAnalysisRequest {
@@ -125,9 +126,9 @@ export interface TestCase {
 }
 
 // Hook to fetch AI insights for a specific dimension
-export function useAiInsights(dimensionId: number) {
+export function useAiInsights(dimensionId: number, projectId?: number) {
   return useQuery<AiInsight>({
-    queryKey: ['/api/ai/insights', dimensionId],
+    queryKey: ['/api/ai/insights', dimensionId, { projectId }],
     enabled: !!dimensionId,
     refetchOnWindowFocus: false,
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -159,9 +160,9 @@ export function useAnalyzeTestingData() {
 }
 
 // Hook to fetch a maturity roadmap for a dimension
-export function useMaturityRoadmap(dimensionId: number, currentLevel: number = 1) {
+export function useMaturityRoadmap(dimensionId: number, currentLevel: number = 1, projectId?: number) {
   return useQuery<MaturityRoadmap>({
-    queryKey: ['/api/ai/roadmap', dimensionId, currentLevel],
+    queryKey: ['/api/ai/roadmap', dimensionId, currentLevel, { projectId }],
     enabled: !!dimensionId,
     refetchOnWindowFocus: false,
     staleTime: 30 * 60 * 1000, // 30 minutes

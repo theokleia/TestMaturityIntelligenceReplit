@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMaturityRoadmap } from "@/hooks/use-ai-recommendations";
 import { Spinner } from "@/components/ui/ui-spinner";
 import type { MaturityDimension } from "@shared/schema";
+import { useProject } from "@/context/ProjectContext";
 
 interface MaturityRoadmapProps {
   dimensions: MaturityDimension[];
@@ -13,8 +14,10 @@ interface MaturityRoadmapProps {
 export function MaturityRoadmap({ dimensions, className }: MaturityRoadmapProps) {
   const [selectedDimension, setSelectedDimension] = useState<number>(dimensions[0]?.id || 1);
   const [currentLevel, setCurrentLevel] = useState<number>(1);
+  const { selectedProject } = useProject();
+  const projectId = selectedProject?.id;
   
-  const { data: roadmapData, isLoading, error } = useMaturityRoadmap(selectedDimension, currentLevel);
+  const { data: roadmapData, isLoading, error } = useMaturityRoadmap(selectedDimension, currentLevel, projectId);
   
   const handleDimensionChange = (dimensionId: string) => {
     setSelectedDimension(parseInt(dimensionId));
