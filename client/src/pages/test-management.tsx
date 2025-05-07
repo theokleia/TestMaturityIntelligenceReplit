@@ -8,6 +8,7 @@ import {
   CardTitle 
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { 
   Table, 
@@ -621,6 +622,294 @@ export default function TestManagement() {
                   disabled={createTestSuiteMutation.isPending}
                 >
                   {createTestSuiteMutation.isPending ? "Creating..." : "Create Test Suite"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Test Case Dialog */}
+      <Dialog open={newCaseDialogOpen} onOpenChange={setNewCaseDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Test Case</DialogTitle>
+            <DialogDescription>
+              Add a new test case to your test suite
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...newCaseForm}>
+            <form onSubmit={newCaseForm.handleSubmit(onCreateTestCase)} className="space-y-4 pt-4">
+              <FormField
+                control={newCaseForm.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Title</FormLabel>
+                    <FormControl>
+                      <Input placeholder="User can log in with valid credentials" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={newCaseForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Verify that users can successfully log in with valid credentials" 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={newCaseForm.control}
+                name="preconditions"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Preconditions</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="1. User account exists in the system\n2. User is on the login page" 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={newCaseForm.control}
+                name="expectedResults"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Expected Results</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="1. User is authenticated\n2. User is redirected to the dashboard\n3. Welcome message is displayed" 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={newCaseForm.control}
+                  name="priority"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Priority</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select priority" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="high">High</SelectItem>
+                          <SelectItem value="medium">Medium</SelectItem>
+                          <SelectItem value="low">Low</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={newCaseForm.control}
+                  name="severity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Severity</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select severity" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="critical">Critical</SelectItem>
+                          <SelectItem value="high">High</SelectItem>
+                          <SelectItem value="normal">Normal</SelectItem>
+                          <SelectItem value="low">Low</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={newCaseForm.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="draft">Draft</SelectItem>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="inactive">Inactive</SelectItem>
+                          <SelectItem value="blocked">Blocked</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={newCaseForm.control}
+                  name="automatable"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-end space-x-3 space-y-0 rounded-md border p-3">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>
+                          Automatable
+                        </FormLabel>
+                        <FormDescription>
+                          Can this test be automated?
+                        </FormDescription>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <DialogFooter>
+                <Button 
+                  type="submit" 
+                  disabled={createTestCaseMutation.isPending}
+                >
+                  {createTestCaseMutation.isPending ? "Creating..." : "Create Test Case"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Generate AI Test Cases Dialog */}
+      <Dialog open={aiGenerateDialogOpen} onOpenChange={setAiGenerateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Generate Test Cases with AI</DialogTitle>
+            <DialogDescription>
+              Provide feature details to automatically generate test cases
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...generateAiCasesForm}>
+            <form onSubmit={generateAiCasesForm.handleSubmit(onGenerateAiTestCases)} className="space-y-4 pt-4">
+              <FormField
+                control={generateAiCasesForm.control}
+                name="feature"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Feature Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="User Authentication" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={generateAiCasesForm.control}
+                name="requirements"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Requirements</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="1. Users must be able to log in with email/password\n2. System should validate input\n3. Failed attempts should be logged" 
+                        className="min-h-[120px]"
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={generateAiCasesForm.control}
+                name="complexity"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Complexity</FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select complexity" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="simple">Simple</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="complex">Complex</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <DialogFooter>
+                <Button 
+                  type="submit" 
+                  disabled={generateTestCasesMutation.isPending}
+                  className="flex items-center gap-2"
+                >
+                  {generateTestCasesMutation.isPending ? (
+                    <>Generating...</>
+                  ) : (
+                    <>
+                      <Bot className="h-4 w-4" />
+                      <span>Generate Test Cases</span>
+                    </>
+                  )}
                 </Button>
               </DialogFooter>
             </form>
