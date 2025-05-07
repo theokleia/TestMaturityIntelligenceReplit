@@ -638,7 +638,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // AI-powered test case generation
   app.post("/api/ai/generate-test-cases", async (req, res) => {
     try {
-      const { feature, requirements, complexity, testSuiteId } = req.body;
+      const { feature, requirements, complexity, testSuiteId, projectId } = req.body;
       
       if (!feature || !requirements || !testSuiteId) {
         return res.status(400).json({ 
@@ -651,6 +651,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!testSuite) {
         return res.status(404).json({ message: "Test suite not found" });
       }
+      
+      // Get the projectId from the test suite if not explicitly provided
+      const testProjectId = projectId || testSuite.projectId;
       
       // Generate test cases using AI
       const generatedTestCases = await generateTestCases(
@@ -677,7 +680,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             userId: 1, // Default to admin user
             aiGenerated: true,
             automatable: testCase.automatable,
-            automationStatus: "not-automated"
+            automationStatus: "not-automated",
+            projectId: testProjectId
           });
           
           createdTestCases.push(newTestCase);
@@ -701,7 +705,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userId: 1, // Default to admin user
           aiGenerated: true,
           automatable: true,
-          automationStatus: "not-automated"
+          automationStatus: "not-automated",
+          projectId: testProjectId
         });
         
         createdTestCases.push(newTestCase);
