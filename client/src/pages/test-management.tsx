@@ -62,7 +62,8 @@ import {
   Eye,
   X,
   ClipboardList,
-  Check
+  Check,
+  Pencil
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/app-layout";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -74,6 +75,8 @@ import {
   useCreateTestSuite, 
   useTestCases, 
   useCreateTestCase,
+  useUpdateTestCase,
+  useDeleteTestCase,
   useGenerateTestCases,
   TestSuite,
   TestCase
@@ -134,6 +137,8 @@ export default function TestManagement() {
   const [newCaseDialogOpen, setNewCaseDialogOpen] = useState(false);
   const [aiGenerateDialogOpen, setAiGenerateDialogOpen] = useState(false);
   const [testCaseDetailOpen, setTestCaseDetailOpen] = useState(false);
+  const [editCaseDialogOpen, setEditCaseDialogOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [selectedTestCase, setSelectedTestCase] = useState<TestCase | null>(null);
   
   // Fetch test suites
@@ -152,6 +157,12 @@ export default function TestManagement() {
   
   // Create test case mutation
   const createTestCaseMutation = useCreateTestCase();
+  
+  // Update test case mutation
+  const updateTestCaseMutation = useUpdateTestCase(selectedTestCase?.id || 0);
+  
+  // Delete test case mutation
+  const deleteTestCaseMutation = useDeleteTestCase();
   
   // Generate AI test cases mutation
   const generateTestCasesMutation = useGenerateTestCases();
@@ -183,6 +194,23 @@ export default function TestManagement() {
       status: "draft",
       suiteId: selectedSuite?.id || 0,
       automatable: false,
+    },
+  });
+  
+  // Form for editing a test case
+  const editCaseForm = useForm<z.infer<typeof createTestCaseSchema>>({
+    resolver: zodResolver(createTestCaseSchema),
+    defaultValues: {
+      title: selectedTestCase?.title || "",
+      description: selectedTestCase?.description || "",
+      preconditions: selectedTestCase?.preconditions || "",
+      steps: selectedTestCase?.steps || [],
+      expectedResults: selectedTestCase?.expectedResults || "",
+      priority: selectedTestCase?.priority || "medium",
+      severity: selectedTestCase?.severity || "normal",
+      status: selectedTestCase?.status || "draft",
+      suiteId: selectedTestCase?.suiteId || selectedSuite?.id || 0,
+      automatable: selectedTestCase?.automatable || false,
     },
   });
   
@@ -303,6 +331,81 @@ export default function TestManagement() {
       },
     });
   }
+  
+  // Handle updating a test case
+  function onUpdateTestCase(data: z.infer<typeof createTestCaseSchema>) {
+    if (!selectedTestCase) return;
+    
+    // Add steps array based on test case format
+    const testCaseData = {
+      ...data,
+      // Use structured steps if the format is structured, otherwise use a default step
+      steps: selectedProject?.testCaseFormat === "structured" 
+        ? data.steps || []
+        : [{ step: "Initialize test", expected: "Test is ready to run" }],
+    };
+    
+    updateTestCaseMutation.mutate(testCaseData, {
+      onSuccess: () => {
+        toast({
+          title: "Success",
+          description: "Test case updated successfully",
+        });
+        setEditCaseDialogOpen(false);
+        setSelectedTestCase(null);
+      },
+      onError: (error) => {
+        console.error(error);
+        toast({
+          title: "Error",
+          description: "Failed to update test case",
+          variant: "destructive",
+        });
+      },
+    });
+  }
+  
+  // Handle deleting a test case
+  function onDeleteTestCase() {
+    if (!selectedTestCase) return;
+    
+    deleteTestCaseMutation.mutate(selectedTestCase.id, {
+      onSuccess: () => {
+        toast({
+          title: "Success",
+          description: "Test case deleted successfully",
+        });
+        setDeleteConfirmOpen(false);
+        setSelectedTestCase(null);
+      },
+      onError: (error) => {
+        console.error(error);
+        toast({
+          title: "Error",
+          description: "Failed to delete test case",
+          variant: "destructive",
+        });
+      },
+    });
+  }
+  
+  // Reset edit form when selected test case changes
+  React.useEffect(() => {
+    if (selectedTestCase) {
+      editCaseForm.reset({
+        title: selectedTestCase.title,
+        description: selectedTestCase.description,
+        preconditions: selectedTestCase.preconditions,
+        steps: selectedTestCase.steps || [],
+        expectedResults: selectedTestCase.expectedResults,
+        priority: selectedTestCase.priority,
+        severity: selectedTestCase.severity,
+        status: selectedTestCase.status,
+        suiteId: selectedTestCase.suiteId,
+        automatable: selectedTestCase.automatable,
+      });
+    }
+  }, [selectedTestCase, editCaseForm]);
   
   return (
     <AppLayout>
@@ -1154,7 +1257,343 @@ export default function TestManagement() {
                 {selectedTestCase?.automatable ? "Yes" : "No"}
               </span>
             </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end space-x-3 pt-4 border-t border-atmf-main/50">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setTestCaseDetailOpen(false);
+                  setEditCaseDialogOpen(true);
+                }}
+                className="flex items-center gap-2"
+              >
+                <Pencil className="h-4 w-4" />
+                <span>Edit Test Case</span>
+              </Button>
+              
+              <Button 
+                variant="destructive" 
+                onClick={() => {
+                  setTestCaseDetailOpen(false);
+                  setDeleteConfirmOpen(true);
+                }}
+                className="flex items-center gap-2"
+              >
+                <Trash2 className="h-4 w-4" />
+                <span>Delete</span>
+              </Button>
+            </div>
           </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Edit Test Case Dialog */}
+      <Dialog open={editCaseDialogOpen} onOpenChange={setEditCaseDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <span>Edit Test Case</span>
+              {selectedTestCase?.aiGenerated && (
+                <IconWrapper color="blue" size="sm">
+                  <Bot className="h-4 w-4" />
+                </IconWrapper>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              Update test case details and steps
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...editCaseForm}>
+            <form onSubmit={editCaseForm.handleSubmit(onUpdateTestCase)} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={editCaseForm.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Title</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter test case title" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={editCaseForm.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="draft">Draft</SelectItem>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="review">Review</SelectItem>
+                          <SelectItem value="deprecated">Deprecated</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  control={editCaseForm.control}
+                  name="priority"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Priority</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select priority" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="high">High</SelectItem>
+                          <SelectItem value="medium">Medium</SelectItem>
+                          <SelectItem value="low">Low</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={editCaseForm.control}
+                  name="severity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Severity</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select severity" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="critical">Critical</SelectItem>
+                          <SelectItem value="high">High</SelectItem>
+                          <SelectItem value="normal">Normal</SelectItem>
+                          <SelectItem value="low">Low</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={editCaseForm.control}
+                  name="automatable"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-end space-x-2 space-y-0 rounded-md border p-4">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>
+                          Automatable
+                        </FormLabel>
+                        <FormDescription>
+                          Can this test be automated?
+                        </FormDescription>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <FormField
+                control={editCaseForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Describe the test case" {...field} className="min-h-24" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={editCaseForm.control}
+                name="preconditions"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Preconditions</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="List any preconditions" {...field} className="min-h-20" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              {selectedProject?.testCaseFormat === "structured" && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-medium">Test Steps</h3>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const currentSteps = editCaseForm.getValues("steps") || [];
+                        editCaseForm.setValue("steps", [
+                          ...currentSteps,
+                          { step: "", expected: "" }
+                        ]);
+                      }}
+                      className="h-8 flex items-center gap-1"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>Add Step</span>
+                    </Button>
+                  </div>
+                  
+                  {editCaseForm.watch("steps")?.map((_, index) => (
+                    <div key={index} className="grid grid-cols-12 gap-2 items-start">
+                      <div className="col-span-5">
+                        <FormField
+                          control={editCaseForm.control}
+                          name={`steps.${index}.step`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="sr-only">Step {index + 1}</FormLabel>
+                              <FormControl>
+                                <Input placeholder={`Step ${index + 1}`} {...field} />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <div className="col-span-5">
+                        <FormField
+                          control={editCaseForm.control}
+                          name={`steps.${index}.expected`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="sr-only">Expected Result</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Expected result" {...field} />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <div className="col-span-2 flex justify-end pt-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            const currentSteps = editCaseForm.getValues("steps") || [];
+                            if (currentSteps.length > 1) {
+                              editCaseForm.setValue(
+                                "steps",
+                                currentSteps.filter((_, i) => i !== index)
+                              );
+                            }
+                          }}
+                          disabled={editCaseForm.watch("steps")?.length <= 1}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              <FormField
+                control={editCaseForm.control}
+                name="expectedResults"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Expected Results</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Describe the expected results" {...field} className="min-h-20" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="secondary" 
+                  onClick={() => setEditCaseDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={updateTestCaseMutation.isPending}
+                >
+                  {updateTestCaseMutation.isPending ? "Saving..." : "Save Changes"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              Delete Test Case
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this test case? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <div className="bg-atmf-main p-3 rounded-md border border-white/5">
+              <p className="font-medium">{selectedTestCase?.title}</p>
+              <p className="text-sm text-atmf-muted mt-1">{selectedTestCase?.description}</p>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="secondary" 
+              onClick={() => setDeleteConfirmOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={onDeleteTestCase}
+              disabled={deleteTestCaseMutation.isPending}
+            >
+              {deleteTestCaseMutation.isPending ? "Deleting..." : "Delete Test Case"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </AppLayout>
