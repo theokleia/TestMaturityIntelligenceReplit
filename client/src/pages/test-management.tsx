@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Card, 
   CardContent, 
@@ -390,7 +390,7 @@ export default function TestManagement() {
   }
   
   // Reset edit form when selected test case changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (selectedTestCase) {
       editCaseForm.reset({
         title: selectedTestCase.title,
@@ -1469,7 +1469,7 @@ export default function TestManagement() {
                     </Button>
                   </div>
                   
-                  {editCaseForm.watch("steps")?.map((_, index) => (
+                  {editCaseForm.watch("steps") && editCaseForm.watch("steps")?.map((_, index) => (
                     <div key={index} className="grid grid-cols-12 gap-2 items-start">
                       <div className="col-span-5">
                         <FormField
@@ -1515,7 +1515,7 @@ export default function TestManagement() {
                               );
                             }
                           }}
-                          disabled={editCaseForm.watch("steps")?.length <= 1}
+                          disabled={(editCaseForm.watch("steps") || []).length <= 1}
                           className="h-8 w-8 p-0"
                         >
                           <Trash2 className="h-4 w-4" />
