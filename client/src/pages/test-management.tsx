@@ -1047,18 +1047,13 @@ export default function TestManagement() {
       <Dialog open={testCaseDetailOpen} onOpenChange={setTestCaseDetailOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span>Test Case: {selectedTestCase?.title}</span>
-                {selectedTestCase?.aiGenerated && (
-                  <IconWrapper color="blue" size="sm">
-                    <Bot className="h-4 w-4" />
-                  </IconWrapper>
-                )}
-              </div>
-              <Button variant="ghost" size="icon" onClick={() => setTestCaseDetailOpen(false)}>
-                <X className="h-4 w-4" />
-              </Button>
+            <DialogTitle className="flex items-center gap-2">
+              <span>Test Case: {selectedTestCase?.title}</span>
+              {selectedTestCase?.aiGenerated && (
+                <IconWrapper color="blue" size="sm">
+                  <Bot className="h-4 w-4" />
+                </IconWrapper>
+              )}
             </DialogTitle>
             <DialogDescription>
               {selectedSuite?.name} • Created: {new Date(selectedTestCase?.createdAt || '').toLocaleDateString()}
