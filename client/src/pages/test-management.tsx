@@ -169,6 +169,7 @@ export default function TestManagement() {
       title: "",
       description: "",
       preconditions: "",
+      steps: selectedProject?.testCaseFormat === "structured" ? [{ step: "", expected: "" }] : undefined,
       expectedResults: "",
       priority: "medium",
       severity: "normal",
@@ -233,10 +234,13 @@ export default function TestManagement() {
   
   // Handle creating a new test case
   function onCreateTestCase(data: z.infer<typeof createTestCaseSchema>) {
-    // Add empty steps array since this is a manual case
+    // Add steps array based on test case format
     const testCaseData = {
       ...data,
-      steps: [{ step: "Initialize test", expected: "Test is ready to run" }],
+      // Use structured steps if the format is structured, otherwise use a default step
+      steps: selectedProject?.testCaseFormat === "structured" 
+        ? data.steps || []
+        : [{ step: "Initialize test", expected: "Test is ready to run" }],
       aiGenerated: false,
       automationStatus: "not-automated",
       projectId
@@ -694,6 +698,94 @@ export default function TestManagement() {
                   </FormItem>
                 )}
               />
+              
+              {/* Steps field shown only for structured test case format */}
+              {selectedProject?.testCaseFormat === "structured" && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <FormLabel>Test Steps</FormLabel>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const currentSteps = newCaseForm.getValues("steps") || [];
+                        newCaseForm.setValue("steps", [
+                          ...currentSteps,
+                          { step: "", expected: "" }
+                        ]);
+                      }}
+                      className="flex items-center gap-1"
+                    >
+                      <Plus className="h-3 w-3" />
+                      <span>Add Step</span>
+                    </Button>
+                  </div>
+                  
+                  {newCaseForm.watch("steps")?.map((_, index) => (
+                    <div key={index} className="grid grid-cols-12 gap-2 items-start">
+                      <div className="col-span-1 flex items-center justify-center mt-2">
+                        <Badge variant="outline">{index + 1}</Badge>
+                      </div>
+                      <div className="col-span-5">
+                        <FormField
+                          control={newCaseForm.control}
+                          name={`steps.${index}.step`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormControl>
+                                <Textarea 
+                                  placeholder="Enter test step action" 
+                                  className="min-h-[80px]"
+                                  {...field} 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <div className="col-span-5">
+                        <FormField
+                          control={newCaseForm.control}
+                          name={`steps.${index}.expected`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormControl>
+                                <Textarea 
+                                  placeholder="Enter expected result" 
+                                  className="min-h-[80px]"
+                                  {...field} 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <div className="col-span-1 flex items-center justify-center mt-2">
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => {
+                            const currentSteps = newCaseForm.getValues("steps") || [];
+                            if (currentSteps.length > 1) {
+                              newCaseForm.setValue(
+                                "steps",
+                                currentSteps.filter((_, i) => i !== index)
+                              );
+                            }
+                          }}
+                          disabled={newCaseForm.watch("steps")?.length === 1}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
               
               <FormField
                 control={newCaseForm.control}
