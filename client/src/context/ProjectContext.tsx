@@ -12,7 +12,7 @@ export interface Project {
   jiraJql?: string; // Add Jira JQL search query (optional)
   jiraApiKey?: string; // Add Jira API key (optional)
   githubRepo?: string; // Add GitHub repository (optional)
-  testCaseFormat?: string; // Format for test cases: "structured" or "plain"
+  testCaseFormat?: "structured" | "plain"; // Format for test cases
 }
 
 // Define the context type
