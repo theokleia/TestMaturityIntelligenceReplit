@@ -613,16 +613,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to create test case" });
     }
   });
-
+  
+  // Update a test case
   app.patch("/api/test-cases/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const updateData = insertTestCaseSchema.partial().parse(req.body);
       
+      // Check if test case exists
+      const existingTestCase = await storage.getTestCase(id);
+      if (!existingTestCase) {
+        return res.status(404).json({ message: "Test case not found" });
+      }
+      
+      // Parse and validate update data
+      const updateSchema = insertTestCaseSchema.partial();
+      const updateData = updateSchema.parse(req.body);
+      
+      // Update the test case
       const updatedTestCase = await storage.updateTestCase(id, updateData);
       
       if (!updatedTestCase) {
-        return res.status(404).json({ message: "Test case not found" });
+        return res.status(500).json({ message: "Failed to update test case" });
       }
       
       res.json(updatedTestCase);
@@ -632,6 +643,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error updating test case:", error);
       res.status(500).json({ message: "Failed to update test case" });
+    }
+  });
+  
+  // Delete a test case
+  app.delete("/api/test-cases/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Check if test case exists
+      const existingTestCase = await storage.getTestCase(id);
+      if (!existingTestCase) {
+        return res.status(404).json({ message: "Test case not found" });
+      }
+      
+      // Delete the test case - assuming the storage interface has a deleteTestCase method
+      await storage.updateTestCase(id, { status: "deleted" });
+      
+      // Return success with no content
+      res.status(204).end();
+    } catch (error) {
+      console.error("Error deleting test case:", error);
+      res.status(500).json({ message: "Failed to delete test case" });
     }
   });
 
