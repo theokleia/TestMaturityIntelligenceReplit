@@ -57,7 +57,12 @@ import {
   Search, 
   Plus, 
   Brain, 
-  Bot
+  Bot,
+  Trash2,
+  Eye,
+  X,
+  ClipboardList,
+  Check
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/app-layout";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -128,6 +133,8 @@ export default function TestManagement() {
   const [newSuiteDialogOpen, setNewSuiteDialogOpen] = useState(false);
   const [newCaseDialogOpen, setNewCaseDialogOpen] = useState(false);
   const [aiGenerateDialogOpen, setAiGenerateDialogOpen] = useState(false);
+  const [testCaseDetailOpen, setTestCaseDetailOpen] = useState(false);
+  const [selectedTestCase, setSelectedTestCase] = useState<TestCase | null>(null);
   
   // Fetch test suites
   const { data: testSuites, isLoading: isLoadingTestSuites } = useTestSuites({
@@ -438,7 +445,14 @@ export default function TestManagement() {
                         </TableHeader>
                         <TableBody>
                           {testCases.map((testCase) => (
-                            <TableRow key={testCase.id}>
+                            <TableRow 
+                              key={testCase.id}
+                              className="cursor-pointer hover:bg-primary/5"
+                              onClick={() => {
+                                setSelectedTestCase(testCase);
+                                setTestCaseDetailOpen(true);
+                              }}
+                            >
                               <TableCell className="font-medium">{testCase.title}</TableCell>
                               <TableCell>
                                 <StatusBadge status={testCase.status} variant="test" />
@@ -453,15 +467,29 @@ export default function TestManagement() {
                                 <StatusBadge status={testCase.automationStatus} variant="automation" />
                               </TableCell>
                               <TableCell>
-                                {testCase.aiGenerated ? (
-                                  <IconWrapper color="blue" size="xs">
-                                    <Bot className="h-3 w-3" />
-                                  </IconWrapper>
-                                ) : (
-                                  <IconWrapper color="primary" size="xs">
-                                    <FileText className="h-3 w-3" />
-                                  </IconWrapper>
-                                )}
+                                <div className="flex items-center gap-2">
+                                  {testCase.aiGenerated ? (
+                                    <IconWrapper color="blue" size="xs">
+                                      <Bot className="h-3 w-3" />
+                                    </IconWrapper>
+                                  ) : (
+                                    <IconWrapper color="primary" size="xs">
+                                      <FileText className="h-3 w-3" />
+                                    </IconWrapper>
+                                  )}
+                                  <Button 
+                                    size="icon" 
+                                    variant="ghost" 
+                                    className="h-7 w-7 ml-2"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedTestCase(testCase);
+                                      setTestCaseDetailOpen(true);
+                                    }}
+                                  >
+                                    <Eye className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
                               </TableCell>
                             </TableRow>
                           ))}
@@ -1012,6 +1040,126 @@ export default function TestManagement() {
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Test Case Detail Dialog */}
+      <Dialog open={testCaseDetailOpen} onOpenChange={setTestCaseDetailOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span>Test Case: {selectedTestCase?.title}</span>
+                {selectedTestCase?.aiGenerated && (
+                  <IconWrapper color="blue" size="sm">
+                    <Bot className="h-4 w-4" />
+                  </IconWrapper>
+                )}
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => setTestCaseDetailOpen(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </DialogTitle>
+            <DialogDescription>
+              {selectedSuite?.name} • Created: {new Date(selectedTestCase?.createdAt || '').toLocaleDateString()}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="mt-4 space-y-6">
+            {/* Status Information */}
+            <div className="flex flex-wrap gap-2 md:gap-4">
+              <div className="bg-atmf-main p-2 rounded-md border border-white/5 flex items-center gap-2">
+                <span className="text-sm text-atmf-muted">Status:</span>
+                <StatusBadge status={selectedTestCase?.status || "draft"} variant="test" />
+              </div>
+              
+              <div className="bg-atmf-main p-2 rounded-md border border-white/5 flex items-center gap-2">
+                <span className="text-sm text-atmf-muted">Priority:</span>
+                <StatusBadge status={selectedTestCase?.priority || "medium"} variant="priority" />
+              </div>
+              
+              <div className="bg-atmf-main p-2 rounded-md border border-white/5 flex items-center gap-2">
+                <span className="text-sm text-atmf-muted">Severity:</span>
+                <StatusBadge status={selectedTestCase?.severity || "normal"} variant="severity" />
+              </div>
+              
+              <div className="bg-atmf-main p-2 rounded-md border border-white/5 flex items-center gap-2">
+                <span className="text-sm text-atmf-muted">Automation:</span>
+                <StatusBadge status={selectedTestCase?.automationStatus || "not-automated"} variant="automation" />
+              </div>
+            </div>
+            
+            {/* Description */}
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium text-atmf-muted flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Description
+              </h3>
+              <div className="bg-atmf-main p-3 rounded-md border border-white/5">
+                <p>{selectedTestCase?.description}</p>
+              </div>
+            </div>
+            
+            {/* Preconditions */}
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium text-atmf-muted flex items-center gap-2">
+                <ClipboardList className="h-4 w-4" />
+                Preconditions
+              </h3>
+              <div className="bg-atmf-main p-3 rounded-md border border-white/5">
+                <p>{selectedTestCase?.preconditions}</p>
+              </div>
+            </div>
+            
+            {/* Test Steps - Only for structured format */}
+            {selectedProject?.testCaseFormat === "structured" && selectedTestCase?.steps && selectedTestCase?.steps.length > 0 && (
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-atmf-muted flex items-center gap-2">
+                  <Check className="h-4 w-4" />
+                  Test Steps
+                </h3>
+                <div className="rounded-md border border-white/5 overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-atmf-main border-b border-white/5">
+                      <tr>
+                        <th className="px-4 py-2 text-left font-medium w-16">#</th>
+                        <th className="px-4 py-2 text-left font-medium">Action</th>
+                        <th className="px-4 py-2 text-left font-medium">Expected Result</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {selectedTestCase?.steps.map((step, index) => (
+                        <tr key={index} className="bg-atmf-main/50">
+                          <td className="px-4 py-3 text-atmf-muted">{index + 1}</td>
+                          <td className="px-4 py-3">{step.step}</td>
+                          <td className="px-4 py-3">{step.expected}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+            
+            {/* Expected Results */}
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium text-atmf-muted flex items-center gap-2">
+                <Check className="h-4 w-4" />
+                Expected Results
+              </h3>
+              <div className="bg-atmf-main p-3 rounded-md border border-white/5">
+                <p>{selectedTestCase?.expectedResults}</p>
+              </div>
+            </div>
+            
+            {/* Automation Potential */}
+            <div className="flex items-center space-x-2 p-3 bg-atmf-main rounded-md border border-white/5">
+              <span className="text-sm font-medium">Automatable:</span>
+              <span className={selectedTestCase?.automatable ? "text-green-400" : "text-red-400"}>
+                {selectedTestCase?.automatable ? "Yes" : "No"}
+              </span>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </AppLayout>
