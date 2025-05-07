@@ -58,6 +58,8 @@ export default function ProjectSettings() {
           `https://your-instance.atlassian.net/projects/${selectedProject.jiraProjectId}` : '',
         // For API key, if stored, initialize it (masked for security)
         jiraApiKey: selectedProject.jiraApiKey ? '••••••••••••••••' : '',
+        // Load saved test case format preference
+        testCaseFormat: selectedProject.testCaseFormat || 'structured',
       });
       setSaveSuccess(false);
     }
@@ -97,6 +99,8 @@ export default function ProjectSettings() {
             jiraApiKey: settings.jiraApiKey || undefined,
             // Add GitHub repo information if provided
             githubRepo: settings.githubRepo || undefined,
+            // Store test case format preference
+            testCaseFormat: settings.testCaseFormat,
           }),
         });
         

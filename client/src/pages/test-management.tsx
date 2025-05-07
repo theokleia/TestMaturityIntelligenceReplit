@@ -94,6 +94,12 @@ const createTestCaseSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().min(1, "Description is required"),
   preconditions: z.string().min(1, "Preconditions are required"),
+  steps: z.array(
+    z.object({ 
+      step: z.string(), 
+      expected: z.string() 
+    })
+  ).optional(),
   expectedResults: z.string().min(1, "Expected results are required"),
   priority: z.string().min(1, "Priority is required"),
   severity: z.string().min(1, "Severity is required"),

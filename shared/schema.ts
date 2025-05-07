@@ -21,6 +21,7 @@ export const projects = pgTable("projects", {
   jiraJql: text("jira_jql"),
   jiraApiKey: varchar("jira_api_key", { length: 100 }),
   githubRepo: varchar("github_repo", { length: 100 }),
+  testCaseFormat: varchar("test_case_format", { length: 20 }).default("structured"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
