@@ -74,10 +74,10 @@ import {
   useCreateTestSuite, 
   useTestCases, 
   useCreateTestCase,
+  useGenerateTestCases,
   TestSuite,
   TestCase
 } from "@/hooks/test-management";
-import { useGenerateTestCases } from "@/hooks/use-ai-recommendations";
 import { ATMFCard, ATMFCardHeader } from "@/components/design-system/atmf-card";
 import { StatusBadge } from "@/components/design-system/status-badge";
 import { IconWrapper } from "@/components/design-system/icon-wrapper";
