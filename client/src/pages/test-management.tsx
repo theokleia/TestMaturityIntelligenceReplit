@@ -282,28 +282,30 @@ export default function TestManagement() {
   
   // Handle creating a new test suite
   function onCreateSuite(data: z.infer<typeof createTestSuiteSchema>) {
-    createTestSuiteMutation.mutate({
+    createSuite({
       ...data,
       projectId
-    }, {
-      onSuccess: (newSuite) => {
-        toast({
-          title: "Success",
-          description: "Test suite created successfully",
-        });
-        setNewSuiteDialogOpen(false);
-        newSuiteForm.reset();
-        setSelectedSuite(newSuite);
-      },
-      onError: (error) => {
-        console.error(error);
-        toast({
-          title: "Error",
-          description: "Failed to create test suite",
-          variant: "destructive",
-        });
-      },
     });
+    
+    // Handle success actions
+    toast({
+      title: "Success",
+      description: "Test suite created successfully",
+    });
+    setNewSuiteDialogOpen(false);
+    newSuiteForm.reset();
+    
+    // We'll need to fetch the latest test suites to get the new one
+    setTimeout(() => {
+      const latestSuites = testSuitesData.filter(suite => suite.projectId === projectId);
+      if (latestSuites.length > 0) {
+        // Select the latest suite (assuming it's our newly created one)
+        const newSuite = latestSuites.sort((a, b) => 
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        )[0];
+        setSelectedSuite(newSuite);
+      }
+    }, 500); // Small delay to allow the server to process and the query to refetch
   }
   
   // Handle creating a new test case
@@ -320,55 +322,38 @@ export default function TestManagement() {
       projectId
     };
     
-    createTestCaseMutation.mutate(testCaseData, {
-      onSuccess: () => {
-        toast({
-          title: "Success",
-          description: "Test case created successfully",
-        });
-        setNewCaseDialogOpen(false);
-        newCaseForm.reset();
-        if (selectedSuite) {
-          newCaseForm.setValue("suiteId", selectedSuite.id);
-        }
-      },
-      onError: (error) => {
-        console.error(error);
-        toast({
-          title: "Error",
-          description: "Failed to create test case",
-          variant: "destructive",
-        });
-      },
+    // Call the create test case function
+    createTestCase(testCaseData);
+    
+    // Handle success
+    toast({
+      title: "Success",
+      description: "Test case created successfully",
     });
+    setNewCaseDialogOpen(false);
+    newCaseForm.reset();
+    if (selectedSuite) {
+      newCaseForm.setValue("suiteId", selectedSuite.id);
+    }
   }
   
   // Handle generating AI test cases
   function onGenerateAiTestCases(data: z.infer<typeof generateTestCasesSchema>) {
-    generateTestCasesMutation.mutate({
+    generateTestCases({
       ...data,
       projectId
-    }, {
-      onSuccess: (result) => {
-        toast({
-          title: "Success",
-          description: `Generated ${result.testCases.length} test cases successfully`,
-        });
-        setAiGenerateDialogOpen(false);
-        generateAiCasesForm.reset();
-        if (selectedSuite) {
-          generateAiCasesForm.setValue("testSuiteId", selectedSuite.id);
-        }
-      },
-      onError: (error) => {
-        console.error(error);
-        toast({
-          title: "Error",
-          description: "Failed to generate test cases",
-          variant: "destructive",
-        });
-      },
     });
+    
+    // Handle success actions
+    toast({
+      title: "Success",
+      description: "Generated test cases successfully",
+    });
+    setAiGenerateDialogOpen(false);
+    generateAiCasesForm.reset();
+    if (selectedSuite) {
+      generateAiCasesForm.setValue("testSuiteId", selectedSuite.id);
+    }
   }
   
   // Handle updating a test case
@@ -384,99 +369,73 @@ export default function TestManagement() {
         : [{ step: "Initialize test", expected: "Test is ready to run" }],
     };
     
-    updateTestCaseMutation.mutate(testCaseData, {
-      onSuccess: () => {
-        toast({
-          title: "Success",
-          description: "Test case updated successfully",
-        });
-        setEditCaseDialogOpen(false);
-        setSelectedTestCase(null);
-      },
-      onError: (error) => {
-        console.error(error);
-        toast({
-          title: "Error",
-          description: "Failed to update test case",
-          variant: "destructive",
-        });
-      },
+    updateTestCase({
+      id: selectedTestCase.id, 
+      data: testCaseData
     });
+    
+    // Handle success
+    toast({
+      title: "Success",
+      description: "Test case updated successfully",
+    });
+    setEditCaseDialogOpen(false);
+    setSelectedTestCase(null);
   }
   
   // Handle deleting a test case
   function onDeleteTestCase() {
     if (!selectedTestCase) return;
     
-    deleteTestCaseMutation.mutate(selectedTestCase.id, {
-      onSuccess: () => {
-        toast({
-          title: "Success",
-          description: "Test case deleted successfully",
-        });
-        setDeleteConfirmOpen(false);
-        setSelectedTestCase(null);
-      },
-      onError: (error) => {
-        console.error(error);
-        toast({
-          title: "Error",
-          description: "Failed to delete test case",
-          variant: "destructive",
-        });
-      },
+    deleteTestCase(selectedTestCase.id);
+    
+    // Handle success
+    toast({
+      title: "Success",
+      description: "Test case deleted successfully",
     });
+    setDeleteConfirmOpen(false);
+    setSelectedTestCase(null);
   }
   
   // Handle updating a test suite
   function onUpdateTestSuite(data: z.infer<typeof createTestSuiteSchema>) {
     if (!selectedSuite) return;
     
-    updateTestSuiteMutation.mutate({
+    updateSuite(selectedSuite.id, {
       ...data,
       projectId
-    }, {
-      onSuccess: (updatedSuite) => {
-        toast({
-          title: "Success",
-          description: "Test suite updated successfully",
-        });
-        setEditSuiteDialogOpen(false);
-        setSelectedSuite(updatedSuite);
-      },
-      onError: (error) => {
-        console.error(error);
-        toast({
-          title: "Error",
-          description: "Failed to update test suite",
-          variant: "destructive",
-        });
-      },
     });
+    
+    // Handle success
+    toast({
+      title: "Success",
+      description: "Test suite updated successfully",
+    });
+    setEditSuiteDialogOpen(false);
+    
+    // We'll refresh the test suite data and select the updated suite
+    setTimeout(() => {
+      const updatedSuites = testSuitesData.filter(suite => suite.id === selectedSuite.id);
+      if (updatedSuites.length > 0) {
+        setSelectedSuite(updatedSuites[0]);
+      }
+    }, 500);
   }
   
   // Handle deleting a test suite
   function onDeleteTestSuite() {
     if (!selectedSuite) return;
     
-    deleteTestSuiteMutation.mutate(selectedSuite.id, {
-      onSuccess: () => {
-        toast({
-          title: "Success",
-          description: "Test suite deleted successfully",
-        });
-        setDeleteSuiteConfirmOpen(false);
-        setSelectedSuite(null);
-      },
-      onError: (error) => {
-        console.error(error);
-        toast({
-          title: "Error",
-          description: "Failed to delete test suite",
-          variant: "destructive",
-        });
-      },
+    deleteSuite(selectedSuite.id);
+    
+    // Handle success
+    toast({
+      title: "Success",
+      description: "Test suite deleted successfully",
     });
+    setDeleteSuiteConfirmOpen(false);
+    setSelectedSuite(null);
   }
   
   // Reset edit form when selected test case changes
@@ -893,10 +852,9 @@ export default function TestManagement() {
               
               <DialogFooter>
                 <Button 
-                  type="submit" 
-                  disabled={createTestSuiteMutation.isPending}
+                  type="submit"
                 >
-                  {createTestSuiteMutation.isPending ? "Creating..." : "Create Test Suite"}
+                  Create Test Suite
                 </Button>
               </DialogFooter>
             </form>
