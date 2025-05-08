@@ -55,15 +55,17 @@ export default function ProjectSettings() {
         ...defaultSettings,
         // Pre-fill GitHub repo if set
         githubRepo: selectedProject.githubRepo || '',
-        // For Jira, if project ID exists, create a placeholder URL
-        jiraUrl: selectedProject.jiraProjectId ? 
-          `https://your-instance.atlassian.net/projects/${selectedProject.jiraProjectId}` : '',
+        // Use the saved Jira URL if available, otherwise create a placeholder
+        jiraUrl: selectedProject.jiraUrl || (selectedProject.jiraProjectId ? 
+          `https://your-instance.atlassian.net/projects/${selectedProject.jiraProjectId}` : ''),
         // For API key, if stored, initialize it (masked for security)
         jiraApiKey: selectedProject.jiraApiKey ? '••••••••••••••••' : '',
         // Load saved JQL query if available
         jiraJql: selectedProject.jiraJql || '',
         // Load saved test case format preference
         testCaseFormat: selectedProject.testCaseFormat || 'structured',
+        // Load saved output format preference
+        outputFormat: selectedProject.outputFormat || 'markdown',
       });
       setSaveSuccess(false);
     }
@@ -95,6 +97,9 @@ export default function ProjectSettings() {
         
         // Only add fields that are actually populated
         if (settings.jiraUrl) {
+          // Save the complete Jira URL
+          updatePayload.jiraUrl = settings.jiraUrl;
+          
           // Extract Jira project ID from the URL - it's typically the last part of the URL path
           updatePayload.jiraProjectId = settings.jiraUrl.split('/').pop()?.toUpperCase() || "JIRA";
         }

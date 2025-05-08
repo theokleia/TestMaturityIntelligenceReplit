@@ -18,6 +18,7 @@ export const projects = pgTable("projects", {
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
   jiraProjectId: varchar("jira_project_id", { length: 10 }),
+  jiraUrl: text("jira_url"), // Added jiraUrl field to store the Jira base URL
   jiraJql: text("jira_jql"),
   jiraApiKey: text("jira_api_key"), // Changed from varchar(100) to text to support longer API keys
   githubRepo: varchar("github_repo", { length: 100 }),
