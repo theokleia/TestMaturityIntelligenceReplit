@@ -561,6 +561,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to update test suite" });
     }
   });
+  
+  // Delete a test suite
+  app.delete("/api/test-suites/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Check if test suite exists
+      const existingTestSuite = await storage.getTestSuite(id);
+      if (!existingTestSuite) {
+        return res.status(404).json({ message: "Test suite not found" });
+      }
+      
+      // Delete the test suite by marking it as deleted
+      await storage.updateTestSuite(id, { status: "deleted" });
+      
+      // Return success with no content
+      res.status(204).end();
+    } catch (error) {
+      console.error("Error deleting test suite:", error);
+      res.status(500).json({ message: "Failed to delete test suite" });
+    }
+  });
 
   // Test Cases API endpoints
   app.get("/api/test-cases", async (req, res) => {
