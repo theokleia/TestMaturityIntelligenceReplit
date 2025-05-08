@@ -173,26 +173,25 @@ export default function TestManagement() {
     projectId
   });
   
-  // Create test suite mutation
-  const createTestSuiteMutation = useCreateTestSuite();
+  // Get test suite operations from hook
+  const { 
+    createSuite, 
+    updateSuite, 
+    deleteSuite
+  } = useTestSuites({
+    projectId
+  });
   
-  // Update test suite mutation
-  const updateTestSuiteMutation = useUpdateTestSuite(selectedSuite?.id || 0);
-  
-  // Delete test suite mutation
-  const deleteTestSuiteMutation = useDeleteTestSuite();
-  
-  // Create test case mutation
-  const createTestCaseMutation = useCreateTestCase();
-  
-  // Update test case mutation
-  const updateTestCaseMutation = useUpdateTestCase(selectedTestCase?.id || 0);
-  
-  // Delete test case mutation
-  const deleteTestCaseMutation = useDeleteTestCase();
-  
-  // Generate AI test cases mutation
-  const generateTestCasesMutation = useGenerateTestCases();
+  // Create test case operations from hook
+  const { 
+    createTestCase, 
+    updateTestCase, 
+    deleteTestCase,
+    generateTestCases
+  } = useTestCases({
+    suiteId: selectedSuite?.id,
+    projectId
+  });
   
   // Form for creating a new test suite
   const newSuiteForm = useForm<z.infer<typeof createTestSuiteSchema>>({
