@@ -6,6 +6,7 @@ export const testSuiteSchema = z.object({
   status: z.enum(["draft", "ready", "in-progress", "completed", "archived"]),
   priority: z.enum(["high", "medium", "low"]),
   projectArea: z.string().min(1, "Project area is required"),
+  type: z.string().default("functional"), // Default to functional tests
 });
 
 export type TestSuiteFormValues = z.infer<typeof testSuiteSchema>;
@@ -23,9 +24,10 @@ export const testCaseSchema = z.object({
   suiteId: z.number(),
   severity: z.enum(["critical", "high", "normal", "low"]),
   automatable: z.boolean(),
-  preconditions: z.string().optional(),
+  preconditions: z.string().optional().nullable().default(""), // Make it truly optional
   expectedResults: z.string().min(1, "Expected results are required"),
   steps: z.array(testStepSchema).optional(),
+  automationStatus: z.string().optional(),
 });
 
 export type TestCaseFormValues = z.infer<typeof testCaseSchema>;
