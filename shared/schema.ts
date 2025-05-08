@@ -15,15 +15,16 @@ export const users = pgTable("users", {
 
 export const projects = pgTable("projects", {
   id: serial("id").primaryKey(),
-  name: varchar("name", { length: 100 }).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
   jiraProjectId: varchar("jira_project_id", { length: 10 }),
   jiraJql: text("jira_jql"),
   jiraApiKey: varchar("jira_api_key", { length: 100 }),
   githubRepo: varchar("github_repo", { length: 100 }),
   testCaseFormat: varchar("test_case_format", { length: 20 }).default("structured"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  outputFormat: varchar("output_format", { length: 20 }).default("markdown"),
+  createdAt: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: 'string', withTimezone: true }).defaultNow(),
 });
 
 export const maturityDimensions = pgTable("maturity_dimensions", {

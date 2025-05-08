@@ -89,7 +89,8 @@ export default function ProjectSettings() {
       if (selectedProject?.id) {
         // Prepare the update payload
         const updatePayload: Record<string, any> = {
-          testCaseFormat: settings.testCaseFormat
+          testCaseFormat: settings.testCaseFormat,
+          outputFormat: settings.outputFormat
         };
         
         // Only add fields that are actually populated
@@ -117,16 +118,24 @@ export default function ProjectSettings() {
         }
         
         // Make the update request
-        const response = await fetch(`/api/projects/${selectedProject.id}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(updatePayload),
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to update project settings');
+        try {
+          const response = await fetch(`/api/projects/${selectedProject.id}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(updatePayload),
+          });
+          
+          const responseData = await response.json();
+          console.log("API Response:", response.status, responseData);
+          
+          if (!response.ok) {
+            throw new Error('Failed to update project settings');
+          }
+        } catch (error: any) {
+          console.error("API Error details:", error);
+          throw new Error('Error processing response: ' + (error.message || 'Unknown error'));
         }
         
         // Show success message and refresh context with a small delay
