@@ -29,6 +29,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Form,
   FormControl,
   FormDescription,
@@ -1714,6 +1724,221 @@ export default function TestManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      {/* Edit Test Suite Dialog */}
+      <Dialog open={editSuiteDialogOpen} onOpenChange={setEditSuiteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Test Suite</DialogTitle>
+            <DialogDescription>
+              Update the details of this test suite
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...editSuiteForm}>
+            <form onSubmit={editSuiteForm.handleSubmit(onUpdateTestSuite)} className="space-y-4 pt-4">
+              <FormField
+                control={editSuiteForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Authentication Tests" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={editSuiteForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Test cases for user authentication flows"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={editSuiteForm.control}
+                name="projectArea"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Project Area</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Authentication" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={editSuiteForm.control}
+                  name="priority"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Priority</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select priority" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="high">High</SelectItem>
+                          <SelectItem value="medium">Medium</SelectItem>
+                          <SelectItem value="low">Low</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={editSuiteForm.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="draft">Draft</SelectItem>
+                          <SelectItem value="archived">Archived</SelectItem>
+                          <SelectItem value="deprecated">Deprecated</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <FormField
+                control={editSuiteForm.control}
+                name="type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Type</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="functional">Functional</SelectItem>
+                        <SelectItem value="integration">Integration</SelectItem>
+                        <SelectItem value="performance">Performance</SelectItem>
+                        <SelectItem value="security">Security</SelectItem>
+                        <SelectItem value="usability">Usability</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <DialogFooter className="pt-4">
+                <Button 
+                  type="button" 
+                  variant="secondary" 
+                  onClick={() => setEditSuiteDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={updateTestSuiteMutation.isPending}>
+                  {updateTestSuiteMutation.isPending ? (
+                    <div className="flex items-center gap-2">
+                      <IconWrapper className="animate-spin">
+                        <ClipboardList className="h-4 w-4" />
+                      </IconWrapper>
+                      <span>Saving...</span>
+                    </div>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Delete Test Suite Confirmation */}
+      <AlertDialog open={deleteSuiteConfirmOpen} onOpenChange={setDeleteSuiteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Test Suite</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this test suite? This action cannot be undone and will make all test cases within this suite unavailable.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          {selectedSuite && (
+            <div className="py-4">
+              <div className="bg-destructive/10 p-4 rounded-md border border-destructive/30">
+                <p className="font-medium">{selectedSuite.name}</p>
+                <p className="text-sm text-muted-foreground mt-1">{selectedSuite.description}</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <Badge variant="outline">{selectedSuite.projectArea}</Badge>
+                  <StatusBadge status={selectedSuite.priority} variant="priority" />
+                  <StatusBadge status={selectedSuite.status} variant="test" />
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={onDeleteTestSuite}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteTestSuiteMutation.isPending}
+            >
+              {deleteTestSuiteMutation.isPending ? (
+                <div className="flex items-center gap-2">
+                  <IconWrapper className="animate-spin">
+                    <ClipboardList className="h-4 w-4" />
+                  </IconWrapper>
+                  <span>Deleting...</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Trash2 className="h-4 w-4" />
+                  <span>Delete</span>
+                </div>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 }
