@@ -415,7 +415,11 @@ export async function analyzeTestPatterns(
 export async function generateTestCases(
   feature: string,
   requirements: string,
-  complexity: string
+  complexity: string,
+  jiraInfo?: {
+    jiraProjectId?: string;
+    jiraJql?: string;
+  }
 ): Promise<{
   testCases: Array<{
     title: string;
@@ -429,12 +433,23 @@ export async function generateTestCases(
   }>;
 }> {
   try {
+    // Build the Jira context string if available
+    let jiraContext = '';
+    if (jiraInfo && jiraInfo.jiraProjectId) {
+      jiraContext = `\nJira Project ID: ${jiraInfo.jiraProjectId}`;
+      
+      if (jiraInfo.jiraJql) {
+        jiraContext += `\nJira JQL Query: ${jiraInfo.jiraJql}`;
+        jiraContext += `\nPlease consider Jira issues matching the above JQL query when creating test cases.`;
+      }
+    }
+
     const prompt = `
       Generate detailed test cases for the following feature:
       
       Feature: ${feature}
       Requirements: ${requirements}
-      Complexity: ${complexity}
+      Complexity: ${complexity}${jiraContext}
       
       Provide 3 detailed test cases, each with:
       1. Title
@@ -451,6 +466,7 @@ export async function generateTestCases(
       expectedResults, priority, severity, automatable.
       
       Make the test cases specific and detailed, with clear preconditions and steps that would be actionable for a tester.
+      ${jiraInfo?.jiraJql ? 'Incorporate specific details from Jira issues matching the JQL query to make the test cases more relevant and aligned with actual project requirements.' : ''}
     `;
 
     const response = await openai.chat.completions.create({

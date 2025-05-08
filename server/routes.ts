@@ -710,11 +710,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get the projectId from the test suite if not explicitly provided
       const testProjectId = projectId || testSuite.projectId;
       
-      // Generate test cases using AI
+      // Get the project to access Jira settings
+      let jiraInfo;
+      if (testProjectId) {
+        const project = await storage.getProject(testProjectId);
+        if (project && project.jiraProjectId) {
+          jiraInfo = {
+            jiraProjectId: project.jiraProjectId,
+            jiraJql: project.jiraJql
+          };
+        }
+      }
+      
+      // Generate test cases using AI, including Jira context if available
       const generatedTestCases = await generateTestCases(
         feature,
         requirements,
-        complexity
+        complexity,
+        jiraInfo
       );
       
       const createdTestCases = [];
