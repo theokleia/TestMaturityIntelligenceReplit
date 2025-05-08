@@ -387,7 +387,7 @@ export default function TestManagement() {
   function onDeleteTestCase() {
     if (!selectedTestCase) return;
     
-    deleteTestCase(selectedTestCase.id);
+    deleteTestCase({id: selectedTestCase.id});
     
     // Handle success
     toast({
@@ -402,9 +402,12 @@ export default function TestManagement() {
   function onUpdateTestSuite(data: z.infer<typeof createTestSuiteSchema>) {
     if (!selectedSuite) return;
     
-    updateSuite(selectedSuite.id, {
-      ...data,
-      projectId
+    updateSuite({
+      id: selectedSuite.id,
+      data: {
+        ...data,
+        projectId
+      }
     });
     
     // Handle success
@@ -427,7 +430,7 @@ export default function TestManagement() {
   function onDeleteTestSuite() {
     if (!selectedSuite) return;
     
-    deleteSuite(selectedSuite.id);
+    deleteSuite({id: selectedSuite.id});
     
     // Handle success
     toast({
@@ -1136,10 +1139,9 @@ export default function TestManagement() {
               
               <DialogFooter>
                 <Button 
-                  type="submit" 
-                  disabled={createTestCaseMutation.isPending}
+                  type="submit"
                 >
-                  {createTestCaseMutation.isPending ? "Creating..." : "Create Test Case"}
+                  Create Test Case
                 </Button>
               </DialogFooter>
             </form>
@@ -1220,17 +1222,10 @@ export default function TestManagement() {
               <DialogFooter>
                 <Button 
                   type="submit" 
-                  disabled={generateTestCasesMutation.isPending}
                   className="flex items-center gap-2"
                 >
-                  {generateTestCasesMutation.isPending ? (
-                    <>Generating...</>
-                  ) : (
-                    <>
-                      <Bot className="h-4 w-4" />
-                      <span>Generate Test Cases</span>
-                    </>
-                  )}
+                  <Bot className="h-4 w-4" />
+                  <span>Generate Test Cases</span>
                 </Button>
               </DialogFooter>
             </form>
@@ -1641,10 +1636,9 @@ export default function TestManagement() {
                   Cancel
                 </Button>
                 <Button 
-                  type="submit" 
-                  disabled={updateTestCaseMutation.isPending}
+                  type="submit"
                 >
-                  {updateTestCaseMutation.isPending ? "Saving..." : "Save Changes"}
+                  Save Changes
                 </Button>
               </DialogFooter>
             </form>
@@ -1681,9 +1675,8 @@ export default function TestManagement() {
             <Button 
               variant="destructive" 
               onClick={onDeleteTestCase}
-              disabled={deleteTestCaseMutation.isPending}
             >
-              {deleteTestCaseMutation.isPending ? "Deleting..." : "Delete Test Case"}
+              Delete Test Case
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1837,17 +1830,8 @@ export default function TestManagement() {
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={updateTestSuiteMutation.isPending}>
-                  {updateTestSuiteMutation.isPending ? (
-                    <div className="flex items-center gap-2">
-                      <IconWrapper className="animate-spin">
-                        <ClipboardList className="h-4 w-4" />
-                      </IconWrapper>
-                      <span>Saving...</span>
-                    </div>
-                  ) : (
-                    "Save Changes"
-                  )}
+                <Button type="submit">
+                  Save Changes
                 </Button>
               </DialogFooter>
             </form>
