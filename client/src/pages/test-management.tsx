@@ -73,6 +73,8 @@ import { useToast } from "@/hooks/use-toast";
 import { 
   useTestSuites, 
   useCreateTestSuite, 
+  useUpdateTestSuite,
+  useDeleteTestSuite,
   useTestCases, 
   useCreateTestCase,
   useUpdateTestCase,
@@ -134,6 +136,8 @@ export default function TestManagement() {
   
   // Dialogs state
   const [newSuiteDialogOpen, setNewSuiteDialogOpen] = useState(false);
+  const [editSuiteDialogOpen, setEditSuiteDialogOpen] = useState(false);
+  const [deleteSuiteConfirmOpen, setDeleteSuiteConfirmOpen] = useState(false);
   const [newCaseDialogOpen, setNewCaseDialogOpen] = useState(false);
   const [aiGenerateDialogOpen, setAiGenerateDialogOpen] = useState(false);
   const [testCaseDetailOpen, setTestCaseDetailOpen] = useState(false);
@@ -154,6 +158,12 @@ export default function TestManagement() {
   
   // Create test suite mutation
   const createTestSuiteMutation = useCreateTestSuite();
+  
+  // Update test suite mutation
+  const updateTestSuiteMutation = useUpdateTestSuite(selectedSuite?.id || 0);
+  
+  // Delete test suite mutation
+  const deleteTestSuiteMutation = useDeleteTestSuite();
   
   // Create test case mutation
   const createTestCaseMutation = useCreateTestCase();
@@ -177,6 +187,19 @@ export default function TestManagement() {
       priority: "medium",
       status: "active",
       type: "functional",
+    },
+  });
+  
+  // Form for editing a test suite
+  const editSuiteForm = useForm<z.infer<typeof createTestSuiteSchema>>({
+    resolver: zodResolver(createTestSuiteSchema),
+    defaultValues: {
+      name: selectedSuite?.name || "",
+      description: selectedSuite?.description || "",
+      projectArea: selectedSuite?.projectArea || "",
+      priority: selectedSuite?.priority || "medium",
+      status: selectedSuite?.status || "active",
+      type: selectedSuite?.type || "functional",
     },
   });
   
@@ -389,6 +412,57 @@ export default function TestManagement() {
     });
   }
   
+  // Handle updating a test suite
+  function onUpdateTestSuite(data: z.infer<typeof createTestSuiteSchema>) {
+    if (!selectedSuite) return;
+    
+    updateTestSuiteMutation.mutate({
+      ...data,
+      projectId
+    }, {
+      onSuccess: (updatedSuite) => {
+        toast({
+          title: "Success",
+          description: "Test suite updated successfully",
+        });
+        setEditSuiteDialogOpen(false);
+        setSelectedSuite(updatedSuite);
+      },
+      onError: (error) => {
+        console.error(error);
+        toast({
+          title: "Error",
+          description: "Failed to update test suite",
+          variant: "destructive",
+        });
+      },
+    });
+  }
+  
+  // Handle deleting a test suite
+  function onDeleteTestSuite() {
+    if (!selectedSuite) return;
+    
+    deleteTestSuiteMutation.mutate(selectedSuite.id, {
+      onSuccess: () => {
+        toast({
+          title: "Success",
+          description: "Test suite deleted successfully",
+        });
+        setDeleteSuiteConfirmOpen(false);
+        setSelectedSuite(null);
+      },
+      onError: (error) => {
+        console.error(error);
+        toast({
+          title: "Error",
+          description: "Failed to delete test suite",
+          variant: "destructive",
+        });
+      },
+    });
+  }
+  
   // Reset edit form when selected test case changes
   useEffect(() => {
     if (selectedTestCase) {
@@ -406,6 +480,20 @@ export default function TestManagement() {
       });
     }
   }, [selectedTestCase, editCaseForm]);
+  
+  // Reset edit suite form when selected suite changes
+  useEffect(() => {
+    if (selectedSuite) {
+      editSuiteForm.reset({
+        name: selectedSuite.name,
+        description: selectedSuite.description,
+        projectArea: selectedSuite.projectArea,
+        priority: selectedSuite.priority,
+        status: selectedSuite.status,
+        type: selectedSuite.type,
+      });
+    }
+  }, [selectedSuite, editSuiteForm]);
   
   return (
     <AppLayout>
@@ -464,7 +552,37 @@ export default function TestManagement() {
                                 <div className="truncate font-medium" title={suite.name}>
                                   {suite.name}
                                 </div>
-                                <StatusBadge status={suite.status} variant="test" />
+                                <div className="flex items-center gap-1">
+                                  <StatusBadge status={suite.status} variant="test" />
+                                  {selectedSuite?.id === suite.id && (
+                                    <div className="flex items-center ml-1">
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-6 w-6"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setEditSuiteDialogOpen(true);
+                                        }}
+                                        title="Edit test suite"
+                                      >
+                                        <Pencil className="h-3.5 w-3.5" />
+                                      </Button>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-6 w-6 text-destructive hover:text-destructive"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setDeleteSuiteConfirmOpen(true);
+                                        }}
+                                        title="Delete test suite"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                               <p className="text-sm text-text-muted line-clamp-2" title={suite.description}>
                                 {suite.description}
