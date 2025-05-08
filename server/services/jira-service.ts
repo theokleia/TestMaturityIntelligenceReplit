@@ -1,0 +1,151 @@
+/**
+ * Jira Integration Service
+ * Provides functionality to interact with Jira API using the stored credentials
+ */
+
+import fetch from 'node-fetch';
+import { Project } from '@shared/schema';
+
+// Define types for Jira API responses
+interface JiraIssue {
+  id: string;
+  key: string;
+  fields: {
+    summary: string;
+    description: string;
+    issuetype: {
+      name: string;
+    };
+    status: {
+      name: string;
+    };
+    priority?: {
+      name: string;
+    };
+    [key: string]: any; // Allow for flexible fields
+  };
+}
+
+interface JiraResponse {
+  issues: JiraIssue[];
+  total: number;
+  maxResults: number;
+  startAt: number;
+}
+
+/**
+ * Fetch issues from Jira based on JQL query
+ */
+export async function fetchJiraIssues(project: Project): Promise<JiraIssue[] | null> {
+  // Verify that the project has the necessary Jira configuration
+  if (!project.jiraUrl || !project.jiraProjectId || !project.jiraApiKey) {
+    console.warn("Jira integration is not fully configured for project:", project.id);
+    return null;
+  }
+
+  try {
+    // Use the configured JQL or create a default one
+    const jql = project.jiraJql || `project = ${project.jiraProjectId}`;
+    
+    // Construct the URL for the Jira API endpoint
+    const apiUrl = `${project.jiraUrl}/rest/api/2/search`;
+
+    // Create the request URL with query parameters
+    const url = new URL(apiUrl);
+    url.searchParams.append('jql', jql);
+    url.searchParams.append('maxResults', '50'); // Adjust as needed
+    url.searchParams.append('fields', 'summary,description,issuetype,status,priority,components,labels');
+
+    // Make the API call with appropriate authentication
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        'Authorization': `Basic ${Buffer.from(`${project.jiraApiKey}`).toString('base64')}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error(`Jira API error (${response.status}):`, errorData);
+      return null;
+    }
+
+    const data = await response.json() as JiraResponse;
+    return data.issues;
+  } catch (error) {
+    console.error("Error fetching Jira issues:", error);
+    return null;
+  }
+}
+
+/**
+ * Extract project coverage metrics based on Jira issues
+ */
+export function analyzeJiraCoverage(issues: JiraIssue[]): {
+  totalIssues: number;
+  coveredFeatures: string[];
+  uncoveredFeatures: string[];
+  coverageByType: Record<string, { total: number; covered: number }>;
+} {
+  // This is a simplified implementation
+  // In a real scenario, you would compare issues against existing test cases
+  
+  const result = {
+    totalIssues: issues.length,
+    coveredFeatures: [] as string[],
+    uncoveredFeatures: [] as string[],
+    coverageByType: {} as Record<string, { total: number; covered: number }>
+  };
+
+  // For demo purposes, consider 30% of features as covered, 70% as uncovered
+  // In a real implementation, this would check against actual test case coverage
+  issues.forEach((issue, index) => {
+    const issueType = issue.fields.issuetype?.name || 'Unknown';
+    
+    // Initialize type coverage if not exists
+    if (!result.coverageByType[issueType]) {
+      result.coverageByType[issueType] = { 
+        total: 0, 
+        covered: 0 
+      };
+    }
+    
+    result.coverageByType[issueType].total++;
+    
+    // Mock coverage status (in a real app, would check against test cases)
+    const featureKey = `${issue.key}: ${issue.fields.summary}`;
+    if (index % 3 === 0) { // Simulating 1/3 coverage
+      result.coveredFeatures.push(featureKey);
+      result.coverageByType[issueType].covered++;
+    } else {
+      result.uncoveredFeatures.push(featureKey);
+    }
+  });
+
+  return result;
+}
+
+/**
+ * Process Jira issues to extract key information for AI prompt enhancement
+ */
+export function getJiraContextForAI(issues: JiraIssue[]): string {
+  if (!issues || issues.length === 0) {
+    return "No Jira issues available.";
+  }
+
+  // Extract key details from issues to enhance AI prompt
+  const issuesSummary = issues.map(issue => {
+    return `
+Issue: ${issue.key}
+Type: ${issue.fields.issuetype?.name || 'Unknown'}
+Summary: ${issue.fields.summary}
+Status: ${issue.fields.status?.name || 'Unknown'}
+Priority: ${issue.fields.priority?.name || 'Not set'}
+Description: ${issue.fields.description ? issue.fields.description.substring(0, 300) + (issue.fields.description.length > 300 ? '...' : '') : 'No description'}
+---`;
+  }).join("\n");
+
+  return `Available Jira Issues:\n${issuesSummary}`;
+}
