@@ -339,9 +339,10 @@ export default function TestManagement() {
   
   // Handle generating AI test cases
   function onGenerateAiTestCases(data: z.infer<typeof generateTestCasesSchema>) {
+    // Ensure complexity is properly typed
     generateTestCases({
       ...data,
-      projectId
+      complexity: data.complexity as "high" | "medium" | "low"
     });
     
     // Handle success actions
@@ -387,7 +388,7 @@ export default function TestManagement() {
   function onDeleteTestCase() {
     if (!selectedTestCase) return;
     
-    deleteTestCase({id: selectedTestCase.id});
+    deleteTestCase(selectedTestCase.id);
     
     // Handle success
     toast({
@@ -430,7 +431,7 @@ export default function TestManagement() {
   function onDeleteTestSuite() {
     if (!selectedSuite) return;
     
-    deleteSuite({id: selectedSuite.id});
+    deleteSuite(selectedSuite.id);
     
     // Handle success
     toast({
@@ -447,7 +448,7 @@ export default function TestManagement() {
       editCaseForm.reset({
         title: selectedTestCase.title,
         description: selectedTestCase.description,
-        preconditions: selectedTestCase.preconditions,
+        preconditions: selectedTestCase.preconditions || '', // Convert null to empty string
         steps: selectedTestCase.steps || [],
         expectedResults: selectedTestCase.expectedResults,
         priority: selectedTestCase.priority,
@@ -1868,21 +1869,11 @@ export default function TestManagement() {
             <AlertDialogAction 
               onClick={onDeleteTestSuite}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={deleteTestSuiteMutation.isPending}
             >
-              {deleteTestSuiteMutation.isPending ? (
-                <div className="flex items-center gap-2">
-                  <IconWrapper className="animate-spin">
-                    <ClipboardList className="h-4 w-4" />
-                  </IconWrapper>
-                  <span>Deleting...</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <Trash2 className="h-4 w-4" />
-                  <span>Delete</span>
-                </div>
-              )}
+              <div className="flex items-center gap-2">
+                <Trash2 className="h-4 w-4" />
+                <span>Delete</span>
+              </div>
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
