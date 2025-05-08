@@ -7,14 +7,14 @@ import { testCaseSchema, TestCaseFormValues } from "@/schemas/test-management";
 interface UseTestCaseFormProps {
   testCase?: TestCase | null;
   selectedSuite?: TestSuite | null;
-  isStructured: boolean;
+  isStructured?: boolean;
   mode: "create" | "edit";
 }
 
 export function useTestCaseForm({
   testCase,
   selectedSuite,
-  isStructured,
+  isStructured = true,
   mode,
 }: UseTestCaseFormProps) {
   const form = useForm<TestCaseFormValues>({

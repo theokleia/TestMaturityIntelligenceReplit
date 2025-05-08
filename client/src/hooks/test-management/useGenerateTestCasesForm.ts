@@ -10,21 +10,18 @@ import { useToast } from "@/hooks/use-toast";
 const generateTestCasesSchema = z.object({
   feature: z.string().min(5, "Feature description is required"),
   requirements: z.string().min(5, "Requirements are required"),
-  count: z.number().min(1).max(10),
-  priority: z.enum(["high", "medium", "low"]).default("medium"),
-  suiteId: z.number().min(1, "A test suite must be selected"),
+  complexity: z.enum(["simple", "moderate", "complex"]).default("moderate"),
+  testSuiteId: z.number().min(1, "A test suite must be selected"),
 });
 
-type GenerateTestCasesFormValues = z.infer<typeof generateTestCasesSchema>;
+export type GenerateTestCasesFormValues = z.infer<typeof generateTestCasesSchema>;
 
-type GenerateTestCasesFormOptions = {
+export interface GenerateTestCasesFormOptions {
   selectedSuite?: TestSuite | null;
-  isOpen: boolean;
-};
+}
 
 export function useGenerateTestCasesForm({
   selectedSuite,
-  isOpen,
 }: GenerateTestCasesFormOptions) {
   const { toast } = useToast();
   const [isGenerating, setIsGenerating] = useState(false);
@@ -34,15 +31,14 @@ export function useGenerateTestCasesForm({
     defaultValues: {
       feature: "",
       requirements: "",
-      count: 3,
-      priority: "medium",
-      suiteId: selectedSuite?.id || 0,
+      complexity: "moderate",
+      testSuiteId: selectedSuite?.id || 0,
     },
   });
 
-  // Reset the form when it's opened
-  if (isOpen && selectedSuite?.id && form.getValues("suiteId") !== selectedSuite.id) {
-    form.setValue("suiteId", selectedSuite.id);
+  // Reset the form when the selected suite changes
+  if (selectedSuite?.id && form.getValues("testSuiteId") !== selectedSuite.id) {
+    form.setValue("testSuiteId", selectedSuite.id);
   }
 
   const generateTestCases = async (data: GenerateTestCasesFormValues) => {
@@ -51,7 +47,7 @@ export function useGenerateTestCasesForm({
       await apiRequest("/api/ai/generate-tests", "POST", data);
       toast({
         title: "Test cases generated",
-        description: `${data.count} test cases were successfully generated for ${selectedSuite?.name}`,
+        description: `Test cases were successfully generated for ${selectedSuite?.name}`,
       });
       return true;
     } catch (error) {

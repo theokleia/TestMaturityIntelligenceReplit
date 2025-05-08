@@ -1,5 +1,6 @@
 import React from "react";
-import { TestSuite, useGenerateTestCasesForm } from "@/hooks/test-management";
+import { TestSuite } from "@/hooks/test-management";
+import { useGenerateTestCasesForm } from "@/hooks/test-management/useGenerateTestCasesForm";
 import { GenerateTestCasesFormValues } from "@/schemas/test-management";
 import { ErrorBoundary } from "@/components/error/ErrorBoundary";
 

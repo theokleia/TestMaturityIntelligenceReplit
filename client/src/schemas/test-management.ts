@@ -37,9 +37,8 @@ export type TestCaseFormValues = z.infer<typeof testCaseSchema>;
 export const generateTestCasesSchema = z.object({
   feature: z.string().min(5, "Feature description is required"),
   requirements: z.string().min(5, "Requirements are required"),
-  count: z.number().min(1).max(10),
-  priority: z.enum(["high", "medium", "low"]).default("medium"),
-  suiteId: z.number().min(1, "A test suite must be selected"),
+  complexity: z.enum(["simple", "moderate", "complex"]).default("moderate"),
+  testSuiteId: z.number().min(1, "A test suite must be selected"),
 });
 
 export type GenerateTestCasesFormValues = z.infer<typeof generateTestCasesSchema>;
