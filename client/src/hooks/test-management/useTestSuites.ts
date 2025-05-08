@@ -20,6 +20,9 @@ interface TestSuitesFilters {
 export function useTestSuites(filters: TestSuitesFilters = {}) {
   const queryClient = useQueryClient();
   
+  // Debug filters
+  console.log("useTestSuites called with filters:", filters);
+  
   // Construct query key with filters
   const queryKey = Object.entries(filters).length > 0
     ? ["/api/test-suites", filters]
@@ -38,6 +41,7 @@ export function useTestSuites(filters: TestSuitesFilters = {}) {
       });
       
       const url = `/api/test-suites${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      console.log("useTestSuites fetching from URL:", url);
       return apiRequest<TestSuite[]>(url);
     },
   });

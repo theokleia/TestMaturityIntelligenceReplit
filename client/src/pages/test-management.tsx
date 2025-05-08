@@ -155,8 +155,12 @@ export default function TestManagement() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [selectedTestCase, setSelectedTestCase] = useState<TestCase | null>(null);
   
+  // Debug selected project
+  console.log("TestManagement - selectedProject:", selectedProject);
+  console.log("TestManagement - projectId:", projectId);
+  
   // Fetch test suites
-  const { data: testSuites, isLoading: isLoadingTestSuites } = useTestSuites({
+  const { testSuites, isLoading: isLoadingTestSuites } = useTestSuites({
     projectId
   });
   
