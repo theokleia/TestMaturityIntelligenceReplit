@@ -1,23 +1,21 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { UpdateTestSuiteRequest } from "./types";
+import { useMutation } from "@tanstack/react-query";
+import { UpdateTestSuiteRequest, TestSuite } from "./types";
 import { apiRequest } from "@/lib/queryClient";
+import { invalidateResource } from "@/lib/queryUtils";
+
+const TEST_SUITES_ENDPOINT = "/api/test-suites";
 
 /**
  * Hook for updating an existing test suite
  */
 export function useUpdateTestSuite(id: number) {
-  const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: async (testSuite: UpdateTestSuiteRequest) => {
-      const response = await apiRequest(`/api/test-suites/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(testSuite),
-      });
-      return response;
+    mutationFn: async (testSuite: UpdateTestSuiteRequest): Promise<TestSuite> => {
+      const response = await apiRequest('PATCH', `${TEST_SUITES_ENDPOINT}/${id}`, testSuite);
+      return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/test-suites'] });
+      invalidateResource(TEST_SUITES_ENDPOINT);
     },
   });
 }
