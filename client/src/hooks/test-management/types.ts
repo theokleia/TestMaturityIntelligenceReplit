@@ -39,6 +39,7 @@ export interface UpdateTestSuiteRequest {
   priority?: string;
   status?: string;
   type?: string;
+  projectId?: number;
   tags?: string[];
 }
 
