@@ -19,7 +19,7 @@ export const projects = pgTable("projects", {
   description: text("description"),
   jiraProjectId: varchar("jira_project_id", { length: 10 }),
   jiraJql: text("jira_jql"),
-  jiraApiKey: varchar("jira_api_key", { length: 100 }),
+  jiraApiKey: text("jira_api_key"), // Changed from varchar(100) to text to support longer API keys
   githubRepo: varchar("github_repo", { length: 100 }),
   testCaseFormat: varchar("test_case_format", { length: 20 }).default("structured"),
   outputFormat: varchar("output_format", { length: 20 }).default("markdown"),
