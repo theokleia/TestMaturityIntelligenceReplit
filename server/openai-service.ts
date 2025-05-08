@@ -573,13 +573,13 @@ export async function generateTestStrategy(
  * Generate project-specific assistant responses based on user queries
  */
 export async function generateAssistantResponse(
-  projectName: string,
+  project: Project,
   query: string,
   contextPath: string
 ): Promise<string> {
   try {
     // Determine project type based on name for enhanced context
-    const projectType = getProjectTypeFromName(projectName);
+    const projectType = getProjectTypeFromName(project.name);
     const projectContext = PROJECT_CONTEXTS[projectType] || null;
     
     // Determine page context based on path
@@ -592,13 +592,65 @@ export async function generateAssistantResponse(
       pageContext = "Test Management - Managing test cases, suites, and execution";
     } else if (contextPath.includes("ai-insights")) {
       pageContext = "AI Insights - Analyzing testing data for patterns and recommendations";
+    } else if (contextPath.includes("settings")) {
+      pageContext = "Project Settings - Configuring project preferences and integrations";
     } else {
       pageContext = "General project overview and navigation";
     }
     
-    // Construct prompt with enhanced context
+    // Get Jira and GitHub data if available
+    let jiraContext = "";
+    let githubContext = "";
+    
+    // Only attempt to fetch Jira data if project has Jira configured
+    if (project.jiraUrl && project.jiraApiKey && project.jiraProjectId) {
+      console.log(`Fetching Jira issues for project ${project.id} - ${project.name}`);
+      try {
+        const jiraIssues = await fetchJiraIssues(project);
+        if (jiraIssues && jiraIssues.length > 0) {
+          jiraContext = getJiraContextForAI(jiraIssues);
+        } else {
+          jiraContext = "Jira integration is configured, but no issues were found or available.";
+        }
+      } catch (error) {
+        console.error("Error fetching Jira data for AI context:", error);
+        jiraContext = "Error retrieving Jira data. Integration may need to be reconfigured.";
+      }
+    } else {
+      jiraContext = "No Jira integration configured for this project.";
+    }
+    
+    // Only attempt to fetch GitHub data if project has GitHub configured
+    if (project.githubRepo && project.githubToken) {
+      console.log(`Fetching GitHub data for project ${project.id} - ${project.name}`);
+      try {
+        const repoFiles = await fetchRepoFiles(project);
+        const recentCommits = await fetchRecentCommits(project);
+        
+        // Get content of key files (e.g., README.md) if available
+        const fileContents: Record<string, string> = {};
+        if (repoFiles) {
+          const readmeFile = repoFiles.find(f => f.name.toLowerCase() === 'readme.md');
+          if (readmeFile) {
+            const content = await fetchFileContent(project, readmeFile.path);
+            if (content) {
+              fileContents[readmeFile.path] = content;
+            }
+          }
+        }
+        
+        githubContext = getGitHubContextForAI(repoFiles || [], recentCommits, fileContents);
+      } catch (error) {
+        console.error("Error fetching GitHub data for AI context:", error);
+        githubContext = "Error retrieving GitHub data. Integration may need to be reconfigured.";
+      }
+    } else {
+      githubContext = "No GitHub integration configured for this project.";
+    }
+    
+    // Construct prompt with enhanced context including Jira and GitHub data
     const prompt = `
-      You are an AI testing assistant for the ATMosFera testing platform, helping with the "${projectName}" project.
+      You are an AI testing assistant for the ATMosFera testing platform, helping with the "${project.name}" project.
       
       ${projectContext ? `Project Context:
       - Type: ${projectContext.type}
@@ -608,20 +660,26 @@ export async function generateAssistantResponse(
       
       Current Page Context: ${pageContext}
       
+      ${jiraContext ? `\nJira Integration Data:\n${jiraContext}\n` : ""}
+      
+      ${githubContext ? `\nGitHub Integration Data:\n${githubContext}\n` : ""}
+      
       User Query: ${query}
       
       Provide a helpful, concise response to assist the user with their testing needs.
       Focus on practical, actionable advice related to their query.
+      If you reference integration data from Jira or GitHub, clearly indicate that in your response.
       If you don't have enough information, suggest what specific details would help you provide better guidance.
       Format your response using markdown for better readability. Use bullet points and bold formatting for key points.
     `;
 
+    console.log(`Generating AI Assistant response for project ${project.id} - ${project.name}`);
     const response = await openai.chat.completions.create({
       model: MODEL,
       messages: [
         { 
           role: "system", 
-          content: "You are ATMosFera Assistant, an expert in test automation, quality engineering, and the Adaptive Testing Maturity Framework (ATMF). You provide concise, practical advice to help testing teams improve their processes and deliverables." 
+          content: "You are ATMosFera Assistant, an expert in test automation, quality engineering, and the Adaptive Testing Maturity Framework (ATMF). You provide concise, practical advice to help testing teams improve their processes and deliverables by leveraging their actual project data from integrations." 
         },
         { role: "user", content: prompt }
       ],
@@ -640,13 +698,13 @@ export async function generateAssistantResponse(
  * Generate contextual whisper mode suggestions based on user's current activity
  */
 export async function generateWhisperSuggestions(
-  projectName: string,
+  project: Project,
   contextPath: string,
   contextData?: any
 ): Promise<{ suggestions: string[]; priority: "low" | "medium" | "high" }> {
   try {
     // Determine project type from the project name
-    const projectType = getProjectTypeFromName(projectName);
+    const projectType = getProjectTypeFromName(project.name);
     
     // Use the project context to enhance the suggestions
     const context = PROJECT_CONTEXTS[projectType] || PROJECT_CONTEXTS.general;
@@ -666,13 +724,77 @@ export async function generateWhisperSuggestions(
       pageContext = "Test Management - Managing test cases, suites, and execution";
     } else if (contextPath.includes("ai-insights")) {
       pageContext = "AI Insights - Analyzing testing data for patterns and recommendations";
+    } else if (contextPath.includes("settings")) {
+      pageContext = "Project Settings - Configuring project preferences and integrations";
     } else {
       pageContext = "General project overview and navigation";
     }
     
+    // Get Jira and GitHub data if available to enhance the whisper suggestions
+    let jiraContext = "";
+    let githubContext = "";
+    
+    // Only attempt to fetch Jira data if project has Jira configured
+    let jiraIssues = null;
+    if (project.jiraUrl && project.jiraApiKey && project.jiraProjectId) {
+      console.log(`Fetching Jira issues for whisper suggestions - project ${project.id} - ${project.name}`);
+      try {
+        jiraIssues = await fetchJiraIssues(project);
+        if (jiraIssues && jiraIssues.length > 0) {
+          // For whisper, we need a very condensed version of the Jira data
+          const issueTypes = new Set(jiraIssues.map(issue => issue.fields.issuetype?.name || "Unknown"));
+          const statuses = new Set(jiraIssues.map(issue => issue.fields.status?.name || "Unknown"));
+          
+          jiraContext = `
+          Jira Integration Summary:
+          - ${jiraIssues.length} issues found
+          - Issue types: ${Array.from(issueTypes).join(", ")}
+          - Statuses: ${Array.from(statuses).join(", ")}`;
+          
+          // Add potential test gaps information
+          const coverage = analyzeJiraCoverage(jiraIssues);
+          if (coverage.uncoveredFeatures.length > 0) {
+            jiraContext += `\n- ${coverage.uncoveredFeatures.length} features without test coverage`;
+          }
+        } else {
+          jiraContext = "Jira integration configured, but no issues available.";
+        }
+      } catch (error) {
+        console.error("Error fetching Jira data for whisper suggestions:", error);
+        jiraContext = "Error retrieving Jira data.";
+      }
+    }
+    
+    // Only attempt to fetch GitHub data if project has GitHub configured
+    if (project.githubRepo && project.githubToken) {
+      console.log(`Fetching GitHub data for whisper suggestions - project ${project.id} - ${project.name}`);
+      try {
+        const recentCommits = await fetchRecentCommits(project, 5);
+        
+        if (recentCommits && recentCommits.length > 0) {
+          // For whisper, we just need a summary of recent activity
+          githubContext = `
+          GitHub Integration Summary:
+          - ${recentCommits.length} recent commits
+          - Latest commit: ${recentCommits[0].commit.message.substring(0, 50)}...
+          - Most active files may need test coverage`;
+        } else {
+          githubContext = "GitHub integration configured, but no recent commits found.";
+        }
+      } catch (error) {
+        console.error("Error fetching GitHub data for whisper suggestions:", error);
+        githubContext = "Error retrieving GitHub data.";
+      }
+    }
+    
+    // Determine if we're on a page where integration data should influence suggestions
+    const isIntegrationRelevant = contextPath.includes("test-management") || 
+                                 contextPath.includes("ai-insights") || 
+                                 contextPath === "/";
+    
     // Build a context-aware prompt
     let prompt = `
-      You are providing quiet whisper suggestions for someone working on a "${projectName}" project (${context.type}) focused on ${context.focus}.
+      You are providing quiet whisper suggestions for someone working on a "${project.name}" project (${context.type}) focused on ${context.focus}.
       
       Key risks in this type of project include: ${context.keyRisks.join(", ")}.
       Recommended practices include: ${context.recommendedPractices.join(", ")}.
@@ -680,18 +802,23 @@ export async function generateWhisperSuggestions(
       Current page context: ${pageContext}
       ${contextDataStr}
       
-      Provide 1-3 brief, helpful whisper suggestions that would be valuable for someone working on this page in this kind of project. 
+      ${isIntegrationRelevant && jiraContext ? `\n${jiraContext}\n` : ""}
+      ${isIntegrationRelevant && githubContext ? `\n${githubContext}\n` : ""}
+      
+      Based on this context ${isIntegrationRelevant ? "and integration data" : ""}, provide 1-3 brief, helpful whisper suggestions that would be valuable for someone working on this page.
       These should be non-intrusive tips that appear in a small floating card.
+      ${isIntegrationRelevant && jiraIssues && jiraIssues.length > 0 ? "Include a suggestion related to test coverage based on Jira issues." : ""}
       Keep each suggestion under 80 characters.
-      Format your response as JSON.
+      Format your response as JSON with "suggestions" array and "priority" field (low, medium, high).
     `;
     
+    console.log(`Generating whisper suggestions for project ${project.id} - ${project.name}`);
     const response = await openai.chat.completions.create({
       model: MODEL,
       messages: [
         { 
           role: "system", 
-          content: "You are ATMosFera WhisperMode, a non-intrusive assistant that provides short, timely, contextual suggestions for software testing activities. You provide brief, actionable tips without being asked." 
+          content: "You are ATMosFera WhisperMode, a non-intrusive assistant that provides short, timely, contextual suggestions for software testing activities based on real project data." 
         },
         { role: "user", content: prompt }
       ],
