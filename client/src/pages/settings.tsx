@@ -22,6 +22,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 interface ProjectSettings {
   language: string;
   jiraUrl: string;
+  jiraProjectId: string;  // Added Jira Project ID field
   jiraApiKey: string;
   jiraJql: string;
   githubToken: string;
@@ -33,6 +34,7 @@ interface ProjectSettings {
 const defaultSettings: ProjectSettings = {
   language: "English",
   jiraUrl: "",
+  jiraProjectId: "",  // Added Jira Project ID field
   jiraApiKey: "",
   jiraJql: "",
   githubToken: "",
@@ -55,9 +57,10 @@ export default function ProjectSettings() {
         ...defaultSettings,
         // Pre-fill GitHub repo if set
         githubRepo: selectedProject.githubRepo || '',
-        // Use the saved Jira URL if available, otherwise create a placeholder
-        jiraUrl: selectedProject.jiraUrl || (selectedProject.jiraProjectId ? 
-          `https://your-instance.atlassian.net/projects/${selectedProject.jiraProjectId}` : ''),
+        // Use the saved Jira URL if available
+        jiraUrl: selectedProject.jiraUrl || '',
+        // Use the saved Jira project ID if available
+        jiraProjectId: selectedProject.jiraProjectId || '',
         // For API key, if stored, initialize it (masked for security)
         jiraApiKey: selectedProject.jiraApiKey ? '••••••••••••••••' : '',
         // Load saved JQL query if available
@@ -95,21 +98,22 @@ export default function ProjectSettings() {
           outputFormat: settings.outputFormat
         };
         
-        // Only add fields that are actually populated
+        // Add Jira URL if provided
         if (settings.jiraUrl) {
-          // Save the complete Jira URL
           updatePayload.jiraUrl = settings.jiraUrl;
-          
-          // Extract Jira project ID from the URL - it's typically the last part of the URL path
-          updatePayload.jiraProjectId = settings.jiraUrl.split('/').pop()?.toUpperCase() || "JIRA";
+        }
+        
+        // Add Jira Project ID if provided
+        if (settings.jiraProjectId) {
+          updatePayload.jiraProjectId = settings.jiraProjectId.toUpperCase();
         }
         
         // Add JQL if provided
         if (settings.jiraJql) {
           updatePayload.jiraJql = settings.jiraJql;
-        } else if (settings.jiraUrl) {
-          // Create a default JQL if URL is provided but no custom JQL
-          updatePayload.jiraJql = `project = ${settings.jiraUrl.split('/').pop()?.toUpperCase() || "JIRA"}`;
+        } else if (settings.jiraProjectId) {
+          // Create a default JQL if project ID is provided but no custom JQL
+          updatePayload.jiraJql = `project = ${settings.jiraProjectId.toUpperCase()}`;
         }
         
         // Add API key if provided
@@ -344,7 +348,21 @@ export default function ProjectSettings() {
                     value={settings.jiraUrl}
                     onChange={(e) => handleChange("jiraUrl", e.target.value)}
                   />
-                  <p className="text-xs text-atmf-muted">Enter your Atlassian Jira base URL</p>
+                  <p className="text-xs text-atmf-muted">Enter your Atlassian Jira base URL (without project-specific path)</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="jiraProjectId">Jira Project ID</Label>
+                  <Input
+                    id="jiraProjectId"
+                    placeholder="PROJECT"
+                    className="bg-atmf-main border-white/10 focus:border-white/20"
+                    value={settings.jiraProjectId}
+                    onChange={(e) => handleChange("jiraProjectId", e.target.value)}
+                  />
+                  <p className="text-xs text-atmf-muted">
+                    The project identifier in Jira (usually uppercase, like "PROJ" or "TEST")
+                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -396,7 +414,7 @@ export default function ProjectSettings() {
 
                 <Button 
                   className="btn-atmf-secondary w-full mt-2" 
-                  disabled={!settings.jiraUrl || !settings.jiraApiKey}
+                  disabled={!settings.jiraUrl || !settings.jiraProjectId || !settings.jiraApiKey}
                   onClick={handleSaveSettings}
                 >
                   <Database className="h-4 w-4 mr-2" />
@@ -412,6 +430,11 @@ export default function ProjectSettings() {
                       <p className="text-sm font-medium text-white">
                         Connected to Jira Project: <span className="text-emerald-400">{selectedProject.jiraProjectId}</span>
                       </p>
+                      {selectedProject.jiraUrl && (
+                        <p className="mt-1 text-xs text-atmf-muted">
+                          <span className="text-blue-400">Jira URL:</span> {selectedProject.jiraUrl}
+                        </p>
+                      )}
                       {selectedProject.jiraJql && (
                         <p className="mt-1 text-xs text-atmf-muted">
                           <span className="text-blue-400">JQL Query:</span> {selectedProject.jiraJql}
