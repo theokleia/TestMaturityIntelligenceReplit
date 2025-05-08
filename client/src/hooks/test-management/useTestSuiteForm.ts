@@ -1,9 +1,8 @@
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { TestSuite } from ".";
-import { testSuiteSchema, TestSuiteFormValues } from "@/schemas/test-management";
-import { useProject } from "@/context/ProjectContext";
+import { TestSuite } from "@/hooks/test-management";
+import { TestSuiteFormValues, testSuiteSchema } from "@/schemas/test-management";
 
 interface UseTestSuiteFormProps {
   testSuite?: TestSuite | null;
@@ -12,53 +11,58 @@ interface UseTestSuiteFormProps {
 
 export function useTestSuiteForm({
   testSuite,
-  mode,
+  mode
 }: UseTestSuiteFormProps) {
-  const { selectedProject } = useProject();
-
+  // Initialize form with validation schema
   const form = useForm<TestSuiteFormValues>({
     resolver: zodResolver(testSuiteSchema),
     defaultValues: {
-      name: testSuite?.name || "",
-      description: testSuite?.description || "",
-      projectArea: testSuite?.projectArea || "",
-      priority: (testSuite?.priority as "high" | "medium" | "low") || "medium",
-      status: (testSuite?.status as "draft" | "ready" | "in-progress" | "completed") || "draft",
-      projectId: selectedProject?.id || 0,
+      name: "",
+      description: "",
+      status: "draft",
+      priority: "medium",
+      projectArea: "",
     },
   });
 
-  // Reset form when test suite changes
+  // Update form when testSuite changes (for edit mode)
   useEffect(() => {
-    if (testSuite) {
+    if (testSuite && mode === "edit") {
+      // Reset form with testSuite values
       form.reset({
         name: testSuite.name,
         description: testSuite.description,
-        projectArea: testSuite.projectArea,
+        status: testSuite.status as "draft" | "ready" | "in-progress" | "completed" | "archived",
         priority: testSuite.priority as "high" | "medium" | "low",
-        status: testSuite.status as "draft" | "ready" | "in-progress" | "completed",
-        projectId: testSuite.projectId,
-      });
-    } else if (mode === "create") {
-      form.reset({
-        name: "",
-        description: "",
-        projectArea: "",
-        priority: "medium",
-        status: "draft",
-        projectId: selectedProject?.id || 0,
+        projectArea: testSuite.projectArea,
       });
     }
-  }, [testSuite, form, mode, selectedProject]);
+  }, [testSuite, form, mode]);
 
-  // Update project ID when selected project changes
-  useEffect(() => {
-    if (selectedProject?.id && form.getValues().projectId !== selectedProject.id) {
-      form.setValue("projectId", selectedProject.id);
+  // Format data for submission based on mode
+  const formatDataForSubmission = (data: TestSuiteFormValues) => {
+    if (mode === "create") {
+      return {
+        ...data,
+      };
+    } else {
+      // For edit mode, return only the fields that need to be updated
+      const updatedFields: Partial<TestSuiteFormValues> = {};
+      
+      if (testSuite) {
+        if (data.name !== testSuite.name) updatedFields.name = data.name;
+        if (data.description !== testSuite.description) updatedFields.description = data.description;
+        if (data.status !== testSuite.status) updatedFields.status = data.status;
+        if (data.priority !== testSuite.priority) updatedFields.priority = data.priority;
+        if (data.projectArea !== testSuite.projectArea) updatedFields.projectArea = data.projectArea;
+      }
+      
+      return updatedFields;
     }
-  }, [selectedProject, form]);
+  };
 
   return {
     form,
+    formatDataForSubmission,
   };
 }

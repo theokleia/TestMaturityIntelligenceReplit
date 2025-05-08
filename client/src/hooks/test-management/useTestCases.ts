@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { TestCase, UseTestCasesResult } from './index';
-import { useProject } from '@/context/ProjectContext';
+import { 
+  useMutation, 
+  useQuery, 
+  useQueryClient,
+  UseMutateFunction
+} from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import type { TestCase } from "@/hooks/test-management";
+import { TestCaseFormValues, GenerateTestCasesFormValues } from "@/schemas/test-management";
 
-/**
- * Hook for fetching test cases with optional filtering
- */
-export function useTestCases(filters?: {
+interface TestCasesFilters {
   suiteId?: number;
   userId?: number;
   status?: string;
@@ -14,145 +16,209 @@ export function useTestCases(filters?: {
   severity?: string;
   aiGenerated?: boolean;
   automatable?: boolean;
-}): UseTestCasesResult {
-  const { selectedProject } = useProject();
+  projectId?: number;
+}
+
+interface GenerateTestCasesResponse {
+  success: boolean;
+  message: string;
+  testCases: TestCase[];
+}
+
+export function useTestCases(filters: TestCasesFilters = {}) {
+  const queryClient = useQueryClient();
   
-  const queryParams = new URLSearchParams();
+  // Construct query key with filters
+  const queryKey = Object.entries(filters).length > 0
+    ? ["/api/test-cases", filters]
+    : ["/api/test-cases"];
   
-  if (filters?.suiteId) queryParams.append('suiteId', filters.suiteId.toString());
-  if (filters?.userId) queryParams.append('userId', filters.userId.toString());
-  if (filters?.status) queryParams.append('status', filters.status);
-  if (filters?.priority) queryParams.append('priority', filters.priority);
-  if (filters?.severity) queryParams.append('severity', filters.severity);
-  if (filters?.aiGenerated !== undefined) queryParams.append('aiGenerated', filters.aiGenerated.toString());
-  if (filters?.automatable !== undefined) queryParams.append('automatable', filters.automatable.toString());
-  if (selectedProject?.id) queryParams.append('projectId', selectedProject.id.toString());
-  
-  const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
-  
-  const { data = [], isLoading, error, refetch } = useQuery({
-    queryKey: ['/api/test-cases', selectedProject?.id, filters],
+  // Fetch all test cases with optional filters
+  const { data: testCases = [], isLoading, error } = useQuery({
+    queryKey,
     queryFn: async () => {
-      // In a real implementation, we would make an API call here
-      // For now, return dummy data
-      return [] as TestCase[];
+      const queryParams = new URLSearchParams();
+      
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, value.toString());
+        }
+      });
+      
+      const url = `/api/test-cases${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      return apiRequest(url);
     },
-    enabled: !!selectedProject,
   });
-  
+
+  // Create a new test case
+  const createTestCaseMutation = useMutation({
+    mutationFn: async (data: Omit<TestCase, "id" | "createdAt" | "updatedAt" | "userId" | "aiGenerated">) => {
+      const response = await apiRequest<TestCase>("/api/test-cases", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+      return response;
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate test cases query to refetch
+      queryClient.invalidateQueries({ queryKey: ["/api/test-cases"] });
+      
+      // Also invalidate test cases for specific suite if applicable
+      if (variables.suiteId) {
+        queryClient.invalidateQueries({ 
+          queryKey: ["/api/test-cases", { suiteId: variables.suiteId }]
+        });
+      }
+    },
+  });
+
+  // Update an existing test case
+  const updateTestCaseMutation = useMutation({
+    mutationFn: async ({ 
+      id, 
+      data 
+    }: { 
+      id: number; 
+      data: Partial<Omit<TestCase, "id" | "createdAt" | "updatedAt" | "userId">>
+    }) => {
+      const response = await apiRequest<TestCase>(`/api/test-cases/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      });
+      return response;
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate test cases query to refetch
+      queryClient.invalidateQueries({ queryKey: ["/api/test-cases"] });
+      
+      // Also invalidate the single test case query if it exists
+      queryClient.invalidateQueries({ queryKey: ["/api/test-cases", variables.id] });
+      
+      // If the test case's suite ID has changed, invalidate the old suite's test cases
+      if (variables.data.suiteId) {
+        queryClient.invalidateQueries({ 
+          queryKey: ["/api/test-cases", { suiteId: variables.data.suiteId }]
+        });
+      }
+    },
+  });
+
+  // Delete a test case
+  const deleteTestCaseMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await apiRequest<boolean>(`/api/test-cases/${id}`, {
+        method: "DELETE",
+      });
+      return response;
+    },
+    onSuccess: () => {
+      // Invalidate test cases query to refetch
+      queryClient.invalidateQueries({ queryKey: ["/api/test-cases"] });
+    },
+  });
+
+  // Generate test cases with AI
+  const generateTestCasesMutation = useMutation({
+    mutationFn: async (data: GenerateTestCasesFormValues) => {
+      const response = await apiRequest<GenerateTestCasesResponse>("/api/test-cases/generate", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+      return response;
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate test cases query to refetch
+      queryClient.invalidateQueries({ queryKey: ["/api/test-cases"] });
+      
+      // Also invalidate test cases for the specific suite
+      if (variables.testSuiteId) {
+        queryClient.invalidateQueries({ 
+          queryKey: ["/api/test-cases", { suiteId: variables.testSuiteId }]
+        });
+      }
+    },
+  });
+
   return {
+    testCases,
     isLoading,
     error,
-    data,
-    refetch,
+    createTestCase: createTestCaseMutation.mutate,
+    updateTestCase: updateTestCaseMutation.mutate,
+    deleteTestCase: deleteTestCaseMutation.mutate,
+    generateTestCases: generateTestCasesMutation.mutate,
+    createTestCaseIsPending: createTestCaseMutation.isPending,
+    updateTestCaseIsPending: updateTestCaseMutation.isPending,
+    deleteTestCaseIsPending: deleteTestCaseMutation.isPending,
+    generateTestCasesIsPending: generateTestCasesMutation.isPending,
   };
 }
 
-/**
- * Hook for creating a new test case
- */
-export function useCreateTestCase() {
-  const { selectedProject } = useProject();
-
-  const createTestCase = async (data: Omit<TestCase, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'aiGenerated'>) => {
-    // In a real implementation, we would make an API call here
-    // For now, just return a dummy object
-    return {
-      id: Math.floor(Math.random() * 1000), 
-      title: data.title,
-      description: data.description,
-      preconditions: data.preconditions,
-      steps: data.steps,
-      expectedResults: data.expectedResults,
-      priority: data.priority,
-      severity: data.severity,
-      status: data.status,
-      suiteId: data.suiteId,
-      projectId: selectedProject?.id || 0,
-      userId: 1, // Mock user ID
-      automatable: data.automatable,
-      aiGenerated: false,
-      automationStatus: 'pending',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-  };
-
-  return { createTestCase };
-}
-
-/**
- * Hook for updating an existing test case
- */
-export function useUpdateTestCase() {
-  const updateTestCase = async (id: number, data: Partial<Omit<TestCase, 'id' | 'userId' | 'createdAt' | 'updatedAt'>>) => {
-    // In a real implementation, we would make an API call here
-    // For now, just return a dummy object
-    return {
-      id,
-      ...data,
-      updatedAt: new Date().toISOString(),
-    };
-  };
-
-  return { updateTestCase };
-}
-
-/**
- * Hook for deleting a test case
- */
-export function useDeleteTestCase() {
-  const deleteTestCase = async (id: number) => {
-    // In a real implementation, we would make an API call here
-    return true;
-  };
-
-  return { deleteTestCase };
-}
-
-/**
- * Hook for AI generation of test cases
- */
-export function useGenerateTestCases() {
-  const { selectedProject } = useProject();
+export function useTestCase(id: number) {
+  const queryClient = useQueryClient();
   
-  const generateTestCases = async (data: { 
-    feature: string;
-    requirements: string;
-    complexity: string;
-    testSuiteId: number;
-  }) => {
-    // In a real implementation, this would call the AI API
-    // For now, return a dummy successful response
-    return {
-      success: true,
-      message: 'Test cases generated successfully',
-      testCases: [
-        {
-          id: Math.floor(Math.random() * 1000),
-          title: `Test case for ${data.feature}`,
-          description: `Generated test case for ${data.feature} with ${data.complexity} complexity`,
-          preconditions: 'System is running and user is logged in',
-          steps: [
-            { step: 'Navigate to feature', expected: 'Feature page loads correctly' },
-            { step: 'Perform action', expected: 'System responds appropriately' }
-          ],
-          expectedResults: 'Feature works as expected',
-          priority: 'high',
-          severity: 'normal',
-          status: 'draft',
-          suiteId: data.testSuiteId,
-          projectId: selectedProject?.id || 0,
-          userId: 1,
-          automatable: true,
-          aiGenerated: true,
-          automationStatus: 'not-automated',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }
-      ]
-    };
+  const { data: testCase, isLoading, error } = useQuery({
+    queryKey: ["/api/test-cases", id],
+    queryFn: async () => {
+      const response = await apiRequest<TestCase>(`/api/test-cases/${id}`);
+      return response;
+    },
+    enabled: !!id, // Only run query if id is provided
+  });
+
+  // Update an existing test case
+  const updateTestCaseMutation = useMutation({
+    mutationFn: async (data: Partial<TestCaseFormValues>) => {
+      const response = await apiRequest<TestCase>(`/api/test-cases/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      });
+      return response;
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate the single test case query
+      queryClient.invalidateQueries({ queryKey: ["/api/test-cases", id] });
+      
+      // Also invalidate the test cases list
+      queryClient.invalidateQueries({ queryKey: ["/api/test-cases"] });
+      
+      // If the test case's suite ID has changed, invalidate the suite's test cases
+      if (variables.suiteId) {
+        queryClient.invalidateQueries({ 
+          queryKey: ["/api/test-cases", { suiteId: variables.suiteId }]
+        });
+      }
+    },
+  });
+
+  // Delete a test case
+  const deleteTestCaseMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest<boolean>(`/api/test-cases/${id}`, {
+        method: "DELETE",
+      });
+      return response;
+    },
+    onSuccess: () => {
+      // Invalidate the test cases list
+      queryClient.invalidateQueries({ queryKey: ["/api/test-cases"] });
+      
+      // If we know the suite ID from the fetched test case, invalidate its test cases too
+      if (testCase && testCase.suiteId) {
+        queryClient.invalidateQueries({ 
+          queryKey: ["/api/test-cases", { suiteId: testCase.suiteId }]
+        });
+      }
+    },
+  });
+
+  return {
+    testCase,
+    isLoading,
+    error,
+    updateTestCase: updateTestCaseMutation.mutate,
+    deleteTestCase: deleteTestCaseMutation.mutate,
+    updateTestCaseIsPending: updateTestCaseMutation.isPending,
+    deleteTestCaseIsPending: deleteTestCaseMutation.isPending,
   };
-  
-  return { generateTestCases };
 }
