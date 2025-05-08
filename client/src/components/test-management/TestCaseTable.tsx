@@ -29,10 +29,12 @@ export function TestCaseTable({
   projectId
 }: TestCaseTableProps) {
   // Fetch test cases for the selected suite
-  const { data: testCases, isLoading: isLoadingTestCases } = useTestCases({
+  const { testCases, isLoading: isLoadingTestCases } = useTestCases({
     suiteId: selectedSuite?.id,
     projectId
   });
+  
+  console.log("TestCaseTable - testCases:", testCases);
 
   if (!selectedSuite) {
     return (

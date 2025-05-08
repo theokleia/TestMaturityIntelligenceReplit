@@ -28,9 +28,11 @@ export function TestSuiteList({
   const projectId = selectedProject?.id;
   
   // Fetch test suites
-  const { data: testSuites, isLoading: isLoadingTestSuites } = useTestSuites({
+  const { testSuites, isLoading: isLoadingTestSuites } = useTestSuites({
     projectId
   });
+  
+  console.log("TestSuiteList - testSuites:", testSuites);
   
   // Filter test suites based on search term
   const filteredTestSuites = testSuites?.filter((suite) => 

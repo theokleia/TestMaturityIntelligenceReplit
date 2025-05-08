@@ -160,12 +160,15 @@ export default function TestManagement() {
   console.log("TestManagement - projectId:", projectId);
   
   // Fetch test suites
-  const { testSuites, isLoading: isLoadingTestSuites } = useTestSuites({
+  const { testSuites: testSuitesData, isLoading: isLoadingTestSuites } = useTestSuites({
     projectId
   });
   
+  // Log what we receive from the hook
+  console.log("TestManagement - testSuitesData:", testSuitesData);
+  
   // Fetch test cases for the selected suite
-  const { data: testCases, isLoading: isLoadingTestCases } = useTestCases({
+  const { testCases, isLoading: isLoadingTestCases } = useTestCases({
     suiteId: selectedSuite?.id,
     projectId
   });
@@ -272,7 +275,7 @@ export default function TestManagement() {
   }
   
   // Filter test suites based on search term
-  const filteredTestSuites = testSuites?.filter((suite) => 
+  const filteredTestSuites = testSuitesData?.filter((suite) => 
     suite.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     suite.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
     suite.projectArea.toLowerCase().includes(searchTerm.toLowerCase())
