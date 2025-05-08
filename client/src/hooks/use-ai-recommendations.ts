@@ -135,8 +135,10 @@ export function useGenerateRecommendation() {
 export function useAnalyzeTestingData() {
   return useMutation({
     mutationFn: async (request: TestDataAnalysisRequest) => {
-      const res = await apiRequest('POST', '/api/ai/analyze', request);
-      return res.json();
+      return apiRequest<TestDataAnalysis>('/api/ai/analyze', {
+        method: 'POST',
+        body: JSON.stringify(request)
+      });
     },
   });
 }
@@ -155,8 +157,10 @@ export function useMaturityRoadmap(dimensionId: number, currentLevel: number = 1
 export function useAnalyzeTestPatterns() {
   return useMutation({
     mutationFn: async (request: TestPatternData) => {
-      const res = await apiRequest('POST', '/api/ai/test-patterns', request);
-      return res.json() as Promise<TestPatternAnalysis>;
+      return apiRequest<TestPatternAnalysis>('/api/ai/test-patterns', {
+        method: 'POST',
+        body: JSON.stringify(request)
+      });
     },
   });
 }
@@ -165,8 +169,10 @@ export function useAnalyzeTestPatterns() {
 export function useGenerateTestStrategy() {
   return useMutation({
     mutationFn: async (request: TestStrategyRequest) => {
-      const res = await apiRequest('POST', '/api/ai/test-strategy', request);
-      return res.json() as Promise<TestStrategy>;
+      return apiRequest<TestStrategy>('/api/ai/test-strategy', {
+        method: 'POST',
+        body: JSON.stringify(request)
+      });
     },
   });
 }
@@ -175,11 +181,13 @@ export function useGenerateTestStrategy() {
 export function useGenerateTestCases() {
   return useMutation({
     mutationFn: async (request: GenerateTestCasesRequest) => {
-      const res = await apiRequest('POST', '/api/test-cases/generate', request);
-      return res.json() as Promise<{
+      return apiRequest<{
         message: string;
         testCases: TestCase[];
-      }>;
+      }>('/api/test-cases/generate', {
+        method: 'POST',
+        body: JSON.stringify(request)
+      });
     },
     onSuccess: () => {
       // Invalidate test cases cache when new ones are created
