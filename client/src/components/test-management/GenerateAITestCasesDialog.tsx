@@ -1,10 +1,7 @@
-import { useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { TestSuite } from "@/hooks/test-management";
-import { IconWrapper } from "@/components/design-system/icon-wrapper";
-import { Brain } from "lucide-react";
-import { generateTestCasesSchema, GenerateTestCasesFormValues } from "@/schemas/test-management";
+import React from "react";
+import { TestSuite, useGenerateTestCasesForm } from "@/hooks/test-management";
+import { GenerateTestCasesFormValues } from "@/schemas/test-management";
+import { ErrorBoundary } from "@/components/error/ErrorBoundary";
 
 import {
   Dialog,
@@ -30,130 +27,46 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 
 interface GenerateAITestCasesDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: GenerateTestCasesFormValues) => void;
-  suites?: TestSuite[];
+  onGenerate: (data: GenerateTestCasesFormValues) => void;
+  suites: TestSuite[];
   selectedSuite?: TestSuite | null;
-  isSubmitting?: boolean;
+  isGenerating?: boolean;
 }
 
 export function GenerateAITestCasesDialog({
   open,
   onOpenChange,
-  onSubmit,
-  suites = [],
+  onGenerate,
+  suites,
   selectedSuite,
-  isSubmitting = false,
+  isGenerating = false,
 }: GenerateAITestCasesDialogProps) {
-  const form = useForm<GenerateTestCasesFormValues>({
-    resolver: zodResolver(generateTestCasesSchema),
-    defaultValues: {
-      feature: "",
-      requirements: "",
-      complexity: "medium",
-      testSuiteId: selectedSuite?.id || 0,
-    },
+  const { form } = useGenerateTestCasesForm({
+    selectedSuite,
   });
-
-  // Reset form values when opening the dialog
-  useEffect(() => {
-    if (open) {
-      form.reset({
-        feature: "",
-        requirements: "",
-        complexity: "medium",
-        testSuiteId: selectedSuite?.id || 0,
-      });
-    }
-  }, [open, form, selectedSuite]);
-
-  // Update test suite ID when selected suite changes
-  useEffect(() => {
-    if (selectedSuite?.id && form.getValues("testSuiteId") !== selectedSuite.id) {
-      form.setValue("testSuiteId", selectedSuite.id);
-    }
-  }, [selectedSuite, form]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Generate Test Cases with AI</DialogTitle>
+          <DialogTitle>Generate AI Test Cases</DialogTitle>
           <DialogDescription>
-            Describe the feature and requirements to automatically generate test cases
+            Generate test cases using AI based on feature description and requirements
           </DialogDescription>
         </DialogHeader>
 
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="space-y-6 py-4"
-          >
-            <FormField
-              control={form.control}
-              name="feature"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Feature Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="User Authentication" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="requirements"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Feature Requirements</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Users should be able to login with email/password or SSO. Failed login attempts should be limited to 3 before temporary lockout. Password reset functionality should send a secure token via email."
-                      rows={6}
-                      className="resize-none"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="complexity"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Complexity</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select complexity" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="simple">Simple</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
-                        <SelectItem value="complex">Complex</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
+        <ErrorBoundary name="Generate AI Test Cases Form">
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(onGenerate)}
+              className="space-y-4 py-4"
+            >
               <FormField
                 control={form.control}
                 name="testSuiteId"
@@ -163,7 +76,6 @@ export function GenerateAITestCasesDialog({
                     <Select
                       onValueChange={(value) => field.onChange(parseInt(value))}
                       defaultValue={field.value?.toString()}
-                      value={field.value?.toString()}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -182,31 +94,92 @@ export function GenerateAITestCasesDialog({
                   </FormItem>
                 )}
               />
-            </div>
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => onOpenChange(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <div className="flex items-center gap-2">
-                    <IconWrapper className="animate-spin">
-                      <Brain className="h-4 w-4" />
-                    </IconWrapper>
-                    <span>Generating...</span>
-                  </div>
-                ) : (
-                  "Generate Test Cases"
+              <FormField
+                control={form.control}
+                name="feature"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Feature Description</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Describe the feature you want to test"
+                        className="h-24"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+              />
+
+              <FormField
+                control={form.control}
+                name="requirements"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Requirements</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="List functional and non-functional requirements"
+                        className="h-24"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="complexity"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Test Complexity</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select complexity" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="simple">Simple</SelectItem>
+                        <SelectItem value="moderate">Moderate</SelectItem>
+                        <SelectItem value="complex">Complex</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => onOpenChange(false)}
+                  disabled={isGenerating}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isGenerating}>
+                  {isGenerating ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Generating...</span>
+                    </div>
+                  ) : (
+                    "Generate Test Cases"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </ErrorBoundary>
       </DialogContent>
     </Dialog>
   );

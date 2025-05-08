@@ -1,40 +1,43 @@
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect } from "react";
-import { TestSuite } from "@/hooks/test-management";
+import { TestSuite } from ".";
 import { testSuiteSchema, TestSuiteFormValues } from "@/schemas/test-management";
+import { useProject } from "@/context/ProjectContext";
 
-type TestSuiteFormOptions = {
+interface UseTestSuiteFormProps {
   testSuite?: TestSuite | null;
   mode: "create" | "edit";
-};
+}
 
 export function useTestSuiteForm({
   testSuite,
   mode,
-}: TestSuiteFormOptions) {
+}: UseTestSuiteFormProps) {
+  const { selectedProject } = useProject();
+
   const form = useForm<TestSuiteFormValues>({
     resolver: zodResolver(testSuiteSchema),
     defaultValues: {
       name: testSuite?.name || "",
       description: testSuite?.description || "",
       projectArea: testSuite?.projectArea || "",
-      priority: testSuite?.priority || "medium",
-      status: testSuite?.status || "active",
-      type: testSuite?.type || "functional",
+      priority: (testSuite?.priority as "high" | "medium" | "low") || "medium",
+      status: (testSuite?.status as "draft" | "ready" | "in-progress" | "completed") || "draft",
+      projectId: selectedProject?.id || 0,
     },
   });
 
   // Reset form when test suite changes
   useEffect(() => {
-    if (testSuite && mode === "edit") {
+    if (testSuite) {
       form.reset({
         name: testSuite.name,
         description: testSuite.description,
         projectArea: testSuite.projectArea,
-        priority: testSuite.priority,
-        status: testSuite.status,
-        type: testSuite.type,
+        priority: testSuite.priority as "high" | "medium" | "low",
+        status: testSuite.status as "draft" | "ready" | "in-progress" | "completed",
+        projectId: testSuite.projectId,
       });
     } else if (mode === "create") {
       form.reset({
@@ -42,13 +45,20 @@ export function useTestSuiteForm({
         description: "",
         projectArea: "",
         priority: "medium",
-        status: "active",
-        type: "functional",
+        status: "draft",
+        projectId: selectedProject?.id || 0,
       });
     }
-  }, [testSuite, form, mode]);
+  }, [testSuite, form, mode, selectedProject]);
+
+  // Update project ID when selected project changes
+  useEffect(() => {
+    if (selectedProject?.id && form.getValues().projectId !== selectedProject.id) {
+      form.setValue("projectId", selectedProject.id);
+    }
+  }, [selectedProject, form]);
 
   return {
-    form
+    form,
   };
 }

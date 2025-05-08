@@ -1,22 +1,22 @@
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect } from "react";
-import { TestCase, TestSuite } from "@/hooks/test-management";
+import { TestCase, TestSuite } from ".";
 import { testCaseSchema, TestCaseFormValues } from "@/schemas/test-management";
 
-type TestCaseFormOptions = {
+interface UseTestCaseFormProps {
   testCase?: TestCase | null;
   selectedSuite?: TestSuite | null;
-  isStructured?: boolean;
+  isStructured: boolean;
   mode: "create" | "edit";
-};
+}
 
 export function useTestCaseForm({
   testCase,
   selectedSuite,
-  isStructured = false,
+  isStructured,
   mode,
-}: TestCaseFormOptions) {
+}: UseTestCaseFormProps) {
   const form = useForm<TestCaseFormValues>({
     resolver: zodResolver(testCaseSchema),
     defaultValues: {
@@ -25,9 +25,9 @@ export function useTestCaseForm({
       preconditions: testCase?.preconditions || "",
       steps: testCase?.steps || (isStructured ? [{ step: "", expected: "" }] : undefined),
       expectedResults: testCase?.expectedResults || "",
-      priority: testCase?.priority || "medium",
-      severity: testCase?.severity || "normal",
-      status: testCase?.status || "draft",
+      priority: (testCase?.priority as "high" | "medium" | "low") || "medium",
+      severity: (testCase?.severity as "critical" | "high" | "normal" | "low") || "normal",
+      status: (testCase?.status as "draft" | "ready" | "in-progress" | "blocked" | "completed") || "draft",
       suiteId: testCase?.suiteId || selectedSuite?.id || 0,
       automatable: testCase?.automatable || false,
     },
@@ -42,9 +42,9 @@ export function useTestCaseForm({
         preconditions: testCase.preconditions,
         steps: testCase.steps || [],
         expectedResults: testCase.expectedResults,
-        priority: testCase.priority,
-        severity: testCase.severity,
-        status: testCase.status,
+        priority: testCase.priority as "high" | "medium" | "low",
+        severity: testCase.severity as "critical" | "high" | "normal" | "low",
+        status: testCase.status as "draft" | "ready" | "in-progress" | "blocked" | "completed",
         suiteId: testCase.suiteId,
         automatable: testCase.automatable,
       });
@@ -66,7 +66,7 @@ export function useTestCaseForm({
 
   // Update suite ID when selected suite changes
   useEffect(() => {
-    if (selectedSuite?.id && form.getValues("suiteId") !== selectedSuite.id) {
+    if (selectedSuite?.id && form.getValues().suiteId !== selectedSuite.id) {
       form.setValue("suiteId", selectedSuite.id);
     }
   }, [selectedSuite, form]);
@@ -89,6 +89,6 @@ export function useTestCaseForm({
   return {
     form,
     addStep,
-    removeStep
+    removeStep,
   };
 }

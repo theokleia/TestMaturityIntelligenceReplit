@@ -1,11 +1,7 @@
-import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { TestSuite } from "@/hooks/test-management";
-import { useProject } from "@/context/ProjectContext";
-import { IconWrapper } from "@/components/design-system/icon-wrapper";
-import { ClipboardList } from "lucide-react";
+import { useState } from "react";
+import { TestSuite, useTestSuiteForm } from "@/hooks/test-management";
+import { TestSuiteFormValues } from "@/schemas/test-management";
+import { ErrorBoundary } from "@/components/error/ErrorBoundary";
 
 import {
   Dialog,
@@ -33,18 +29,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-
-// Schema for test suite form
-const testSuiteSchema = z.object({
-  name: z.string().min(1, "Test suite name is required"),
-  description: z.string().min(1, "Description is required"),
-  projectArea: z.string().min(1, "Project area is required"),
-  priority: z.string().min(1, "Priority is required"),
-  status: z.string().min(1, "Status is required"),
-  type: z.string().default("functional"),
-});
-
-export type TestSuiteFormValues = z.infer<typeof testSuiteSchema>;
+import { Loader2 } from "lucide-react";
 
 interface TestSuiteFormDialogProps {
   open: boolean;
@@ -63,52 +48,14 @@ export function TestSuiteFormDialog({
   isSubmitting = false,
   mode,
 }: TestSuiteFormDialogProps) {
-  const { selectedProject } = useProject();
-  const projectId = selectedProject?.id;
-
-  const form = useForm<TestSuiteFormValues>({
-    resolver: zodResolver(testSuiteSchema),
-    defaultValues: {
-      name: testSuite?.name || "",
-      description: testSuite?.description || "",
-      projectArea: testSuite?.projectArea || "",
-      priority: testSuite?.priority || "medium",
-      status: testSuite?.status || "active",
-      type: testSuite?.type || "functional",
-    },
+  const { form } = useTestSuiteForm({
+    testSuite,
+    mode,
   });
-
-  // Reset form when selected test suite changes
-  useEffect(() => {
-    if (testSuite) {
-      form.reset({
-        name: testSuite.name,
-        description: testSuite.description,
-        projectArea: testSuite.projectArea,
-        priority: testSuite.priority,
-        status: testSuite.status,
-        type: testSuite.type,
-      });
-    } else if (mode === "create") {
-      form.reset({
-        name: "",
-        description: "",
-        projectArea: "",
-        priority: "medium",
-        status: "active",
-        type: "functional",
-      });
-    }
-  }, [testSuite, form, mode]);
-
-  // Handle form submission
-  const handleSubmit = (data: TestSuiteFormValues) => {
-    onSubmit(data);
-  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {mode === "create" ? "Create New Test Suite" : "Edit Test Suite"}
@@ -120,161 +67,141 @@ export function TestSuiteFormDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 pt-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Authentication Tests" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        <ErrorBoundary name="Test Suite Form">
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(onSubmit)}
+              className="space-y-4 py-4"
+            >
+              <div className="grid grid-cols-1 gap-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="User Authentication" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Test cases for user authentication flows"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Tests for user authentication functionality"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-            <FormField
-              control={form.control}
-              name="projectArea"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Project Area</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Authentication" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="draft">Draft</SelectItem>
+                          <SelectItem value="ready">Ready</SelectItem>
+                          <SelectItem value="in-progress">In Progress</SelectItem>
+                          <SelectItem value="completed">Completed</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="priority"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Priority</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select priority" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="high">High</SelectItem>
+                          <SelectItem value="medium">Medium</SelectItem>
+                          <SelectItem value="low">Low</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
               <FormField
                 control={form.control}
-                name="priority"
+                name="projectArea"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Priority</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select priority" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="high">High</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
-                        <SelectItem value="low">Low</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="active">Active</SelectItem>
-                        <SelectItem value="draft">Draft</SelectItem>
-                        <SelectItem value="archived">Archived</SelectItem>
-                        <SelectItem value="deprecated">Deprecated</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Type</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
+                    <FormLabel>Project Area</FormLabel>
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select type" />
-                      </SelectTrigger>
+                      <Input
+                        placeholder="Frontend, API, Mobile"
+                        {...field}
+                      />
                     </FormControl>
-                    <SelectContent>
-                      <SelectItem value="functional">Functional</SelectItem>
-                      <SelectItem value="integration">Integration</SelectItem>
-                      <SelectItem value="performance">Performance</SelectItem>
-                      <SelectItem value="security">Security</SelectItem>
-                      <SelectItem value="usability">Usability</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <DialogFooter className="pt-4">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => onOpenChange(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <div className="flex items-center gap-2">
-                    <IconWrapper className="animate-spin">
-                      <ClipboardList className="h-4 w-4" />
-                    </IconWrapper>
-                    <span>
-                      {mode === "create" ? "Creating..." : "Saving..."}
-                    </span>
-                  </div>
-                ) : (
-                  mode === "create" ? "Create Test Suite" : "Save Changes"
+                    <FormMessage />
+                  </FormItem>
                 )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+              />
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => onOpenChange(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>
+                        {mode === "create" ? "Creating..." : "Saving..."}
+                      </span>
+                    </div>
+                  ) : (
+                    mode === "create" ? "Create Test Suite" : "Save Changes"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </ErrorBoundary>
       </DialogContent>
     </Dialog>
   );
