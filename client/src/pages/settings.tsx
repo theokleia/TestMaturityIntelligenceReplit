@@ -23,6 +23,7 @@ interface ProjectSettings {
   language: string;
   jiraUrl: string;
   jiraApiKey: string;
+  jiraJql: string;
   githubToken: string;
   githubRepo: string;
   testCaseFormat: "structured" | "plain";
@@ -33,6 +34,7 @@ const defaultSettings: ProjectSettings = {
   language: "English",
   jiraUrl: "",
   jiraApiKey: "",
+  jiraJql: "",
   githubToken: "",
   githubRepo: "",
   testCaseFormat: "structured",
@@ -58,6 +60,8 @@ export default function ProjectSettings() {
           `https://your-instance.atlassian.net/projects/${selectedProject.jiraProjectId}` : '',
         // For API key, if stored, initialize it (masked for security)
         jiraApiKey: selectedProject.jiraApiKey ? '••••••••••••••••' : '',
+        // Load saved JQL query if available
+        jiraJql: selectedProject.jiraJql || '',
         // Load saved test case format preference
         testCaseFormat: selectedProject.testCaseFormat || 'structured',
       });
@@ -324,6 +328,20 @@ export default function ProjectSettings() {
                   />
                   <p className="text-xs text-atmf-muted">
                     Your Jira API key is stored securely and used for API requests
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="jiraJql">JQL Query</Label>
+                  <Input
+                    id="jiraJql"
+                    placeholder="project = KEY AND type = Story"
+                    className="bg-atmf-main border-white/10 focus:border-white/20"
+                    value={settings.jiraJql || ''}
+                    onChange={(e) => handleChange("jiraJql", e.target.value)}
+                  />
+                  <p className="text-xs text-atmf-muted">
+                    Define a JQL query to filter which issues should be considered for this project
                   </p>
                 </div>
 
