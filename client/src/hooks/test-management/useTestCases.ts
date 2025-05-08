@@ -46,7 +46,7 @@ export function useTestCases(filters: TestCasesFilters = {}) {
       });
       
       const url = `/api/test-cases${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-      return apiRequest(url);
+      return apiRequest<TestCase[]>(url);
     },
   });
 
