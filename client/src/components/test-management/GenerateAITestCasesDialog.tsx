@@ -1,10 +1,10 @@
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { TestSuite } from "@/hooks/test-management";
 import { IconWrapper } from "@/components/design-system/icon-wrapper";
 import { Brain } from "lucide-react";
+import { generateTestCasesSchema, GenerateTestCasesFormValues } from "@/schemas/test-management";
 
 import {
   Dialog,
@@ -32,16 +32,6 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-
-// Schema for generating AI test cases
-const generateTestCasesSchema = z.object({
-  feature: z.string().min(1, "Feature name is required"),
-  requirements: z.string().min(1, "Requirements are required"),
-  complexity: z.string().min(1, "Complexity is required"),
-  testSuiteId: z.coerce.number().min(1, "Test suite is required"),
-});
-
-export type GenerateTestCasesFormValues = z.infer<typeof generateTestCasesSchema>;
 
 interface GenerateAITestCasesDialogProps {
   open: boolean;

@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { TestCase, TestSuite } from "@/hooks/test-management";
 import { useProject } from "@/context/ProjectContext";
 import { IconWrapper } from "@/components/design-system/icon-wrapper";
 import { ClipboardList, Plus, Trash2 } from "lucide-react";
+import { testCaseSchema, TestCaseFormValues } from "@/schemas/test-management";
 
 import {
   Dialog,
@@ -34,27 +34,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-
-// Schema for test case form
-const testCaseSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  description: z.string().min(1, "Description is required"),
-  preconditions: z.string().min(1, "Preconditions are required"),
-  steps: z.array(
-    z.object({ 
-      step: z.string(), 
-      expected: z.string() 
-    })
-  ).optional(),
-  expectedResults: z.string().min(1, "Expected results are required"),
-  priority: z.string().min(1, "Priority is required"),
-  severity: z.string().min(1, "Severity is required"),
-  status: z.string().min(1, "Status is required"),
-  suiteId: z.coerce.number().min(1, "Test suite is required"),
-  automatable: z.boolean().default(false),
-});
-
-export type TestCaseFormValues = z.infer<typeof testCaseSchema>;
 
 interface TestCaseFormDialogProps {
   open: boolean;
