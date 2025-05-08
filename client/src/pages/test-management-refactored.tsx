@@ -19,6 +19,8 @@ import {
   TestCaseTable,
   TestSuiteFormDialog,
   TestCaseFormDialog,
+  TestCaseDetailsDialog,
+  GenerateAITestCasesDialog,
   DeleteConfirmDialog
 } from "@/components/test-management";
 
@@ -546,10 +548,30 @@ export default function TestManagement() {
       />
       
       {/* Generate AI Test Cases Dialog */}
-      {/* TODO: Replace with GenerateAITestCasesDialog component */}
+      <GenerateAITestCasesDialog
+        open={aiGenerateDialogOpen}
+        onOpenChange={setAiGenerateDialogOpen}
+        onSubmit={onGenerateAiTestCases}
+        selectedSuite={selectedSuite}
+        suites={selectedSuite ? [selectedSuite] : []}
+        isSubmitting={generateTestCasesMutation.isPending}
+      />
       
       {/* View Test Case Details Dialog */}
-      {/* TODO: Replace with TestCaseDetailsDialog component */}
+      <TestCaseDetailsDialog
+        open={testCaseDetailOpen}
+        onOpenChange={setTestCaseDetailOpen}
+        testCase={selectedTestCase}
+        testSuite={selectedSuite}
+        onEdit={() => {
+          setTestCaseDetailOpen(false);
+          setEditCaseDialogOpen(true);
+        }}
+        onDelete={() => {
+          setTestCaseDetailOpen(false);
+          setDeleteConfirmOpen(true);
+        }}
+      />
       
       {/* Edit Test Case Dialog */}
       <TestCaseFormDialog
