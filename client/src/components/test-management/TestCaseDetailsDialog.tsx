@@ -1,8 +1,6 @@
-import { TestCase, TestSuite } from "@/hooks/test-management";
-import { findTestSuiteById, formatDate, getPriorityColor, getStatusColor, getSeverityColor } from "@/utils/test-management";
-import { Badge } from "@/components/ui/badge";
+import React from "react";
+import { TestCase } from "@/hooks/test-management";
 import { ErrorBoundary } from "@/components/error/ErrorBoundary";
-
 import {
   Dialog,
   DialogContent,
@@ -18,150 +16,205 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { formatDate } from "@/lib/utils";
 import { Edit, Trash2 } from "lucide-react";
 
-interface TestCaseDetailsDialogProps {
+export interface TestCaseDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   testCase: TestCase | null;
-  suites: TestSuite[];
-  onEdit: () => void;
-  onDelete: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }
 
 export function TestCaseDetailsDialog({
   open,
   onOpenChange,
   testCase,
-  suites,
   onEdit,
   onDelete,
 }: TestCaseDetailsDialogProps) {
   if (!testCase) return null;
 
-  const suite = findTestSuiteById(suites, testCase.suiteId);
+  // Map status to badge variant
+  const getStatusVariant = (status: string): "secondary" | "outline" | "default" | "destructive" => {
+    switch (status) {
+      case "draft":
+        return "secondary";
+      case "ready":
+        return "outline";
+      case "in-progress":
+        return "default";
+      case "completed":
+        return "default"; // Changed from "success" to fit available variants
+      case "blocked":
+        return "destructive";
+      default:
+        return "outline";
+    }
+  };
+  
+  // Map priority to badge variant
+  const getPriorityVariant = (priority: string): "secondary" | "outline" | "default" | "destructive" => {
+    switch (priority) {
+      case "high":
+        return "destructive";
+      case "medium":
+        return "default";
+      case "low":
+        return "outline";
+      default:
+        return "outline";
+    }
+  };
+  
+  // Map severity to badge variant
+  const getSeverityVariant = (severity: string): "secondary" | "outline" | "default" | "destructive" => {
+    switch (severity) {
+      case "critical":
+        return "destructive";
+      case "high":
+        return "destructive";
+      case "normal":
+        return "default";
+      case "low":
+        return "outline";
+      default:
+        return "outline";
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh]">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex justify-between items-start">
+          <div className="flex justify-between items-start gap-4">
             <div>
-              <DialogTitle className="text-2xl font-bold mb-2">{testCase.title}</DialogTitle>
-              <DialogDescription>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  <Badge variant="outline" className={getStatusColor(testCase.status)}>
-                    {testCase.status}
-                  </Badge>
-                  <Badge variant="outline" className={getPriorityColor(testCase.priority)}>
-                    {testCase.priority} priority
-                  </Badge>
-                  <Badge variant="outline" className={getSeverityColor(testCase.severity)}>
-                    {testCase.severity} severity
-                  </Badge>
-                  {testCase.automatable && (
-                    <Badge variant="outline" className="bg-blue-500/20 text-blue-500">
-                      Automatable
-                    </Badge>
-                  )}
-                  {testCase.aiGenerated && (
-                    <Badge variant="outline" className="bg-purple-500/20 text-purple-500">
-                      AI Generated
-                    </Badge>
-                  )}
-                </div>
+              <DialogTitle className="text-xl">{testCase.title}</DialogTitle>
+              <DialogDescription className="mt-1">
+                {testCase.aiGenerated && (
+                  <Badge variant="secondary" className="mr-2">AI Generated</Badge>
+                )}
+                <Badge variant={getStatusVariant(testCase.status)}>
+                  {testCase.status.charAt(0).toUpperCase() + testCase.status.slice(1)}
+                </Badge>
               </DialogDescription>
+            </div>
+            <div className="flex gap-2">
+              {onEdit && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onEdit();
+                  }}
+                >
+                  <Edit className="h-4 w-4 mr-1" />
+                  Edit
+                </Button>
+              )}
+              {onDelete && (
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onDelete();
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Delete
+                </Button>
+              )}
             </div>
           </div>
         </DialogHeader>
 
-        <ScrollArea className="h-[60vh] mt-4 pr-4">
-          <ErrorBoundary name="Test Case Details">
-            <div className="space-y-6">
+        <ErrorBoundary name="Test Case Details">
+          <div className="space-y-6 py-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <h3 className="text-lg font-semibold mb-2">Suite</h3>
-                <p className="text-muted-foreground">{suite?.name || "Unknown Suite"}</p>
+                <p className="text-sm font-medium text-muted-foreground">Priority</p>
+                <Badge variant={getPriorityVariant(testCase.priority)}>
+                  {testCase.priority.charAt(0).toUpperCase() + testCase.priority.slice(1)}
+                </Badge>
               </div>
-
               <div>
-                <h3 className="text-lg font-semibold mb-2">Description</h3>
-                <p className="text-muted-foreground whitespace-pre-line">{testCase.description}</p>
+                <p className="text-sm font-medium text-muted-foreground">Severity</p>
+                <Badge variant={getSeverityVariant(testCase.severity)}>
+                  {testCase.severity.charAt(0).toUpperCase() + testCase.severity.slice(1)}
+                </Badge>
               </div>
-
-              {testCase.preconditions && (
-                <div>
-                  <h3 className="text-lg font-semibold mb-2">Preconditions</h3>
-                  <p className="text-muted-foreground whitespace-pre-line">{testCase.preconditions}</p>
-                </div>
-              )}
-
-              {testCase.steps && testCase.steps.length > 0 && (
-                <div>
-                  <h3 className="text-lg font-semibold mb-2">Test Steps</h3>
-                  <div className="border rounded-md">
-                    <Accordion type="multiple" className="w-full">
-                      {testCase.steps.map((step, index) => (
-                        <AccordionItem value={`step-${index}`} key={index}>
-                          <AccordionTrigger className="px-4">
-                            <span className="font-medium">Step {index + 1}</span>
-                          </AccordionTrigger>
-                          <AccordionContent className="px-4 pb-4">
-                            <div className="space-y-4">
-                              <div>
-                                <h4 className="text-sm font-semibold mb-1">Action</h4>
-                                <p className="text-muted-foreground whitespace-pre-line">{step.step}</p>
-                              </div>
-                              <div>
-                                <h4 className="text-sm font-semibold mb-1">Expected Result</h4>
-                                <p className="text-muted-foreground whitespace-pre-line">{step.expected}</p>
-                              </div>
-                            </div>
-                          </AccordionContent>
-                        </AccordionItem>
-                      ))}
-                    </Accordion>
-                  </div>
-                </div>
-              )}
-
               <div>
-                <h3 className="text-lg font-semibold mb-2">Expected Results</h3>
-                <p className="text-muted-foreground whitespace-pre-line">{testCase.expectedResults}</p>
-              </div>
-
-              <div className="pt-2 border-t">
-                <div className="flex flex-col sm:flex-row sm:items-center text-xs text-muted-foreground">
-                  <span className="mr-4">Created: {formatDate(testCase.createdAt)}</span>
-                  <span>Updated: {formatDate(testCase.updatedAt)}</span>
-                </div>
+                <p className="text-sm font-medium text-muted-foreground">Automatable</p>
+                <Badge variant={testCase.automatable ? "secondary" : "outline"}>
+                  {testCase.automatable ? "Yes" : "No"}
+                </Badge>
               </div>
             </div>
-          </ErrorBoundary>
-        </ScrollArea>
 
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-2"
-            onClick={onEdit}
-          >
-            <Edit className="h-4 w-4" />
-            <span>Edit</span>
-          </Button>
-          <Button
-            type="button"
-            variant="destructive"
-            size="sm"
-            className="flex items-center gap-2"
-            onClick={onDelete}
-          >
-            <Trash2 className="h-4 w-4" />
-            <span>Delete</span>
-          </Button>
-        </DialogFooter>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground mb-1">Description</p>
+              <p className="text-sm leading-relaxed">{testCase.description}</p>
+            </div>
+
+            <div>
+              <p className="text-sm font-medium text-muted-foreground mb-1">Preconditions</p>
+              <p className="text-sm leading-relaxed">{testCase.preconditions || "No preconditions specified"}</p>
+            </div>
+
+            <div>
+              <p className="text-sm font-medium text-muted-foreground mb-2">Test Steps</p>
+              {testCase.steps && testCase.steps.length > 0 ? (
+                <Accordion type="single" collapsible className="w-full">
+                  {testCase.steps.map((step, index) => (
+                    <AccordionItem key={index} value={`step-${index}`}>
+                      <AccordionTrigger className="px-4 py-2 bg-muted/20 rounded-t-lg text-sm">
+                        Step {index + 1}
+                      </AccordionTrigger>
+                      <AccordionContent className="px-4 py-3 border border-muted rounded-b-lg mb-2">
+                        <div className="space-y-2">
+                          <div>
+                            <p className="text-xs font-medium text-muted-foreground">Action</p>
+                            <p className="text-sm">{step.step}</p>
+                          </div>
+                          <Separator />
+                          <div>
+                            <p className="text-xs font-medium text-muted-foreground">Expected Result</p>
+                            <p className="text-sm">{step.expected}</p>
+                          </div>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              ) : (
+                <p className="text-sm text-muted-foreground">No steps defined for this test case</p>
+              )}
+            </div>
+
+            <div>
+              <p className="text-sm font-medium text-muted-foreground mb-1">Overall Expected Results</p>
+              <p className="text-sm leading-relaxed">{testCase.expectedResults}</p>
+            </div>
+
+            <div className="text-xs text-muted-foreground flex justify-between">
+              <div>Created: {formatDate(testCase.createdAt)}</div>
+              <div>Last updated: {formatDate(testCase.updatedAt)}</div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </ErrorBoundary>
       </DialogContent>
     </Dialog>
   );

@@ -1,8 +1,13 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { TestCase, TestSuite } from ".";
-import { testCaseSchema, TestCaseFormValues } from "@/schemas/test-management";
+import { TestSuite, TestCase } from "@/hooks/test-management";
+import { 
+  TestCaseFormValues, 
+  testCaseSchema, 
+  testStepSchema 
+} from "@/schemas/test-management";
+import { z } from "zod";
 
 interface UseTestCaseFormProps {
   testCase?: TestCase | null;
@@ -11,84 +16,120 @@ interface UseTestCaseFormProps {
   mode: "create" | "edit";
 }
 
+const defaultTestStep = {
+  step: "",
+  expected: "",
+};
+
 export function useTestCaseForm({
   testCase,
   selectedSuite,
   isStructured = true,
-  mode,
+  mode
 }: UseTestCaseFormProps) {
+  const [steps, setSteps] = useState<{ step: string; expected: string }[]>([defaultTestStep]);
+
+  // Initialize form with validation schema
   const form = useForm<TestCaseFormValues>({
     resolver: zodResolver(testCaseSchema),
     defaultValues: {
-      title: testCase?.title || "",
-      description: testCase?.description || "",
-      preconditions: testCase?.preconditions || "",
-      steps: testCase?.steps || (isStructured ? [{ step: "", expected: "" }] : undefined),
-      expectedResults: testCase?.expectedResults || "",
-      priority: (testCase?.priority as "high" | "medium" | "low") || "medium",
-      severity: (testCase?.severity as "critical" | "high" | "normal" | "low") || "normal",
-      status: (testCase?.status as "draft" | "ready" | "in-progress" | "blocked" | "completed") || "draft",
-      suiteId: testCase?.suiteId || selectedSuite?.id || 0,
-      automatable: testCase?.automatable || false,
+      title: "",
+      description: "",
+      status: "draft",
+      priority: "medium",
+      suiteId: selectedSuite?.id || 0,
+      severity: "normal",
+      automatable: false,
+      preconditions: "",
+      expectedResults: "",
+      steps: [defaultTestStep],
     },
   });
 
-  // Reset form when test case changes
+  // Update form when testCase changes (for edit mode)
   useEffect(() => {
-    if (testCase) {
+    if (testCase && mode === "edit") {
+      // Reset form with testCase values
       form.reset({
         title: testCase.title,
         description: testCase.description,
-        preconditions: testCase.preconditions,
-        steps: testCase.steps || [],
-        expectedResults: testCase.expectedResults,
+        status: testCase.status as "draft" | "ready" | "in-progress" | "completed" | "blocked",
         priority: testCase.priority as "high" | "medium" | "low",
-        severity: testCase.severity as "critical" | "high" | "normal" | "low",
-        status: testCase.status as "draft" | "ready" | "in-progress" | "blocked" | "completed",
         suiteId: testCase.suiteId,
+        severity: testCase.severity as "critical" | "high" | "normal" | "low",
         automatable: testCase.automatable,
+        preconditions: testCase.preconditions || "",
+        expectedResults: testCase.expectedResults,
+        steps: testCase.steps || [defaultTestStep],
       });
-    } else if (mode === "create") {
-      form.reset({
-        title: "",
-        description: "",
-        preconditions: "",
-        steps: isStructured ? [{ step: "", expected: "" }] : undefined,
-        expectedResults: "",
-        priority: "medium",
-        severity: "normal",
-        status: "draft",
-        suiteId: selectedSuite?.id || 0,
-        automatable: false,
-      });
-    }
-  }, [testCase, form, mode, isStructured, selectedSuite]);
 
-  // Update suite ID when selected suite changes
+      // Update steps state for steps UI management
+      if (testCase.steps && testCase.steps.length > 0) {
+        setSteps(testCase.steps);
+      }
+    }
+  }, [testCase, form, mode]);
+
+  // Update suiteId when selectedSuite changes
   useEffect(() => {
-    if (selectedSuite?.id && form.getValues().suiteId !== selectedSuite.id) {
+    if (selectedSuite) {
       form.setValue("suiteId", selectedSuite.id);
     }
   }, [selectedSuite, form]);
 
-  // Function to add a new step
+  // Add new step
   const addStep = () => {
+    setSteps([...steps, defaultTestStep]);
     const currentSteps = form.getValues("steps") || [];
-    form.setValue("steps", [...currentSteps, { step: "", expected: "" }]);
+    form.setValue("steps", [...currentSteps, defaultTestStep]);
   };
 
-  // Function to remove a step
+  // Remove step
   const removeStep = (index: number) => {
-    const currentSteps = form.getValues("steps") || [];
-    if (currentSteps.length > 1) {
-      const newSteps = currentSteps.filter((_, i) => i !== index);
-      form.setValue("steps", newSteps);
+    const updatedSteps = steps.filter((_, i) => i !== index);
+    setSteps(updatedSteps);
+    form.setValue("steps", updatedSteps);
+  };
+
+  // Update a specific step field
+  const updateStepField = (index: number, field: "step" | "expected", value: string) => {
+    const updatedSteps = [...steps];
+    updatedSteps[index] = {
+      ...updatedSteps[index],
+      [field]: value,
+    };
+    
+    setSteps(updatedSteps);
+    form.setValue("steps", updatedSteps);
+    
+    // Validate the step field after update
+    const stepValidator = z.object({
+      steps: z.array(testStepSchema)
+    });
+    
+    const result = stepValidator.safeParse({ steps: updatedSteps });
+    if (!result.success) {
+      // Extract error details for the specific field
+      const fieldErrors = result.error.flatten().fieldErrors;
+      if (fieldErrors.steps) {
+        // Set form error for the specific step
+        form.setError(`steps.${index}.${field}` as any, {
+          type: "manual",
+          message: fieldErrors.steps[0] || `Invalid ${field}`,
+        });
+      }
+    } else {
+      // Clear error if validation passes
+      form.clearErrors(`steps.${index}.${field}` as any);
     }
   };
 
   return {
     form,
+    steps,
     addStep,
     removeStep,
+    updateStepField,
+    isStructured,
   };
 }

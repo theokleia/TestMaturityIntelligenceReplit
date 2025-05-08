@@ -1,44 +1,40 @@
-import { z } from "zod";
+import * as z from "zod";
 
-// Test Suite schema
 export const testSuiteSchema = z.object({
-  name: z.string().min(3, "Name must be at least 3 characters"),
-  description: z.string().min(5, "Description must be at least 5 characters"),
-  projectArea: z.string().optional(),
+  name: z.string().min(1, "Name is required"),
+  description: z.string().min(1, "Description is required"),
+  status: z.enum(["draft", "ready", "in-progress", "completed", "archived"]),
   priority: z.enum(["high", "medium", "low"]),
-  status: z.enum(["draft", "ready", "in-progress", "completed"]),
-  projectId: z.number().min(1, "Project ID is required"),
+  projectArea: z.string().min(1, "Project area is required"),
 });
 
 export type TestSuiteFormValues = z.infer<typeof testSuiteSchema>;
 
-// Test Case schema
+export const testStepSchema = z.object({
+  step: z.string().min(1, "Step description is required"),
+  expected: z.string().min(1, "Expected result is required"),
+});
+
 export const testCaseSchema = z.object({
-  title: z.string().min(5, "Title must be at least 5 characters"),
-  description: z.string().min(5, "Description must be at least 5 characters"),
-  preconditions: z.string().optional(),
-  steps: z.array(
-    z.object({
-      step: z.string().min(1, "Step cannot be empty"),
-      expected: z.string().min(1, "Expected result cannot be empty"),
-    })
-  ).optional(),
-  expectedResults: z.string().min(5, "Expected results must be at least 5 characters"),
+  title: z.string().min(1, "Title is required"),
+  description: z.string().min(1, "Description is required"),
+  status: z.enum(["draft", "ready", "in-progress", "completed", "blocked"]),
   priority: z.enum(["high", "medium", "low"]),
+  suiteId: z.number(),
   severity: z.enum(["critical", "high", "normal", "low"]),
-  status: z.enum(["draft", "ready", "in-progress", "blocked", "completed"]),
-  suiteId: z.number().min(1, "A test suite must be selected"),
-  automatable: z.boolean().default(false),
+  automatable: z.boolean(),
+  preconditions: z.string().optional(),
+  expectedResults: z.string().min(1, "Expected results are required"),
+  steps: z.array(testStepSchema).optional(),
 });
 
 export type TestCaseFormValues = z.infer<typeof testCaseSchema>;
 
-// AI Test case generation schema
 export const generateTestCasesSchema = z.object({
-  feature: z.string().min(5, "Feature description is required"),
-  requirements: z.string().min(5, "Requirements are required"),
-  complexity: z.enum(["simple", "moderate", "complex"]).default("moderate"),
-  testSuiteId: z.number().min(1, "A test suite must be selected"),
+  feature: z.string().min(1, "Feature name is required"),
+  requirements: z.string().min(1, "Requirements are required"),
+  complexity: z.enum(["low", "medium", "high"]),
+  testSuiteId: z.number(),
 });
 
 export type GenerateTestCasesFormValues = z.infer<typeof generateTestCasesSchema>;
