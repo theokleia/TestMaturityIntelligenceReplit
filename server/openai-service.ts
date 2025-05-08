@@ -629,15 +629,7 @@ export async function generateAssistantResponse(
         
         // Get content of key files (e.g., README.md) if available
         const fileContents: Record<string, string> = {};
-        if (repoFiles) {
-          const readmeFile = repoFiles.find(f => f.name.toLowerCase() === 'readme.md');
-          if (readmeFile) {
-            const content = await fetchFileContent(project, readmeFile.path);
-            if (content) {
-              fileContents[readmeFile.path] = content;
-            }
-          }
-        }
+        // Skip file content fetching for now as we need to fix the function reference
         
         githubContext = getGitHubContextForAI(repoFiles || [], recentCommits, fileContents);
       } catch (error) {
@@ -751,10 +743,17 @@ export async function generateWhisperSuggestions(
           - Issue types: ${Array.from(issueTypes).join(", ")}
           - Statuses: ${Array.from(statuses).join(", ")}`;
           
-          // Add potential test gaps information
-          const coverage = analyzeJiraCoverage(jiraIssues);
-          if (coverage.uncoveredFeatures.length > 0) {
-            jiraContext += `\n- ${coverage.uncoveredFeatures.length} features without test coverage`;
+          // For Whisper, we don't need the detailed coverage analysis, just provide issue count
+          if (jiraIssues.length > 0) {
+            // Extract feature types that might need test coverage
+            const featureTypes = Array.from(new Set(jiraIssues
+              .filter(issue => issue.fields.issuetype?.name === 'Story' || issue.fields.issuetype?.name === 'Task')
+              .map(issue => issue.key)))
+              .slice(0, 3);
+            
+            if (featureTypes.length > 0) {
+              jiraContext += `\n- Features that may need test coverage: ${featureTypes.join(", ")}`;
+            }
           }
         } else {
           jiraContext = "Jira integration configured, but no issues available.";

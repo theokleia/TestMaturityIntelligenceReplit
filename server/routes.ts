@@ -893,22 +893,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // AI Assistant endpoint
   app.post("/api/ai/assistant", async (req, res) => {
     try {
-      const { projectName, query, contextPath } = req.body;
+      const { projectId, projectName, query, contextPath } = req.body;
       
-      if (!projectName || !query) {
+      // Check for required parameters
+      if ((!projectId && !projectName) || !query) {
         return res.status(400).json({ 
-          message: "projectName and query are required" 
+          message: "Either projectId or projectName, and query are required" 
         });
       }
       
-      // Generate assistant response
-      const response = await generateAssistantResponse(
-        projectName,
-        query,
-        contextPath || ""
-      );
+      // If projectId is provided, fetch the full project details
+      if (projectId) {
+        const project = await storage.getProject(parseInt(projectId));
+        if (!project) {
+          return res.status(404).json({ message: "Project not found" });
+        }
+        
+        console.log(`AI Assistant API called for project ID: ${projectId} - ${project.name}`);
+        
+        // Generate assistant response with full project context
+        const response = await generateAssistantResponse(
+          project,
+          query,
+          contextPath || ""
+        );
+        
+        return res.json({ response });
+      }
       
-      res.json({ response });
+      // Fallback for backward compatibility if only projectName is provided
+      const projects = await storage.getProjects();
+      const project = projects.find(p => p.name === projectName);
+      
+      if (project) {
+        console.log(`AI Assistant API called for project name: ${projectName} (ID: ${project.id})`);
+        
+        // Generate assistant response with full project context
+        const response = await generateAssistantResponse(
+          project,
+          query,
+          contextPath || ""
+        );
+        
+        return res.json({ response });
+      } else {
+        // If no matching project found, create a minimal project object
+        console.log(`AI Assistant API called for project name (no match): ${projectName}`);
+        
+        // Generate assistant response with just the project name
+        const response = await generateAssistantResponse(
+          { name: projectName, id: 0 } as any,
+          query,
+          contextPath || ""
+        );
+        
+        return res.json({ response });
+      }
     } catch (error) {
       console.error("Error generating AI assistant response:", error);
       res.status(500).json({ message: "Failed to generate AI assistant response" });
@@ -918,26 +958,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // AI Whisper Mode endpoint
   app.post("/api/ai/whisper", async (req, res) => {
     try {
-      const { projectName, contextPath, contextData } = req.body;
+      const { projectId, projectName, contextPath, contextData } = req.body;
       
-      if (!projectName) {
+      // Check for required parameters
+      if (!projectId && !projectName) {
         return res.status(400).json({ 
-          message: "projectName is required" 
+          message: "Either projectId or projectName is required" 
         });
       }
       
-      // For testing/development purposes, we'll return static data
-      // to avoid hitting the OpenAI API too frequently
-      // In production, uncomment the following code:
-      /*
-      const suggestions = await generateWhisperSuggestions(
-        projectName,
-        contextPath || "",
-        contextData
-      );
-      */
+      // If projectId is provided, fetch the full project details
+      if (projectId) {
+        const project = await storage.getProject(parseInt(projectId));
+        if (!project) {
+          return res.status(404).json({ message: "Project not found" });
+        }
+        
+        console.log(`Whisper API called for project ID: ${projectId} - ${project.name}, path: ${contextPath}`);
+        
+        // Use real AI-generated suggestions based on project data
+        const suggestions = await generateWhisperSuggestions(
+          project,
+          contextPath || "",
+          contextData
+        );
+        
+        return res.json(suggestions);
+      }
       
-      // Test response with static suggestions
+      // Fallback for backward compatibility if only projectName is provided
+      const projects = await storage.getProjects();
+      const project = projects.find(p => p.name === projectName);
+      
+      if (project) {
+        console.log(`Whisper API called for project name: ${projectName} (ID: ${project.id}), path: ${contextPath}`);
+        
+        // Use real AI-generated suggestions based on project data
+        const suggestions = await generateWhisperSuggestions(
+          project,
+          contextPath || "",
+          contextData
+        );
+        
+        return res.json(suggestions);
+      }
+      
+      // Fallback to static suggestions for backward compatibility
       console.log("Whisper API called for project:", projectName, "path:", contextPath);
       
       const suggestions = {
