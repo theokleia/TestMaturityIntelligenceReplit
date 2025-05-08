@@ -7,7 +7,9 @@ const TEST_SUITES_ENDPOINT = "/api/test-suites";
 export function useDeleteTestSuite() {
   return useMutation({
     mutationFn: async (id: number) => {
-      return apiRequest('DELETE', `${TEST_SUITES_ENDPOINT}/${id}`);
+      return apiRequest<boolean>(`${TEST_SUITES_ENDPOINT}/${id}`, {
+        method: 'DELETE'
+      });
     },
     onSuccess: () => {
       // Invalidate test suites

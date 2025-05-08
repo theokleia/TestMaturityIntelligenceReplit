@@ -38,7 +38,7 @@ export function useTestSuites(filters: TestSuitesFilters = {}) {
       });
       
       const url = `/api/test-suites${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-      return apiRequest(url, { method: 'GET' });
+      return apiRequest<TestSuite[]>(url);
     },
   });
 
@@ -120,7 +120,7 @@ export function useTestSuite(id: number) {
   const { data: testSuite, isLoading, error } = useQuery({
     queryKey: ["/api/test-suites", id],
     queryFn: async () => {
-      const response = await apiRequest<TestSuite>(`/api/test-suites/${id}`, { method: 'GET' });
+      const response = await apiRequest<TestSuite>(`/api/test-suites/${id}`);
       return response;
     },
     enabled: !!id, // Only run query if id is provided
