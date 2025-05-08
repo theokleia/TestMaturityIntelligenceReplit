@@ -491,7 +491,7 @@ export default function TestManagement() {
     }
   }, [selectedTestCase, editCaseForm]);
   
-  // Reset edit suite form when selected suite changes
+  // Reset edit form when selected test suite changes
   useEffect(() => {
     if (selectedSuite) {
       editSuiteForm.reset({
