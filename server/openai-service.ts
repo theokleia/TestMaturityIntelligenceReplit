@@ -1,4 +1,7 @@
 import OpenAI from "openai";
+import { Project } from "@shared/schema";
+import { fetchJiraIssues, getJiraContextForAI } from "./services/jira-service";
+import { fetchRepoFiles, fetchRecentCommits, getGitHubContextForAI } from "./services/github-service";
 
 // Initialize the OpenAI client with the API key from environment variables
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });

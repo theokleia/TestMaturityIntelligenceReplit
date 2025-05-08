@@ -22,6 +22,7 @@ export const projects = pgTable("projects", {
   jiraJql: text("jira_jql"),
   jiraApiKey: text("jira_api_key"), // Changed from varchar(100) to text to support longer API keys
   githubRepo: varchar("github_repo", { length: 100 }),
+  githubToken: text("github_token"), // Added GitHub token field
   testCaseFormat: varchar("test_case_format", { length: 20 }).default("structured"),
   outputFormat: varchar("output_format", { length: 20 }).default("markdown"),
   createdAt: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow(),

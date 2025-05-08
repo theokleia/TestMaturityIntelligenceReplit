@@ -472,7 +472,7 @@ export default function ProjectSettings() {
                     onChange={(e) => handleChange("githubToken", e.target.value)}
                   />
                   <p className="text-xs text-atmf-muted">
-                    Create a token with 'repo' scope for private repositories
+                    Create a token with 'repo' scope for private repositories. This is required for AI features to access your code.
                   </p>
                 </div>
 

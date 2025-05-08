@@ -47,8 +47,9 @@ export async function fetchJiraIssues(project: Project): Promise<JiraIssue[] | n
     // Use the configured JQL or create a default one
     const jql = project.jiraJql || `project = ${project.jiraProjectId}`;
     
-    // Construct the URL for the Jira API endpoint
-    const apiUrl = `${project.jiraUrl}/rest/api/2/search`;
+    // Ensure the URL has the right format and includes the API endpoint
+    const baseUrl = project.jiraUrl.endsWith('/') ? project.jiraUrl : `${project.jiraUrl}/`;
+    const apiUrl = `${baseUrl}rest/api/3/search`;
 
     // Create the request URL with query parameters
     const url = new URL(apiUrl);
@@ -57,10 +58,11 @@ export async function fetchJiraIssues(project: Project): Promise<JiraIssue[] | n
     url.searchParams.append('fields', 'summary,description,issuetype,status,priority,components,labels');
 
     // Make the API call with appropriate authentication
+    // For Jira Cloud, we need to use the API token as the password and "email" as the username
     const response = await fetch(url.toString(), {
       method: 'GET',
       headers: {
-        'Authorization': `Basic ${Buffer.from(`${project.jiraApiKey}`).toString('base64')}`,
+        'Authorization': `Bearer ${project.jiraApiKey}`,
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       }
