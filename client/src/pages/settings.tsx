@@ -87,25 +87,42 @@ export default function ProjectSettings() {
       
       // We need to update the project settings in the backend
       if (selectedProject?.id) {
-        // Construct the update payload
+        // Prepare the update payload
+        const updatePayload: Record<string, any> = {
+          testCaseFormat: settings.testCaseFormat
+        };
+        
+        // Only add fields that are actually populated
+        if (settings.jiraUrl) {
+          // Extract Jira project ID from the URL - it's typically the last part of the URL path
+          updatePayload.jiraProjectId = settings.jiraUrl.split('/').pop()?.toUpperCase() || "JIRA";
+        }
+        
+        // Add JQL if provided
+        if (settings.jiraJql) {
+          updatePayload.jiraJql = settings.jiraJql;
+        } else if (settings.jiraUrl) {
+          // Create a default JQL if URL is provided but no custom JQL
+          updatePayload.jiraJql = `project = ${settings.jiraUrl.split('/').pop()?.toUpperCase() || "JIRA"}`;
+        }
+        
+        // Add API key if provided
+        if (settings.jiraApiKey && settings.jiraApiKey !== '••••••••••••••••') {
+          updatePayload.jiraApiKey = settings.jiraApiKey;
+        }
+        
+        // Add GitHub repo if provided
+        if (settings.githubRepo) {
+          updatePayload.githubRepo = settings.githubRepo;
+        }
+        
+        // Make the update request
         const response = await fetch(`/api/projects/${selectedProject.id}`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            // Extract Jira project ID from the URL - it's typically the last part of the URL path
-            // In a real app, we would validate this properly
-            jiraProjectId: settings.jiraUrl ? settings.jiraUrl.split('/').pop()?.toUpperCase() || "JIRA" : undefined,
-            // Create a simple JQL query based on the extracted project ID
-            jiraJql: settings.jiraUrl ? `project = ${settings.jiraUrl.split('/').pop()?.toUpperCase() || "JIRA"}` : undefined,
-            // Store the API key (in a real app, we would encrypt this)
-            jiraApiKey: settings.jiraApiKey || undefined,
-            // Add GitHub repo information if provided
-            githubRepo: settings.githubRepo || undefined,
-            // Store test case format preference
-            testCaseFormat: settings.testCaseFormat,
-          }),
+          body: JSON.stringify(updatePayload),
         });
         
         if (!response.ok) {
@@ -332,17 +349,35 @@ export default function ProjectSettings() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="jiraJql">JQL Query</Label>
-                  <Input
-                    id="jiraJql"
-                    placeholder="project = KEY AND type = Story"
-                    className="bg-atmf-main border-white/10 focus:border-white/20"
-                    value={settings.jiraJql || ''}
-                    onChange={(e) => handleChange("jiraJql", e.target.value)}
-                  />
-                  <p className="text-xs text-atmf-muted">
-                    Define a JQL query to filter which issues should be considered for this project
-                  </p>
+                  <Label htmlFor="jiraJql">
+                    JQL Query <span className="text-xs text-atmf-muted">(Jira Query Language)</span>
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="jiraJql"
+                      placeholder="project = KEY AND type = Story"
+                      className="bg-atmf-main border-white/10 focus:border-white/20"
+                      value={settings.jiraJql || ''}
+                      onChange={(e) => handleChange("jiraJql", e.target.value)}
+                    />
+                    {!settings.jiraJql && (
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        <div className="text-xs text-atmf-muted bg-atmf-main px-2 py-1 rounded-sm opacity-70">
+                          Press Enter to use default
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-xs text-atmf-muted space-y-1">
+                    <p>
+                      Define a JQL query to filter which Jira issues should be imported and analyzed for test case generation
+                    </p>
+                    <p className="text-atmf-muted/70 text-[10px]">
+                      Examples: 
+                      <span className="ml-1 text-blue-400">project = KEY AND type = Story</span> or 
+                      <span className="ml-1 text-blue-400">project = KEY AND status != "Done" AND component = Backend</span>
+                    </p>
+                  </div>
                 </div>
 
                 <Button 
