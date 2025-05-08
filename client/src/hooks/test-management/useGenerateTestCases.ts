@@ -19,7 +19,7 @@ export interface GenerateTestCasesResponse {
 }
 
 const TEST_CASES_ENDPOINT = "/api/test-cases";
-const GENERATE_TEST_CASES_ENDPOINT = "/api/ai/generate-test-cases";
+const GENERATE_TEST_CASES_ENDPOINT = "/api/test-cases/generate";
 
 /**
  * Hook to generate test cases using AI
@@ -27,8 +27,10 @@ const GENERATE_TEST_CASES_ENDPOINT = "/api/ai/generate-test-cases";
 export function useGenerateTestCases() {
   return useMutation({
     mutationFn: async (request: GenerateTestCasesRequest) => {
-      const res = await apiRequest('POST', GENERATE_TEST_CASES_ENDPOINT, request);
-      return res.json() as Promise<GenerateTestCasesResponse>;
+      return apiRequest<GenerateTestCasesResponse>(GENERATE_TEST_CASES_ENDPOINT, {
+        method: 'POST',
+        body: JSON.stringify(request)
+      });
     },
     onSuccess: () => {
       // Invalidate test cases to refresh the list after generating new ones

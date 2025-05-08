@@ -2,7 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { invalidateResource } from "@/lib/queryUtils";
 // Import TestCase and TestCaseStep types from our refactored module
-import { TestCase, TestCaseStep } from "./test-management";
+import { TestCase, TestStep } from "./test-management";
 
 export interface AiInsight {
   insights: string;
@@ -119,8 +119,10 @@ export function useAiInsights(dimensionId: number, projectId?: number) {
 export function useGenerateRecommendation() {
   return useMutation({
     mutationFn: async (request: GenerateRecommendationRequest) => {
-      const res = await apiRequest('POST', '/api/ai/recommendations', request);
-      return res.json();
+      return apiRequest('/api/ai/recommendations', {
+        method: 'POST',
+        body: JSON.stringify(request)
+      });
     },
     onSuccess: () => {
       // Invalidate recommendations cache when a new one is created
@@ -173,7 +175,7 @@ export function useGenerateTestStrategy() {
 export function useGenerateTestCases() {
   return useMutation({
     mutationFn: async (request: GenerateTestCasesRequest) => {
-      const res = await apiRequest('POST', '/api/ai/generate-test-cases', request);
+      const res = await apiRequest('POST', '/api/test-cases/generate', request);
       return res.json() as Promise<{
         message: string;
         testCases: TestCase[];
