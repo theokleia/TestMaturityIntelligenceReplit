@@ -247,6 +247,7 @@ export function TestCaseFormDialog({
                         placeholder="User has valid credentials"
                         className="min-h-[80px]"
                         {...field}
+                        value={field.value || ''}
                       />
                     </FormControl>
                     <FormMessage />
