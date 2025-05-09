@@ -58,11 +58,29 @@ export async function fetchJiraIssues(project: Project): Promise<JiraIssue[] | n
     url.searchParams.append('fields', 'summary,description,issuetype,status,priority,components,labels');
 
     // Make the API call with appropriate authentication
-    // For Jira Cloud, we need to use the API token as the password and "email" as the username
+    // For Jira Cloud, we should use Basic authentication
+    // The API key format from the user may already include the email, if not, we'll extract it
+    let authHeader = '';
+    
+    // Check if API key includes email:token format
+    if (project.jiraApiKey.includes(':')) {
+      // Already in email:token format, encode directly
+      authHeader = 'Basic ' + Buffer.from(project.jiraApiKey).toString('base64');
+    } else if (project.jiraApiKey.includes('@')) {
+      // Looks like just an email, we should notify user to use proper format
+      console.error('API key appears to be just an email. Format should be email:token');
+      authHeader = `Bearer ${project.jiraApiKey}`;
+    } else {
+      // Just a token was provided, try Bearer auth
+      authHeader = `Bearer ${project.jiraApiKey}`;
+    }
+    
+    console.log(`Using auth method: ${authHeader.startsWith('Basic') ? 'Basic' : 'Bearer'}`);
+    
     const response = await fetch(url.toString(), {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${project.jiraApiKey}`,
+        'Authorization': authHeader,
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       }

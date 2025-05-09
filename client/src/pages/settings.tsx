@@ -376,7 +376,7 @@ export default function ProjectSettings() {
                     onChange={(e) => handleChange("jiraApiKey", e.target.value)}
                   />
                   <p className="text-xs text-atmf-muted">
-                    Your Jira API key is stored securely and used for API requests
+                    For Jira Cloud, use your email address followed by the API token in this format: <span className="text-blue-400">your-email@example.com:your-api-token</span>
                   </p>
                 </div>
                 
