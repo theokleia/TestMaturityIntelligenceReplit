@@ -737,22 +737,29 @@ export async function generateWhisperSuggestions(
           const issueTypes = new Set(jiraIssues.map(issue => issue.fields.issuetype?.name || "Unknown"));
           const statuses = new Set(jiraIssues.map(issue => issue.fields.status?.name || "Unknown"));
           
+          // For Whisper, we'll now provide much more detailed Jira data
+          // We'll use the same formatting function we use for the assistant
+          jiraContext = getJiraContextForAI(jiraIssues);
+          
+          // Add summary information at the beginning
           jiraContext = `
           Jira Integration Summary:
           - ${jiraIssues.length} issues found
           - Issue types: ${Array.from(issueTypes).join(", ")}
-          - Statuses: ${Array.from(statuses).join(", ")}`;
+          - Statuses: ${Array.from(statuses).join(", ")}
           
-          // For Whisper, we don't need the detailed coverage analysis, just provide issue count
+          ${jiraContext}`;
+          
+          // Extract feature types that might need test coverage
           if (jiraIssues.length > 0) {
-            // Extract feature types that might need test coverage
             const featureTypes = Array.from(new Set(jiraIssues
               .filter(issue => issue.fields.issuetype?.name === 'Story' || issue.fields.issuetype?.name === 'Task')
               .map(issue => issue.key)))
-              .slice(0, 3);
+              .slice(0, 5);
             
             if (featureTypes.length > 0) {
-              jiraContext += `\n- Features that may need test coverage: ${featureTypes.join(", ")}`;
+              const uncoveredFeatures = featureTypes.join(", ");
+              jiraContext += `\n\nFeatures that may need test coverage: ${uncoveredFeatures}`;
             }
           }
         } else {

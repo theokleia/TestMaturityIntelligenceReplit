@@ -7,12 +7,33 @@ import fetch from 'node-fetch';
 import { Project } from '@shared/schema';
 
 // Define types for Jira API responses
+interface JiraField {
+  id?: string;
+  key?: string;
+  name?: string;
+  summary?: string;
+  fields?: any;
+  [key: string]: any;
+}
+
+interface JiraIssueLink {
+  id?: string;
+  type?: {
+    id?: string;
+    name?: string;
+    inward?: string;
+    outward?: string;
+  };
+  inwardIssue?: JiraField;
+  outwardIssue?: JiraField;
+}
+
 interface JiraIssue {
   id: string;
   key: string;
   fields: {
     summary: string;
-    description: string;
+    description: any; // Can be string or rich object
     issuetype: {
       name: string;
     };
@@ -22,7 +43,12 @@ interface JiraIssue {
     priority?: {
       name: string;
     };
-    [key: string]: any; // Allow for flexible fields
+    parent?: JiraField;
+    subtasks?: JiraField[];
+    issuelinks?: JiraIssueLink[];
+    components?: Array<{ name: string }>;
+    labels?: string[];
+    [key: string]: any; // Allow for other flexible fields
   };
 }
 
@@ -55,7 +81,7 @@ export async function fetchJiraIssues(project: Project): Promise<JiraIssue[] | n
     const url = new URL(apiUrl);
     url.searchParams.append('jql', jql);
     url.searchParams.append('maxResults', '50'); // Adjust as needed
-    url.searchParams.append('fields', 'summary,description,issuetype,status,priority,components,labels');
+    url.searchParams.append('fields', 'summary,description,issuetype,status,priority,components,labels,parent,subtasks,issuelinks');
 
     // Make the API call with appropriate authentication
     // For Jira Cloud API v3, we need to use Basic authentication with an API token
@@ -212,6 +238,66 @@ function safelyExtractDescription(description: any): string {
   }
 }
 
+// Function to get parent information if available
+function getParentInfo(issue: JiraIssue): string {
+  if (!issue.fields.parent) {
+    return '';
+  }
+  
+  try {
+    return `Parent: ${issue.fields.parent.key || ''} - ${issue.fields.parent.fields?.summary || 'No summary'}\n`;
+  } catch (error) {
+    console.error(`Error extracting parent info for ${issue.key}:`, error);
+    return '';
+  }
+}
+
+// Function to get subtasks if available
+function getSubtasksInfo(issue: JiraIssue): string {
+  if (!issue.fields.subtasks || issue.fields.subtasks.length === 0) {
+    return '';
+  }
+  
+  try {
+    const subtasks = issue.fields.subtasks.map((subtask: JiraField) => 
+      `  - ${subtask.key || ''} - ${subtask.fields?.summary || 'No summary'}`
+    ).join('\n');
+    
+    return `Subtasks:\n${subtasks}\n`;
+  } catch (error) {
+    console.error(`Error extracting subtasks info for ${issue.key}:`, error);
+    return '';
+  }
+}
+
+// Function to get linked issues if available
+function getLinkedIssuesInfo(issue: JiraIssue): string {
+  if (!issue.fields.issuelinks || issue.fields.issuelinks.length === 0) {
+    return '';
+  }
+  
+  try {
+    const links = issue.fields.issuelinks.map((link: JiraIssueLink) => {
+      // Linked issues can be inward or outward
+      const linkedIssue = link.inwardIssue || link.outwardIssue;
+      const linkType = link.type?.name || 'Link';
+      const direction = link.inwardIssue ? 'inward' : 'outward';
+      
+      if (linkedIssue) {
+        return `  - ${linkType} (${direction}): ${linkedIssue.key} - ${linkedIssue.fields?.summary || 'No summary'}`;
+      }
+      return null;
+    })
+    .filter(Boolean) // Remove nulls
+    .join('\n');
+    
+    return links ? `Linked Issues:\n${links}\n` : '';
+  } catch (error) {
+    console.error(`Error extracting linked issues info for ${issue.key}:`, error);
+    return '';
+  }
+}
+
 export function getJiraContextForAI(issues: JiraIssue[]): string {
   if (!issues || issues.length === 0) {
     return "No Jira issues available.";
@@ -220,14 +306,15 @@ export function getJiraContextForAI(issues: JiraIssue[]): string {
   // Extract key details from issues to enhance AI prompt
   const issuesSummary = issues.map(issue => {
     try {
+      // Get all the issue information including relationships
       return `
 Issue: ${issue.key}
 Type: ${issue.fields.issuetype?.name || 'Unknown'}
 Summary: ${issue.fields.summary || 'No summary'}
 Status: ${issue.fields.status?.name || 'Unknown'}
 Priority: ${issue.fields.priority?.name || 'Not set'}
-Description: ${safelyExtractDescription(issue.fields.description)}
----`;
+${getParentInfo(issue)}Description: ${safelyExtractDescription(issue.fields.description)}
+${getSubtasksInfo(issue)}${getLinkedIssuesInfo(issue)}---`;
     } catch (error) {
       console.error(`Error formatting issue ${issue.key}:`, error);
       return `
