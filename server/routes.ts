@@ -1165,6 +1165,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch test cycle items" });
     }
   });
+  
+  // Get a specific test cycle item by ID
+  app.get("/api/test-cycle-items/item/:itemId", async (req, res) => {
+    try {
+      const itemId = parseInt(req.params.itemId);
+      const item = await storage.getTestCycleItem(itemId);
+      if (!item) {
+        return res.status(404).json({ message: "Test cycle item not found" });
+      }
+      res.json(item);
+    } catch (error) {
+      console.error("Error fetching test cycle item:", error);
+      res.status(500).json({ message: "Failed to fetch test cycle item" });
+    }
+  });
 
   app.post("/api/test-cycle-items", async (req, res) => {
     try {
