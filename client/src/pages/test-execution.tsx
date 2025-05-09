@@ -119,6 +119,7 @@ export default function TestExecution() {
   // Queries
   const { data: testCycles, isLoading: isLoadingCycles } = useTestCycles(projectId);
   const { data: cycleItems, isLoading: isLoadingItems } = useTestCycleItems(selectedCycle?.id || 0);
+  const { data: runs, isLoading: isLoadingRuns } = useTestRuns(selectedCycleItem?.id || 0);
   const { testCases, isLoading: isLoadingCases } = useTestCases({
     projectId,
   });
@@ -222,7 +223,7 @@ export default function TestExecution() {
     createRunMutation.mutate({
       cycleItemId: selectedCycleItem.id,
       status,
-      notes: "Executed manually",
+      notes: testRunNotes || `Test ${status} - executed manually`,
       executedAt: new Date().toISOString(),
     }, {
       onSuccess: () => {
@@ -231,6 +232,7 @@ export default function TestExecution() {
           description: `Test status updated to ${status}.`,
         });
         setTestRunDialogOpen(false);
+        setTestRunNotes(""); // Reset notes for next execution
       },
       onError: (error) => {
         toast({
@@ -878,6 +880,17 @@ export default function TestExecution() {
                 )}
               </div>
               
+              {/* Test notes section */}
+              <div className="p-4 bg-atmf-card rounded-lg">
+                <h3 className="text-lg font-medium mb-3">Test Run Notes</h3>
+                <Textarea 
+                  value={testRunNotes}
+                  onChange={(e) => setTestRunNotes(e.target.value)}
+                  placeholder="Add any notes, observations, or issues found during test execution..."
+                  className="min-h-[100px]"
+                />
+              </div>
+
               {/* Test execution buttons section */}
               <div className="p-4 bg-atmf-card rounded-lg">
                 <h3 className="text-lg font-medium mb-3">Update Test Status</h3>

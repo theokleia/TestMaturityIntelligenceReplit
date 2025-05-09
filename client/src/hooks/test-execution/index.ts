@@ -147,7 +147,7 @@ export function useUpdateTestCycleItem(id: number) {
 // Test Runs
 export function useTestRuns(cycleItemId: number) {
   return useQuery<TestRun[]>({
-    queryKey: ['/api/test-runs', cycleItemId],
+    queryKey: [`/api/test-runs/${cycleItemId}`],
     enabled: !!cycleItemId,
   });
 }
@@ -157,7 +157,7 @@ export function useCreateTestRun() {
     mutationFn: (data: InsertTestRun) => 
       apiRequest('/api/test-runs', { method: 'POST', body: JSON.stringify(data) }),
     onSuccess: (response, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/test-runs', variables.cycleItemId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/test-runs/${variables.cycleItemId}`] });
       
       // Get the cycle item to find its cycleId
       const getItem = async () => {
@@ -193,7 +193,7 @@ export function useUpdateTestRun(id: number) {
           
           if (run && run.cycleItemId) {
             // Invalidate this specific run
-            queryClient.invalidateQueries({ queryKey: ['/api/test-runs', run.cycleItemId] });
+            queryClient.invalidateQueries({ queryKey: [`/api/test-runs/${run.cycleItemId}`] });
             
             // Get the cycle item to find its cycleId
             const itemResponse = await fetch(`/api/test-cycle-items/item/${run.cycleItemId}`);
