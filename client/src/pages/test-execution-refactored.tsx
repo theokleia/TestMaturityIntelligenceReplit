@@ -343,9 +343,14 @@ export default function TestExecutionPage() {
   };
   
   // Prepare test case selection options for dialog
+  console.log('Test cases from API:', testCases);
+  console.log('Cycle items:', cycleItems);
+  
   const availableTestCases = testCases.filter(testCase => {
     return !cycleItems.some(item => item.testCaseId === testCase.id);
   });
+  
+  console.log('Available test cases for selection:', availableTestCases);
   
   // Define TabView content
   const tabItems = [
