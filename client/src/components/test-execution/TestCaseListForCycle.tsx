@@ -53,8 +53,7 @@ export function TestCaseListForCycle({
           <TableHead>Title</TableHead>
           <TableHead>Priority</TableHead>
           <TableHead>Status</TableHead>
-          <TableHead>Last Execution</TableHead>
-          <TableHead>Last Result</TableHead>
+          <TableHead>Executions</TableHead>
           <TableHead className="text-right">Actions</TableHead>
         </TableRow>
       </TableHeader>
@@ -81,14 +80,14 @@ export function TestCaseListForCycle({
                 />
               </TableCell>
               <TableCell>
-                {latestRun?.executedAt ? formatDate(latestRun.executedAt) : "Never"}
-              </TableCell>
-              <TableCell>
-                {latestRun?.status ? (
-                  <StatusBadge variant="test" status={latestRun.status} />
-                ) : (
-                  "—"
-                )}
+                <div className="flex items-center">
+                  <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-primary/10 text-xs font-medium">
+                    {latestRun ? 1 : 0}
+                  </span>
+                  <span className="ml-2 text-muted-foreground text-xs">
+                    {latestRun ? "execution" : "executions"}
+                  </span>
+                </div>
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end space-x-2">
