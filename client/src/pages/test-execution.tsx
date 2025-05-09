@@ -8,8 +8,10 @@ import {
   useAddTestSuiteToCycle,
   useUpdateTestCycleItem,
   useCreateTestRun,
+  useTestRuns,
   TestCycle,
-  TestCycleItem
+  TestCycleItem,
+  TestRun
 } from "@/hooks/test-execution";
 import { useTestCases, useTestSuites, TestCase, TestSuite } from "@/hooks/test-management";
 import { useToast } from "@/hooks/use-toast";
@@ -102,6 +104,7 @@ export default function TestExecution() {
   const [selectedCases, setSelectedCases] = useState<number[]>([]);
   const [selectedSuiteId, setSelectedSuiteId] = useState<number | null>(null);
   const [selectedCycleItem, setSelectedCycleItem] = useState<TestCycleItem | null>(null);
+  const [testRunNotes, setTestRunNotes] = useState("");
   
   // Forms
   const newCycleForm = useForm<z.infer<typeof testCycleSchema>>({
@@ -749,7 +752,7 @@ export default function TestExecution() {
       
       {/* Execute Test Dialog */}
       <Dialog open={testRunDialogOpen} onOpenChange={setTestRunDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Execute Test</DialogTitle>
             <DialogDescription>
@@ -757,48 +760,169 @@ export default function TestExecution() {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="py-4">
-            <div className="text-center">Update test status:</div>
-            <div className="grid grid-cols-2 gap-4 mt-4">
-              <Button
-                variant="outline"
-                className="flex-col h-auto py-4 border-green-500/20 hover:bg-green-500/10"
-                onClick={() => handleRunTest("pass")}
-              >
-                <Check className="h-8 w-8 mb-2 text-green-500" />
-                <span>Pass</span>
-              </Button>
+          {selectedCycleItem && (
+            <div className="space-y-6">
+              {/* Test case information section */}
+              <div className="bg-atmf-card rounded-lg p-4">
+                <h3 className="text-lg font-medium mb-3">Test Case Details</h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-sm text-muted-foreground">ID</div>
+                    <div className="font-mono">{selectedCycleItem.testCaseId}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Current Status</div>
+                    <div>{renderStatusBadge(selectedCycleItem.status)}</div>
+                  </div>
+                  
+                  {/* Test case details */}
+                  {getTestCaseDetails(selectedCycleItem.testCaseId) && (
+                    <>
+                      <div className="col-span-2">
+                        <div className="text-sm text-muted-foreground">Description</div>
+                        <div className="mt-1">
+                          {getTestCaseDetails(selectedCycleItem.testCaseId)?.description || "No description available"}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Priority</div>
+                        <div className="mt-1">
+                          <StatusBadge variant={
+                            getTestCaseDetails(selectedCycleItem.testCaseId)?.priority === "high" ? "danger" :
+                            getTestCaseDetails(selectedCycleItem.testCaseId)?.priority === "medium" ? "warning" : "muted"
+                          }>
+                            {getTestCaseDetails(selectedCycleItem.testCaseId)?.priority?.charAt(0).toUpperCase() + 
+                              getTestCaseDetails(selectedCycleItem.testCaseId)?.priority?.slice(1) || "Unknown"}
+                          </StatusBadge>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Severity</div>
+                        <div className="mt-1">
+                          <StatusBadge variant={
+                            getTestCaseDetails(selectedCycleItem.testCaseId)?.severity === "critical" ? "danger" :
+                            getTestCaseDetails(selectedCycleItem.testCaseId)?.severity === "major" ? "warning" :
+                            getTestCaseDetails(selectedCycleItem.testCaseId)?.severity === "minor" ? "muted" : "default"
+                          }>
+                            {getTestCaseDetails(selectedCycleItem.testCaseId)?.severity?.charAt(0).toUpperCase() + 
+                              getTestCaseDetails(selectedCycleItem.testCaseId)?.severity?.slice(1) || "Unknown"}
+                          </StatusBadge>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
               
-              <Button
-                variant="outline"
-                className="flex-col h-auto py-4 border-red-500/20 hover:bg-red-500/10"
-                onClick={() => handleRunTest("fail")}
-              >
-                <X className="h-8 w-8 mb-2 text-red-500" />
-                <span>Fail</span>
-              </Button>
+              {/* Test steps section */}
+              <div className="bg-atmf-card rounded-lg p-4">
+                <h3 className="text-lg font-medium mb-3">Test Steps</h3>
+                {getTestCaseDetails(selectedCycleItem.testCaseId)?.steps ? (
+                  <div className="space-y-3">
+                    {(() => {
+                      try {
+                        // Try to parse as JSON if it's a string
+                        const steps = typeof getTestCaseDetails(selectedCycleItem.testCaseId)?.steps === 'string' 
+                          ? JSON.parse(getTestCaseDetails(selectedCycleItem.testCaseId)?.steps as string) 
+                          : getTestCaseDetails(selectedCycleItem.testCaseId)?.steps || [];
+                        
+                        return Array.isArray(steps) ? steps.map((step: any, index: number) => (
+                          <div key={index} className="border-b pb-3 last:border-b-0">
+                            <div className="flex gap-2">
+                              <div className="min-w-[25px] h-6 flex items-center justify-center rounded-full bg-atmf-badge text-xs">
+                                {index + 1}
+                              </div>
+                              <div>
+                                <div className="font-medium">{step.action || step.description || "Step " + (index + 1)}</div>
+                                {step.expected && (
+                                  <div className="text-sm text-muted-foreground mt-1">
+                                    <span className="font-medium text-primary">Expected:</span> {step.expected}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )) : (
+                          <div className="text-muted-foreground">Steps data format not recognized</div>
+                        );
+                      } catch (error) {
+                        console.error("Failed to parse steps:", error);
+                        return <div className="text-muted-foreground">Unable to display steps</div>;
+                      }
+                    })()}
+                  </div>
+                ) : (
+                  <div className="text-muted-foreground">No test steps available</div>
+                )}
+              </div>
               
-              <Button
-                variant="outline"
-                className="flex-col h-auto py-4 border-yellow-500/20 hover:bg-yellow-500/10"
-                onClick={() => handleRunTest("skip")}
-              >
-                <SkipForward className="h-8 w-8 mb-2 text-yellow-500" />
-                <span>Skip</span>
-              </Button>
+              {/* Previous runs section */}
+              <div className="bg-atmf-card rounded-lg p-4">
+                <h3 className="text-lg font-medium mb-3">Previous Runs</h3>
+                {isLoadingRuns ? (
+                  <div className="text-center py-4">Loading previous runs...</div>
+                ) : runs && runs.length > 0 ? (
+                  <div className="space-y-3 max-h-[200px] overflow-y-auto">
+                    {runs.map((run) => (
+                      <div key={run.id} className="flex items-center justify-between border-b pb-2 last:border-b-0">
+                        <div className="flex items-center gap-3">
+                          {renderStatusBadge(run.status)}
+                          <span className="text-sm">{new Date(run.executedAt || '').toLocaleString()}</span>
+                        </div>
+                        <div className="text-sm text-muted-foreground">{run.notes}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-muted-foreground">No previous runs</div>
+                )}
+              </div>
               
-              <Button
-                variant="outline"
-                className="flex-col h-auto py-4 border-orange-500/20 hover:bg-orange-500/10"
-                onClick={() => handleRunTest("blocked")}
-              >
-                <AlertCircle className="h-8 w-8 mb-2 text-orange-500" />
-                <span>Blocked</span>
-              </Button>
+              {/* Test execution buttons section */}
+              <div className="p-4 bg-atmf-card rounded-lg">
+                <h3 className="text-lg font-medium mb-3">Update Test Status</h3>
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                  <Button
+                    variant="outline"
+                    className="flex-col h-auto py-4 border-green-500/20 hover:bg-green-500/10"
+                    onClick={() => handleRunTest("pass")}
+                  >
+                    <Check className="h-8 w-8 mb-2 text-green-500" />
+                    <span>Pass</span>
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    className="flex-col h-auto py-4 border-red-500/20 hover:bg-red-500/10"
+                    onClick={() => handleRunTest("fail")}
+                  >
+                    <X className="h-8 w-8 mb-2 text-red-500" />
+                    <span>Fail</span>
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    className="flex-col h-auto py-4 border-yellow-500/20 hover:bg-yellow-500/10"
+                    onClick={() => handleRunTest("skip")}
+                  >
+                    <SkipForward className="h-8 w-8 mb-2 text-yellow-500" />
+                    <span>Skip</span>
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    className="flex-col h-auto py-4 border-orange-500/20 hover:bg-orange-500/10"
+                    onClick={() => handleRunTest("blocked")}
+                  >
+                    <AlertCircle className="h-8 w-8 mb-2 text-orange-500" />
+                    <span>Blocked</span>
+                  </Button>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
           
-          <DialogFooter>
+          <DialogFooter className="mt-4">
             <Button variant="ghost" onClick={() => setTestRunDialogOpen(false)}>
               Cancel
             </Button>
