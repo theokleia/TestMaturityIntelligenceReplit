@@ -11,6 +11,7 @@ import {
   useUpdateTestCycleItem,
   useCreateTestRun,
   useTestRuns,
+  useTestRunsByTestCase,
   TestCycle,
   TestCycleItem,
   TestRun
@@ -105,9 +106,11 @@ export default function TestExecution() {
   const [selectCasesDialogOpen, setSelectCasesDialogOpen] = useState(false);
   const [selectSuiteDialogOpen, setSelectSuiteDialogOpen] = useState(false);
   const [testRunDialogOpen, setTestRunDialogOpen] = useState(false);
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [selectedCases, setSelectedCases] = useState<number[]>([]);
   const [selectedSuiteId, setSelectedSuiteId] = useState<number | null>(null);
   const [selectedCycleItem, setSelectedCycleItem] = useState<TestCycleItem | null>(null);
+  const [selectedTestCaseId, setSelectedTestCaseId] = useState<number | null>(null);
   const [testRunNotes, setTestRunNotes] = useState("");
   
   // Forms
@@ -133,6 +136,7 @@ export default function TestExecution() {
   const { data: testCycles, isLoading: isLoadingCycles } = useTestCycles(projectId);
   const { data: cycleItems, isLoading: isLoadingItems } = useTestCycleItems(selectedCycle?.id || 0);
   const { data: runs, isLoading: isLoadingRuns } = useTestRuns(selectedCycleItem?.id || 0);
+  const { data: testRunHistory, isLoading: isLoadingHistory } = useTestRunsByTestCase(selectedTestCaseId || 0);
   const { testCases, isLoading: isLoadingCases } = useTestCases({
     projectId,
   });
@@ -545,6 +549,17 @@ export default function TestExecution() {
                                   >
                                     <PlayCircle size={16} className="mr-2" />
                                     Execute
+                                  </Button>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedTestCaseId(item.testCaseId);
+                                      setHistoryDialogOpen(true);
+                                    }}
+                                  >
+                                    <Clock size={16} className="mr-2" />
+                                    History
                                   </Button>
                                   <Button 
                                     variant="ghost" 
@@ -1145,6 +1160,55 @@ export default function TestExecution() {
             <Button variant="ghost" onClick={() => setTestRunDialogOpen(false)}>
               Cancel
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Test Run History Dialog */}
+      <Dialog open={historyDialogOpen} onOpenChange={setHistoryDialogOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Test Run History</DialogTitle>
+            <DialogDescription>
+              {selectedTestCaseId ? 
+                `Viewing all test runs for test case #${selectedTestCaseId} across all cycles.` : 
+                "Select a test case to view its history."}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="max-h-[500px] overflow-y-auto mt-2">
+            {isLoadingHistory ? (
+              <div className="text-center py-8">Loading test run history...</div>
+            ) : testRunHistory && testRunHistory.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Cycle</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Notes</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {testRunHistory.map((run) => (
+                    <TableRow key={run.id}>
+                      <TableCell>{run.cycleName || `Cycle #${run.cycleId || 'Unknown'}`}</TableCell>
+                      <TableCell>{new Date(run.executedAt).toLocaleString()}</TableCell>
+                      <TableCell>{renderStatusBadge(run.status)}</TableCell>
+                      <TableCell className="max-w-xs truncate">{run.notes || "-"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                No previous test runs found for this test case.
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button onClick={() => setHistoryDialogOpen(false)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
