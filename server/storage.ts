@@ -8,7 +8,10 @@ import {
   assessmentTemplates, type AssessmentTemplate, type InsertAssessmentTemplate,
   testSuites, type TestSuite, type InsertTestSuite,
   testCases, type TestCase, type InsertTestCase,
-  projects, type Project, type InsertProject
+  projects, type Project, type InsertProject,
+  testCycles, type TestCycle, type InsertTestCycle,
+  testCycleItems, type TestCycleItem, type InsertTestCycleItem,
+  testRuns, type TestRun, type InsertTestRun
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc, or, inArray, lt, gte, isNull } from "drizzle-orm";
@@ -94,6 +97,25 @@ export interface IStorage {
   getTestCase(id: number): Promise<TestCase | undefined>;
   createTestCase(testCase: InsertTestCase): Promise<TestCase>;
   updateTestCase(id: number, testCase: Partial<InsertTestCase>): Promise<TestCase | undefined>;
+  
+  // Test Cycles
+  getTestCycles(projectId?: number): Promise<TestCycle[]>;
+  getTestCycle(id: number): Promise<TestCycle | undefined>;
+  createTestCycle(testCycle: InsertTestCycle): Promise<TestCycle>;
+  updateTestCycle(id: number, testCycle: Partial<InsertTestCycle>): Promise<TestCycle | undefined>;
+  
+  // Test Cycle Items
+  getTestCycleItems(cycleId: number): Promise<TestCycleItem[]>;
+  getTestCycleItem(id: number): Promise<TestCycleItem | undefined>;
+  createTestCycleItem(testCycleItem: InsertTestCycleItem): Promise<TestCycleItem>;
+  updateTestCycleItem(id: number, testCycleItem: Partial<InsertTestCycleItem>): Promise<TestCycleItem | undefined>;
+  addTestCasesToCycle(cycleId: number, testCaseIds: number[], suiteId?: number): Promise<TestCycleItem[]>;
+  
+  // Test Runs
+  getTestRuns(cycleItemId: number): Promise<TestRun[]>;
+  getTestRun(id: number): Promise<TestRun | undefined>;
+  createTestRun(testRun: InsertTestRun): Promise<TestRun>;
+  updateTestRun(id: number, testRun: Partial<InsertTestRun>): Promise<TestRun | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {

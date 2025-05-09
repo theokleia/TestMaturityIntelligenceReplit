@@ -140,6 +140,49 @@ export const testCases = pgTable("test_cases", {
   projectId: integer("project_id").references(() => projects.id, { onDelete: "cascade" }),
 });
 
+// Test Cycles for organizing test execution
+export const testCycles = pgTable("test_cycles", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  status: varchar("status", { length: 30 }).default("created"), // created, in-progress, completed, archived
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),
+  userId: integer("user_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  projectId: integer("project_id").references(() => projects.id, { onDelete: "cascade" }),
+});
+
+// Connecting Test Cases to Test Cycles
+export const testCycleItems = pgTable("test_cycle_items", {
+  id: serial("id").primaryKey(),
+  cycleId: integer("cycle_id").notNull().references(() => testCycles.id, { onDelete: "cascade" }),
+  testCaseId: integer("test_case_id").notNull().references(() => testCases.id, { onDelete: "cascade" }),
+  suiteId: integer("suite_id").references(() => testSuites.id, { onDelete: "set null" }),
+  assignedUserId: integer("assigned_user_id").references(() => users.id),
+  status: varchar("status", { length: 30 }).default("not-run"), // not-run, pass, fail, skip, blocked
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Execution runs for each test case in a cycle
+export const testRuns = pgTable("test_runs", {
+  id: serial("id").primaryKey(),
+  cycleItemId: integer("cycle_item_id").notNull().references(() => testCycleItems.id, { onDelete: "cascade" }),
+  executedBy: integer("executed_by").references(() => users.id),
+  executedAt: timestamp("executed_at").defaultNow(),
+  duration: integer("duration"), // in seconds
+  status: varchar("status", { length: 30 }).notNull(), // pass, fail, skip, blocked, cancelled
+  notes: text("notes"),
+  evidence: jsonb("evidence").default([]), // list of attachments or screenshots
+  environment: varchar("environment", { length: 50 }), // e.g. dev, staging, production
+  version: varchar("version", { length: 50 }), // application version tested
+  stepResults: jsonb("step_results").default([]), // [{ stepId: 1, status: "pass", actual: "As expected", notes: "" }]
+  defects: jsonb("defects").default([]), // list of defect IDs or references
+  tags: jsonb("tags").default([]),
+});
+
 // Insert Schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -158,6 +201,9 @@ export const insertAssessmentSchema = createInsertSchema(assessments);
 export const insertTestSuiteSchema = createInsertSchema(testSuites);
 export const insertTestCaseSchema = createInsertSchema(testCases);
 export const insertProjectSchema = createInsertSchema(projects);
+export const insertTestCycleSchema = createInsertSchema(testCycles);
+export const insertTestCycleItemSchema = createInsertSchema(testCycleItems);
+export const insertTestRunSchema = createInsertSchema(testRuns);
 
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -190,11 +236,23 @@ export type TestCase = typeof testCases.$inferSelect;
 export type InsertProject = z.infer<typeof insertProjectSchema>;
 export type Project = typeof projects.$inferSelect;
 
+export type InsertTestCycle = z.infer<typeof insertTestCycleSchema>;
+export type TestCycle = typeof testCycles.$inferSelect;
+
+export type InsertTestCycleItem = z.infer<typeof insertTestCycleItemSchema>;
+export type TestCycleItem = typeof testCycleItems.$inferSelect;
+
+export type InsertTestRun = z.infer<typeof insertTestRunSchema>;
+export type TestRun = typeof testRuns.$inferSelect;
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   testSuites: many(testSuites),
   testCases: many(testCases),
   assessments: many(assessments),
+  testCycles: many(testCycles),
+  testCycleItems: many(testCycleItems, { relationName: "assignedUser" }),
+  testRuns: many(testRuns, { relationName: "executedBy" }),
 }));
 
 export const projectsRelations = relations(projects, ({ many }) => ({
@@ -206,6 +264,7 @@ export const projectsRelations = relations(projects, ({ many }) => ({
   assessments: many(assessments),
   testSuites: many(testSuites),
   testCases: many(testCases),
+  testCycles: many(testCycles),
 }));
 
 export const maturityDimensionsRelations = relations(maturityDimensions, ({ one, many }) => ({
@@ -299,7 +358,7 @@ export const testSuitesRelations = relations(testSuites, ({ one, many }) => ({
   }),
 }));
 
-export const testCasesRelations = relations(testCases, ({ one }) => ({
+export const testCasesRelations = relations(testCases, ({ one, many }) => ({
   suite: one(testSuites, {
     fields: [testCases.suiteId],
     references: [testSuites.id],
@@ -311,5 +370,49 @@ export const testCasesRelations = relations(testCases, ({ one }) => ({
   project: one(projects, {
     fields: [testCases.projectId],
     references: [projects.id],
+  }),
+  cycleItems: many(testCycleItems),
+}));
+
+export const testCyclesRelations = relations(testCycles, ({ one, many }) => ({
+  user: one(users, {
+    fields: [testCycles.userId],
+    references: [users.id],
+  }),
+  project: one(projects, {
+    fields: [testCycles.projectId],
+    references: [projects.id],
+  }),
+  cycleItems: many(testCycleItems),
+}));
+
+export const testCycleItemsRelations = relations(testCycleItems, ({ one, many }) => ({
+  cycle: one(testCycles, {
+    fields: [testCycleItems.cycleId],
+    references: [testCycles.id],
+  }),
+  testCase: one(testCases, {
+    fields: [testCycleItems.testCaseId],
+    references: [testCases.id],
+  }),
+  suite: one(testSuites, {
+    fields: [testCycleItems.suiteId],
+    references: [testSuites.id],
+  }),
+  assignedUser: one(users, {
+    fields: [testCycleItems.assignedUserId],
+    references: [users.id],
+  }),
+  runs: many(testRuns),
+}));
+
+export const testRunsRelations = relations(testRuns, ({ one }) => ({
+  cycleItem: one(testCycleItems, {
+    fields: [testRuns.cycleItemId],
+    references: [testCycleItems.id],
+  }),
+  executedBy: one(users, {
+    fields: [testRuns.executedBy],
+    references: [users.id],
   }),
 }));
