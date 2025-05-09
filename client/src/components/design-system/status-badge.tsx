@@ -13,7 +13,8 @@ export type StatusBadgeVariant =
   | "priority"
   | "severity"
   | "automation"
-  | "assessment";
+  | "assessment"
+  | "status";
 
 export type StatusBadgeSize = "sm" | "md" | "lg";
 
@@ -51,7 +52,8 @@ export function StatusBadge({
     priority: "bg-amber-500/20 text-amber-400",
     severity: "bg-rose-500/20 text-rose-400",
     automation: "bg-emerald-500/20 text-emerald-400",
-    assessment: "bg-violet-500/20 text-violet-400"
+    assessment: "bg-violet-500/20 text-violet-400",
+    status: "bg-indigo-500/20 text-indigo-400"
   };
   
   // Determine size class

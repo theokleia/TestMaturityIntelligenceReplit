@@ -1247,8 +1247,8 @@ export default function TestExecution() {
                       {testRunHistory.map((run) => (
                         <TableRow key={run.id}>
                           <TableCell>{run.cycleName || "Unknown Cycle"}</TableCell>
-                          <TableCell>{new Date(run.createdAt).toLocaleString()}</TableCell>
-                          <TableCell>{renderStatusBadge(run.status)}</TableCell>
+                          <TableCell>{run.executedAt ? formatDate(run.executedAt) : formatDate(run.createdAt || '')}</TableCell>
+                          <TableCell><StatusBadge variant="test" status={run.status || 'unknown'} /></TableCell>
                           <TableCell className="truncate max-w-[200px]">{run.notes || "-"}</TableCell>
                         </TableRow>
                       ))}
