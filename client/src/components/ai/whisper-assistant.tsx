@@ -8,9 +8,15 @@ import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
+interface SuggestionData {
+  text: string;
+  priority?: "low" | "medium" | "high";
+}
+
 interface Suggestion {
   text: string;
   seen: boolean;
+  priority?: "low" | "medium" | "high";
 }
 
 export function WhisperAssistant() {
@@ -35,7 +41,8 @@ export function WhisperAssistant() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          projectName: selectedProject.name,
+          projectId: selectedProject.id,
+          projectName: selectedProject.name, // Keep for backward compatibility
           contextPath: location
         })
       });
@@ -60,16 +67,51 @@ export function WhisperAssistant() {
         : [data.suggestions]; // Handle in case it's a string
         
       if (suggestionArray.length > 0) {
-        // Convert string array to suggestion objects
-        const newSuggestions = suggestionArray.map((text: string) => ({ text, seen: false }));
+        // Process suggestions which could be objects or strings
+        const newSuggestions = suggestionArray.map((item: string | SuggestionData) => {
+          // If the item is a string, create a simple suggestion object
+          if (typeof item === 'string') {
+            return { text: item, seen: false };
+          }
+          
+          // If the item has a 'text' property (new format with text + priority)
+          if (typeof item === 'object' && item !== null) {
+            // Handle both formats: {text: string} and {text: {text: string, priority: string}}
+            if (typeof item.text === 'object' && item.text !== null && 'text' in item.text) {
+              // Handle nested text object format
+              const textObj = item.text as {text: string; priority?: string};
+              return { 
+                text: textObj.text,
+                seen: false,
+                priority: textObj.priority as "low" | "medium" | "high" | undefined
+              };
+            } else {
+              // Handle simple object format
+              return { 
+                text: typeof item.text === 'string' ? item.text : String(item.text),
+                seen: false,
+                priority: item.priority as "low" | "medium" | "high" | undefined
+              };
+            }
+          }
+          
+          // Fallback for any other format
+          return { text: String(item), seen: false };
+        });
+        
         setSuggestions(newSuggestions);
         
-        // Set priority
-        if (data.priority && ["low", "medium", "high"].includes(data.priority)) {
-          setPriority(data.priority as "low" | "medium" | "high");
-        } else {
-          setPriority("low");
-        }
+        // Determine the highest priority among all suggestions or use the global priority
+        const highestPriority = newSuggestions
+          .map((s: Suggestion) => s.priority)
+          .reduce((highest: "low" | "medium" | "high", current?: "low" | "medium" | "high") => {
+            if (!current) return highest;
+            if (current === 'high') return 'high';
+            if (current === 'medium' && highest !== 'high') return 'medium';
+            return highest;
+          }, data.priority as "low" | "medium" | "high" || 'low');
+        
+        setPriority(highestPriority);
         
         // Show the component
         if (!hasShownRef.current && !dismissed) {

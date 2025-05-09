@@ -84,7 +84,8 @@ export function AIAssistantBubble({ contextPath = "" }: { contextPath?: string }
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          projectName: selectedProject.name,
+          projectId: selectedProject.id,
+          projectName: selectedProject.name, // Keep for backward compatibility
           query,
           contextPath
         }),
