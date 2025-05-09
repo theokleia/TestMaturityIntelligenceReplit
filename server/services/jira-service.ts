@@ -166,6 +166,52 @@ export function analyzeJiraCoverage(issues: JiraIssue[]): {
 /**
  * Process Jira issues to extract key information for AI prompt enhancement
  */
+ 
+// Helper function to safely extract description text from Jira issues
+// Jira Cloud API v3 can return descriptions as objects with content structure instead of strings
+function safelyExtractDescription(description: any): string {
+  if (!description) {
+    return 'No description';
+  }
+  
+  // Handle string descriptions (older API or simple cases)
+  if (typeof description === 'string') {
+    return description.substring(0, 300) + (description.length > 300 ? '...' : '');
+  }
+  
+  // Handle Atlassian Document Format (ADF) - common in Cloud API v3
+  try {
+    // If it has content array (Atlassian Document Format)
+    if (description.content && Array.isArray(description.content)) {
+      // Try to extract paragraphs 
+      const textParts: string[] = [];
+      
+      description.content.forEach((block: any) => {
+        if (block.content && Array.isArray(block.content)) {
+          block.content.forEach((textBlock: any) => {
+            if (textBlock.text) {
+              textParts.push(textBlock.text);
+            }
+          });
+        } else if (block.text) {
+          textParts.push(block.text);
+        }
+      });
+      
+      const extractedText = textParts.join(' ');
+      if (extractedText) {
+        return extractedText.substring(0, 300) + (extractedText.length > 300 ? '...' : '');
+      }
+    }
+    
+    // Fallback for other formats: just indicate there's content
+    return 'Rich text description available (unable to display in this format)';
+  } catch (error) {
+    console.error('Error extracting Jira description:', error);
+    return 'Description available but in unknown format';
+  }
+}
+
 export function getJiraContextForAI(issues: JiraIssue[]): string {
   if (!issues || issues.length === 0) {
     return "No Jira issues available.";
@@ -173,14 +219,22 @@ export function getJiraContextForAI(issues: JiraIssue[]): string {
 
   // Extract key details from issues to enhance AI prompt
   const issuesSummary = issues.map(issue => {
-    return `
+    try {
+      return `
 Issue: ${issue.key}
 Type: ${issue.fields.issuetype?.name || 'Unknown'}
-Summary: ${issue.fields.summary}
+Summary: ${issue.fields.summary || 'No summary'}
 Status: ${issue.fields.status?.name || 'Unknown'}
 Priority: ${issue.fields.priority?.name || 'Not set'}
-Description: ${issue.fields.description ? issue.fields.description.substring(0, 300) + (issue.fields.description.length > 300 ? '...' : '') : 'No description'}
+Description: ${safelyExtractDescription(issue.fields.description)}
 ---`;
+    } catch (error) {
+      console.error(`Error formatting issue ${issue.key}:`, error);
+      return `
+Issue: ${issue.key}
+Error: Could not process this issue's data
+---`;
+    }
   }).join("\n");
 
   return `Available Jira Issues:\n${issuesSummary}`;
