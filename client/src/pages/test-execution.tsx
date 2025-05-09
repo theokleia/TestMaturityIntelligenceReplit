@@ -7,6 +7,7 @@ import {
   useTestCycleItems,
   useAddTestCasesToCycle,
   useAddTestSuiteToCycle,
+  useRemoveTestCaseFromCycle,
   useUpdateTestCycleItem,
   useCreateTestRun,
   useTestRuns,
@@ -73,7 +74,8 @@ import {
   SkipForward,
   AlertCircle,
   Clock,
-  ListChecks
+  ListChecks,
+  Trash2
 } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -143,6 +145,7 @@ export default function TestExecution() {
   const updateCycleMutation = useUpdateTestCycle;
   const addCasesMutation = useAddTestCasesToCycle();
   const addSuiteMutation = useAddTestSuiteToCycle();
+  const removeTestCaseMutation = useRemoveTestCaseFromCycle();
   const updateItemMutation = useUpdateTestCycleItem(selectedCycleItem?.id || 0);
   const createRunMutation = useCreateTestRun();
   
@@ -283,6 +286,29 @@ export default function TestExecution() {
         toast({
           title: "Error",
           description: "Failed to update test cycle. Please try again.",
+          variant: "destructive",
+        });
+      }
+    });
+  };
+  
+  const handleRemoveTestCase = (item: TestCycleItem) => {
+    if (!selectedCycle) return;
+    
+    removeTestCaseMutation.mutate({
+      itemId: item.id,
+      cycleId: selectedCycle.id
+    }, {
+      onSuccess: () => {
+        toast({
+          title: "Test Case Removed",
+          description: "Test case has been removed from the cycle successfully.",
+        });
+      },
+      onError: (error) => {
+        toast({
+          title: "Error",
+          description: "Failed to remove test case from cycle. Please try again.",
           variant: "destructive",
         });
       }
@@ -522,6 +548,17 @@ export default function TestExecution() {
                                   >
                                     <PlayCircle size={16} className="mr-2" />
                                     Execute
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    className="text-red-500 hover:text-red-700 hover:bg-red-100/20"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleRemoveTestCase(item);
+                                    }}
+                                  >
+                                    <Trash2 size={16} />
                                   </Button>
                                 </TableCell>
                               </TableRow>
