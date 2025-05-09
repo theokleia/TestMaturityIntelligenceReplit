@@ -125,7 +125,7 @@ export function TestExecutionDialog({
             
             <div>
               <h4 className="font-semibold">Test Steps</h4>
-              {testCase.testData ? (
+              {testCase.testData && typeof testCase.testData === 'string' && testCase.testData.trim() ? (
                 <ol className="list-decimal list-inside mt-1 space-y-2">
                   {testCase.testData.split('\n').map((step, index) => (
                     <li key={index} className="text-sm">{step}</li>
