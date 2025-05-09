@@ -8,13 +8,7 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { 
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter
-} from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
 import { StatusBadge } from "@/components/design-system/status-badge";
 import { Pencil, Trash } from "lucide-react";
 import { formatDate } from "@/lib/utils";
@@ -115,26 +109,26 @@ export function TestCycleTable({
       </Table>
 
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Delete Test Cycle</DialogTitle>
-          </DialogHeader>
-          <p className="mb-4">Are you sure you want to delete this test cycle? This action cannot be undone.</p>
-          <div className="flex justify-end space-x-2">
-            <Button 
-              variant="outline" 
-              onClick={() => setDeleteDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={handleConfirmDelete}
-            >
-              Delete
-            </Button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="bg-card p-6 rounded-lg shadow-lg w-80">
+            <h3 className="font-semibold text-lg mb-2">Delete Test Cycle</h3>
+            <p className="mb-4">Are you sure you want to delete this test cycle? This action cannot be undone.</p>
+            <div className="flex justify-end space-x-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setDeleteDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={handleConfirmDelete}
+              >
+                Delete
+              </Button>
+            </div>
           </div>
-        </DialogContent>
+        </div>
       </Dialog>
     </>
   );
