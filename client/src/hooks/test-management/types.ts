@@ -48,7 +48,7 @@ export interface TestCase {
   title: string;
   description: string;
   preconditions: string;
-  steps: TestCaseStep[];
+  steps: TestCaseStep[] | null;
   expectedResults: string;
   priority: string;
   severity: string;
@@ -62,6 +62,7 @@ export interface TestCase {
   createdAt: string;
   updatedAt: string;
   tags?: string[];
+  testData?: string | Record<string, any>;
 }
 
 export interface CreateTestCaseRequest {

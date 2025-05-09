@@ -7,6 +7,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,14 @@ import { TestCase } from "@/hooks/test-management";
 import { TestRun } from "@/hooks/test-execution";
 import { formatDate } from "@/lib/utils";
 import { TestRunHistory } from "./TestRunHistory";
+import { 
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const formSchema = z.object({
   status: z.string(),
@@ -76,6 +85,8 @@ export function TestExecutionDialog({
         status: "passed",
         notes: "",
       });
+      // Set the active tab to details when opening
+      setActiveTab("details");
     }
   }, [open, form]);
 
@@ -88,13 +99,41 @@ export function TestExecutionDialog({
     return null;
   }
 
+  // Render status badge for previous runs
+  const renderStatusBadge = (status: string) => {
+    const statusMap: Record<string, { color: string, label: string }> = {
+      "passed": { color: "bg-green-500 text-white", label: "Passed" },
+      "failed": { color: "bg-red-500 text-white", label: "Failed" },
+      "blocked": { color: "bg-amber-500 text-white", label: "Blocked" },
+      "skipped": { color: "bg-blue-500 text-white", label: "Skipped" },
+      "not-run": { color: "bg-gray-500 text-white", label: "Not Run" },
+      "not_executed": { color: "bg-gray-500 text-white", label: "Not Executed" }
+    };
+
+    const { color, label } = statusMap[status] || { color: "bg-gray-500 text-white", label: status };
+
+    return (
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${color}`}>
+        {label}
+      </span>
+    );
+  };
+
+  // Check if steps are an array of objects with step property
+  const hasStructuredSteps = Array.isArray(testCase.steps) && 
+                             testCase.steps.length > 0 && 
+                             typeof testCase.steps[0] === 'object';
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl flex items-center">
             <span className="mr-2">TC-{testCase.id}:</span> {testCase.title}
           </DialogTitle>
+          <DialogDescription>
+            Execute this test case and record the results
+          </DialogDescription>
           <div className="flex space-x-2 mt-2">
             <StatusBadge variant="priority" status={testCase.priority} />
             {testCase.severity && (
@@ -103,89 +142,104 @@ export function TestExecutionDialog({
           </div>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-          <TabsList className="grid grid-cols-3">
-            <TabsTrigger value="details">Test Details</TabsTrigger>
-            <TabsTrigger value="execution">Execution</TabsTrigger>
-            {showHistory && (
-              <TabsTrigger value="history">Previous Runs</TabsTrigger>
-            )}
-          </TabsList>
-          
-          <TabsContent value="details" className="mt-4 space-y-4">
+        <div className="grid grid-cols-1 gap-6">
+          <div className="space-y-4 bg-muted/20 p-4 rounded-lg">
             <div>
-              <h4 className="font-semibold">Description</h4>
-              <p className="mt-1 text-sm">{testCase.description || "No description provided."}</p>
+              <h4 className="font-semibold text-primary">Description</h4>
+              <p className="mt-1">{testCase.description || "No description provided."}</p>
             </div>
             
             <div>
-              <h4 className="font-semibold">Preconditions</h4>
-              <p className="mt-1 text-sm">{testCase.preconditions || "None"}</p>
+              <h4 className="font-semibold text-primary">Preconditions</h4>
+              <p className="mt-1">{testCase.preconditions || "None"}</p>
             </div>
             
+            <Separator className="my-4" />
+            
             <div>
-              <h4 className="font-semibold">Test Steps</h4>
-              {testCase.testData && typeof testCase.testData === 'string' && testCase.testData.trim() ? (
-                <ol className="list-decimal list-inside mt-1 space-y-2">
-                  {testCase.testData.split('\n').map((step, index) => (
-                    <li key={index} className="text-sm">{step}</li>
+              <h4 className="font-semibold text-primary">Test Steps</h4>
+              {hasStructuredSteps ? (
+                <div className="space-y-3 mt-3">
+                  {testCase.steps.map((step: any, index: number) => (
+                    <div key={index} className="flex gap-3 p-3 bg-card rounded-md border">
+                      <div className="font-mono text-sm bg-primary/20 w-6 h-6 shrink-0 flex items-center justify-center rounded-full text-primary">
+                        {index + 1}
+                      </div>
+                      <div className="space-y-1">
+                        <p className="font-medium">{step.step}</p>
+                        {step.expected && (
+                          <p className="text-sm text-muted-foreground">
+                            <span className="font-semibold">Expected:</span> {step.expected}
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   ))}
-                </ol>
+                </div>
               ) : (
-                <p className="mt-1 text-sm">No steps defined.</p>
+                <div>
+                  {testCase.testData ? (
+                    <div>
+                      {typeof testCase.testData === 'string' && testCase.testData.trim() ? (
+                        <ol className="list-decimal list-inside mt-1 space-y-2 pl-4">
+                          {testCase.testData.split('\n').map((step, index) => (
+                            <li key={index} className="pl-2">{step}</li>
+                          ))}
+                        </ol>
+                      ) : typeof testCase.testData === 'object' && Object.keys(testCase.testData).length > 0 ? (
+                        <div className="space-y-3 mt-3">
+                          {Object.entries(testCase.testData).map(([key, value], index) => (
+                            <div key={index} className="p-3 bg-card rounded-md border">
+                              <p className="font-medium">{key}: {value}</p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="mt-1 text-muted-foreground italic">No test data provided.</p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-muted-foreground italic">No steps defined.</p>
+                  )}
+                </div>
               )}
             </div>
             
             <div>
-              <h4 className="font-semibold">Expected Results</h4>
-              <p className="mt-1 text-sm">{testCase.expectedResults || "Not specified"}</p>
+              <h4 className="font-semibold text-primary">Expected Results</h4>
+              <p className="mt-1">{testCase.expectedResults || "Not specified"}</p>
             </div>
-          </TabsContent>
+          </div>
           
-          <TabsContent value="execution" className="mt-4">
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Test Result</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select result" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="passed" className="flex items-center">
-                            <div className="flex items-center">
-                              <Check className="w-4 h-4 mr-2 text-green-500" />
-                              <span>Passed</span>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="failed">
-                            <div className="flex items-center">
-                              <X className="w-4 h-4 mr-2 text-red-500" />
-                              <span>Failed</span>
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="blocked">
-                            <div className="flex items-center">
-                              <AlertTriangle className="w-4 h-4 mr-2 text-amber-500" />
-                              <span>Blocked</span>
-                            </div>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+          {previousRuns && previousRuns.length > 0 && (
+            <div>
+              <h4 className="font-semibold text-primary">Previous Runs</h4>
+              <Table className="mt-2">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Notes</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {previousRuns.map((run) => (
+                    <TableRow key={run.id}>
+                      <TableCell>{run.createdAt ? new Date(run.createdAt).toLocaleString() : "N/A"}</TableCell>
+                      <TableCell>{renderStatusBadge(run.status)}</TableCell>
+                      <TableCell className="truncate max-w-[280px]">{run.notes || "-"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
 
+          <Separator />
+          
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+              <div className="grid grid-cols-1 gap-4">
                 <FormField
                   control={form.control}
                   name="notes"
@@ -196,50 +250,44 @@ export function TestExecutionDialog({
                         <Textarea 
                           {...field} 
                           placeholder="Enter test execution notes, observations, or defect details..."
-                          rows={5}
+                          rows={4}
                         />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+              </div>
 
-                <div className="flex justify-center space-x-4 mt-6">
-                  <Button 
-                    type="submit"
-                    onClick={() => form.setValue("status", "passed")}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    <Check className="mr-2 h-4 w-4" />
-                    Pass
-                  </Button>
-                  <Button 
-                    type="submit"
-                    onClick={() => form.setValue("status", "failed")}
-                    className="bg-red-600 hover:bg-red-700"
-                  >
-                    <X className="mr-2 h-4 w-4" />
-                    Fail
-                  </Button>
-                  <Button 
-                    type="submit"
-                    onClick={() => form.setValue("status", "blocked")}
-                    className="bg-amber-600 hover:bg-amber-700"
-                  >
-                    <AlertTriangle className="mr-2 h-4 w-4" />
-                    Block
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          </TabsContent>
-          
-          {showHistory && (
-            <TabsContent value="history" className="mt-4">
-              <TestRunHistory runs={previousRuns} />
-            </TabsContent>
-          )}
-        </Tabs>
+              <div className="flex justify-center space-x-4 mt-6">
+                <Button 
+                  type="submit"
+                  onClick={() => form.setValue("status", "passed")}
+                  className="bg-green-600 hover:bg-green-700 min-w-[100px]"
+                >
+                  <Check className="mr-2 h-4 w-4" />
+                  Pass
+                </Button>
+                <Button 
+                  type="submit"
+                  onClick={() => form.setValue("status", "failed")}
+                  className="bg-red-600 hover:bg-red-700 min-w-[100px]"
+                >
+                  <X className="mr-2 h-4 w-4" />
+                  Fail
+                </Button>
+                <Button 
+                  type="submit"
+                  onClick={() => form.setValue("status", "blocked")}
+                  className="bg-amber-600 hover:bg-amber-700 min-w-[100px]"
+                >
+                  <AlertTriangle className="mr-2 h-4 w-4" />
+                  Block
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </div>
 
         <DialogFooter>
           <Button 
@@ -247,7 +295,7 @@ export function TestExecutionDialog({
             variant="outline" 
             onClick={() => onOpenChange(false)}
           >
-            Close
+            Cancel
           </Button>
         </DialogFooter>
       </DialogContent>
