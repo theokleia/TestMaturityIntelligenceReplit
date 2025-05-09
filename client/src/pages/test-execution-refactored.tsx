@@ -651,6 +651,7 @@ export default function TestExecutionPage() {
           testCase={selectedTestCaseId ? testCasesMap[selectedTestCaseId] : undefined}
           previousRuns={allTestCaseRuns}
           showHistory={true}
+          isPending={false}
         />
       </PageContainer>
     </AppLayout>

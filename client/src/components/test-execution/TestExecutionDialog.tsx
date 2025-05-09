@@ -58,6 +58,7 @@ interface TestExecutionDialogProps {
   testCase?: TestCase;
   previousRuns?: TestRun[];
   showHistory?: boolean;
+  isPending?: boolean;
 }
 
 export function TestExecutionDialog({
@@ -66,7 +67,8 @@ export function TestExecutionDialog({
   onSubmit,
   testCase,
   previousRuns = [],
-  showHistory = true
+  showHistory = true,
+  isPending = false
 }: TestExecutionDialogProps) {
   const [activeTab, setActiveTab] = useState("details");
   
@@ -264,6 +266,7 @@ export function TestExecutionDialog({
                   type="submit"
                   onClick={() => form.setValue("status", "passed")}
                   className="bg-green-600 hover:bg-green-700 min-w-[90px]"
+                  isPending={isPending}
                 >
                   <Check className="mr-2 h-4 w-4" />
                   Pass
@@ -272,6 +275,7 @@ export function TestExecutionDialog({
                   type="submit"
                   onClick={() => form.setValue("status", "failed")}
                   className="bg-red-600 hover:bg-red-700 min-w-[90px]"
+                  isPending={isPending}
                 >
                   <X className="mr-2 h-4 w-4" />
                   Fail
@@ -280,6 +284,7 @@ export function TestExecutionDialog({
                   type="submit"
                   onClick={() => form.setValue("status", "blocked")}
                   className="bg-amber-600 hover:bg-amber-700 min-w-[90px]"
+                  isPending={isPending}
                 >
                   <AlertTriangle className="mr-2 h-4 w-4" />
                   Block
@@ -288,6 +293,7 @@ export function TestExecutionDialog({
                   type="submit"
                   onClick={() => form.setValue("status", "skipped")}
                   className="bg-blue-600 hover:bg-blue-700 min-w-[90px]"
+                  isPending={isPending}
                 >
                   <span className="mr-2">⏭</span>
                   Skip
@@ -302,6 +308,7 @@ export function TestExecutionDialog({
             type="button" 
             variant="outline" 
             onClick={() => onOpenChange(false)}
+            disabled={isPending}
           >
             Close
           </Button>
