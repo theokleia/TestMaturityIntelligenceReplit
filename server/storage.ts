@@ -632,7 +632,7 @@ export class DatabaseStorage implements IStorage {
   async updateTestCycle(id: number, testCycle: Partial<InsertTestCycle>): Promise<TestCycle | undefined> {
     const [updatedCycle] = await db
       .update(testCycles)
-      .set({ ...testCycle, updatedAt: new Date().toISOString() })
+      .set({ ...testCycle, updatedAt: new Date() })
       .where(eq(testCycles.id, id))
       .returning();
     return updatedCycle || undefined;
@@ -666,7 +666,7 @@ export class DatabaseStorage implements IStorage {
   async updateTestCycleItem(id: number, testCycleItem: Partial<InsertTestCycleItem>): Promise<TestCycleItem | undefined> {
     const [updatedItem] = await db
       .update(testCycleItems)
-      .set({ ...testCycleItem, updatedAt: new Date().toISOString() })
+      .set({ ...testCycleItem, updatedAt: new Date() })
       .where(eq(testCycleItems.id, id))
       .returning();
     return updatedItem || undefined;
@@ -715,7 +715,7 @@ export class DatabaseStorage implements IStorage {
         .update(testCycleItems)
         .set({ 
           status: newRun.status,
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date()
         })
         .where(eq(testCycleItems.id, newRun.cycleItemId));
     }
@@ -736,7 +736,7 @@ export class DatabaseStorage implements IStorage {
         .update(testCycleItems)
         .set({ 
           status: testRun.status,
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date()
         })
         .where(eq(testCycleItems.id, updatedRun.cycleItemId));
     }

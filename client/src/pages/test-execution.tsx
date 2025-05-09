@@ -569,17 +569,17 @@ export default function TestExecution() {
                       <TableCell className="font-mono">{testCase.id}</TableCell>
                       <TableCell>{testCase.title}</TableCell>
                       <TableCell>
-                        <StatusBadge color={
-                          testCase.priority === "high" ? "destructive" :
-                          testCase.priority === "medium" ? "warning" : "default"
+                        <StatusBadge variant={
+                          testCase.priority === "high" ? "danger" :
+                          testCase.priority === "medium" ? "warning" : "muted"
                         }>
                           {testCase.priority.charAt(0).toUpperCase() + testCase.priority.slice(1)}
                         </StatusBadge>
                       </TableCell>
                       <TableCell>
-                        <StatusBadge color={
+                        <StatusBadge variant={
                           testCase.status === "passed" ? "success" :
-                          testCase.status === "failed" ? "destructive" : "default"
+                          testCase.status === "failed" ? "danger" : "muted"
                         }>
                           {testCase.status.charAt(0).toUpperCase() + testCase.status.slice(1)}
                         </StatusBadge>
