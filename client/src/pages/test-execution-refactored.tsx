@@ -315,8 +315,19 @@ export default function TestExecutionPage() {
   // Handle clicking the history button (history icon)
   const handleViewTestCaseHistory = (testCaseId: number) => {
     setSelectedTestCaseId(testCaseId);
-    refetchCaseHistory(); // Fetch all history for this test case
-    setHistoryDialogOpen(true); // Opens history dialog for viewing past results
+    
+    // Log before refetch
+    console.log("Before refetch - testCaseId:", testCaseId);
+    console.log("Before refetch - allTestCaseRuns:", allTestCaseRuns);
+    
+    // Fetch all history for this test case and wait for it to complete
+    refetchCaseHistory().then((result) => {
+      console.log("After refetch - result:", result);
+      console.log("After refetch - allTestCaseRuns:", allTestCaseRuns);
+      
+      // Now open the history dialog
+      setHistoryDialogOpen(true);
+    });
   };
   
   const handleCreateTestRun = (data: any) => {

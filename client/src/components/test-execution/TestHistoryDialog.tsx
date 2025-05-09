@@ -26,6 +26,10 @@ export function TestHistoryDialog({
   testCase,
   testRuns = []
 }: TestHistoryDialogProps) {
+  // Add debugging
+  console.log("TestHistoryDialog - testCase:", testCase?.id);
+  console.log("TestHistoryDialog - testRuns:", testRuns);
+  
   if (!testCase) {
     return null;
   }
