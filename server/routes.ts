@@ -26,8 +26,11 @@ import {
   generateAssistantResponse,
   generateWhisperSuggestions
 } from "./openai-service";
+import { setupAuth } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Setup authentication
+  setupAuth(app);
   // Get all maturity dimensions
   app.get("/api/dimensions", async (req, res) => {
     try {
