@@ -175,8 +175,7 @@ export default function TestExecution() {
     isLoading: isLoadingHistory
   } = useTestRunsByTestCase(selectedTestCaseId);
   
-  // Create a state to store test run counts for all test cases
-  const [testRunCounts, setTestRunCounts] = useState<Record<number, number>>({});
+  // State for mutations and API operations
   
   // Mutations
   const createCycleMutation = useCreateTestCycle();
@@ -229,51 +228,9 @@ export default function TestExecution() {
     }
   }, [selectedCycleItem, testRunDialogOpen, runForm]);
   
-  // Helper to fetch test run counts
-  const fetchTestRunCounts = async (testCaseIds: number[]) => {
-    const counts: Record<number, number> = {};
-    
-    // For each test case ID, fetch the runs and count them
-    for (const testCaseId of testCaseIds) {
-      try {
-        const response = await fetch(`/api/test-runs/test-case/${testCaseId}`);
-        if (response.ok) {
-          const runs = await response.json();
-          counts[testCaseId] = runs.length || 0;
-          console.log(`Test case ${testCaseId} has ${runs.length} executions`);
-        }
-      } catch (error) {
-        console.error(`Error fetching runs for test case ${testCaseId}:`, error);
-      }
-    }
-    
-    console.log("Updated test run counts:", counts);
-    setTestRunCounts(prev => ({...prev, ...counts}));
-  };
-
-  // Effects to load test run counts for all test cases in the current cycle
-  useEffect(() => {
-    if (cycleItems && cycleItems.length > 0) {
-      // Get all unique test case IDs from the cycle items
-      const testCaseIds = [...new Set(cycleItems.map(item => item.testCaseId))];
-      fetchTestRunCounts(testCaseIds);
-    }
-  }, [cycleItems]);
-  
-  // Update counts when a new test run is created or when viewing history
-  useEffect(() => {
-    if (selectedTestCaseId) {
-      fetchTestRunCounts([selectedTestCaseId]);
-    }
-  }, [selectedTestCaseId, historyDialogOpen, testRunDialogOpen]);
-  
   // Helper Functions
   const getTestCaseDetails = (id: number): TestCase | undefined => {
     return testCases?.find(tc => tc.id === id);
-  };
-  
-  const getTestRunCount = (testCaseId: number): number => {
-    return testRunCounts[testCaseId] || 0;
   };
   
   // Handlers
@@ -468,11 +425,6 @@ export default function TestExecution() {
             },
             {
               onSuccess: () => {
-                // Update count for the specific test case
-                if (selectedTestCaseId) {
-                  fetchTestRunCounts([selectedTestCaseId]);
-                }
-                
                 refetchItems();
                 refetchRuns();
                 setTestRunDialogOpen(false);
