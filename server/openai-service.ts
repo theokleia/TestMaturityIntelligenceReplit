@@ -800,8 +800,24 @@ export async function generateWhisperSuggestions(
     
     // Determine if we're on a page where integration data should influence suggestions
     const isIntegrationRelevant = contextPath.includes("test-management") || 
+                                 contextPath.includes("test-execution") || 
                                  contextPath.includes("ai-insights") || 
                                  contextPath === "/";
+    
+    // For test execution page, add specific guidance related to test runs
+    let testExecutionContext = "";
+    if (isTestExecutionPage) {
+      testExecutionContext = `
+      For the Test Execution page, please provide specialized suggestions:
+      1. Advise what tests to execute next based on priority and current status of test cases
+      2. Analyze pass/fail ratios and provide insights
+      3. Identify failed tests that don't have a preceding passed status and suggest adding them to a future cycle
+      4. Track test progress and estimate completion status based on the number of executed vs pending tests
+      
+      Prioritize high-risk, high-priority test cases that haven't been executed yet.
+      Consider suggesting specific actions based on the current test cycle progress.
+      `;
+    }
     
     // Build a context-aware prompt
     let prompt = `
@@ -812,6 +828,7 @@ export async function generateWhisperSuggestions(
       
       Current page context: ${pageContext}
       ${contextDataStr}
+      ${testExecutionContext}
       
       ${isIntegrationRelevant && jiraContext ? `\n${jiraContext}\n` : ""}
       ${isIntegrationRelevant && githubContext ? `\n${githubContext}\n` : ""}
@@ -819,6 +836,7 @@ export async function generateWhisperSuggestions(
       Based on this context ${isIntegrationRelevant ? "and integration data" : ""}, provide 1-3 brief, helpful whisper suggestions that would be valuable for someone working on this page.
       These should be non-intrusive tips that appear in a small floating card.
       ${isIntegrationRelevant && jiraIssues && jiraIssues.length > 0 ? "Include a suggestion related to test coverage based on Jira issues." : ""}
+      ${isTestExecutionPage ? "At least one suggestion should specifically relate to test execution priorities, progress analysis, or failed test follow-up." : ""}
       Keep each suggestion under 80 characters.
       Format your response as JSON with "suggestions" array and "priority" field (low, medium, high).
     `;

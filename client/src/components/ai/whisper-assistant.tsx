@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { useTestCycles } from "@/hooks/test-execution/useTestCycles";
+import { useTestCycleItems } from "@/hooks/test-execution/useTestCycleItems";
+import { useTestCases } from "@/hooks/test-management";
 
 interface SuggestionData {
   text: string;
@@ -31,11 +34,89 @@ export function WhisperAssistant() {
   const hasShownRef = useRef(false);
   const { toast } = useToast();
   
+  // Determine if we're on the test execution page
+  const isTestExecutionPage = location.includes('test-execution');
+  
+  // Fetch test execution data when on test execution page
+  const { data: testCycles } = useTestCycles(
+    isTestExecutionPage && selectedProject ? selectedProject.id : undefined
+  );
+  
+  // Get the first test cycle for now - in the future we could handle the active cycle
+  const activeCycle = testCycles && testCycles.length > 0 ? testCycles[0] : undefined;
+  
+  // Fetch test cycle items for the active cycle
+  const { data: cycleItems } = useTestCycleItems(
+    isTestExecutionPage && activeCycle ? activeCycle.id : undefined
+  );
+  
+  // Fetch test cases for the project
+  const { testCases } = useTestCases({
+    projectId: isTestExecutionPage && selectedProject ? selectedProject.id : undefined
+  });
+  
+  // Prepare test execution analytics data for whisper suggestions
+  const prepareTestExecutionData = () => {
+    if (!isTestExecutionPage || !cycleItems || !testCases) return null;
+    
+    // Count test statuses
+    const statusCounts = {
+      passed: 0,
+      failed: 0,
+      blocked: 0,
+      skipped: 0,
+      'not-run': 0
+    };
+    
+    // Need to cast these to proper arrays to avoid TypeScript errors
+    const cycleItemsArray = Array.isArray(cycleItems) ? cycleItems : [];
+    const testCasesArray = Array.isArray(testCases) ? testCases : [];
+    
+    cycleItemsArray.forEach(item => {
+      const status = (item.status as string) || 'not-run';
+      statusCounts[status as keyof typeof statusCounts] = (statusCounts[status as keyof typeof statusCounts] || 0) + 1;
+    });
+    
+    // Calculate completion percentage
+    const totalTests = cycleItemsArray.length;
+    const completedTests = totalTests - statusCounts['not-run'];
+    const completionPercentage = totalTests > 0 ? Math.round((completedTests / totalTests) * 100) : 0;
+    
+    // Identify test cases by priority
+    const highPriorityNotRun = cycleItemsArray
+      .filter(item => item.status === 'not-run')
+      .map(item => {
+        const testCase = testCasesArray.find(tc => tc.id === item.testCaseId);
+        return testCase ? { ...testCase, itemId: item.id } : null;
+      })
+      .filter(Boolean)
+      .filter(tc => tc.priority === 'high')
+      .map(tc => ({ id: tc.id, title: tc.title, priority: tc.priority }));
+    
+    // Find failed tests without previous passes
+    const failedTestIds = cycleItemsArray
+      .filter(item => item.status === 'failed')
+      .map(item => item.testCaseId);
+    
+    return {
+      activeCycle: activeCycle ? { id: activeCycle.id, name: activeCycle.name, status: activeCycle.status } : null,
+      statusCounts,
+      completionPercentage,
+      totalTests,
+      completedTests,
+      highPriorityNotRun: highPriorityNotRun.slice(0, 3), // Just sending top 3 for brevity
+      failedTests: failedTestIds.length
+    };
+  };
+  
   // Fetch whisper suggestions when location or project changes
   const { data, error, isLoading, refetch } = useQuery({
-    queryKey: ['/api/ai/whisper', selectedProject?.id, location],
+    queryKey: ['/api/ai/whisper', selectedProject?.id, location, cycleItems?.length],
     queryFn: async () => {
       if (!selectedProject) return null;
+      
+      // Prepare test execution data if on test execution page
+      const testExecutionData = prepareTestExecutionData();
       
       const response = await fetch('/api/ai/whisper', {
         method: 'POST',
@@ -43,7 +124,8 @@ export function WhisperAssistant() {
         body: JSON.stringify({
           projectId: selectedProject.id,
           projectName: selectedProject.name, // Keep for backward compatibility
-          contextPath: location
+          contextPath: location,
+          contextData: testExecutionData // Include test execution data when available
         })
       });
       
