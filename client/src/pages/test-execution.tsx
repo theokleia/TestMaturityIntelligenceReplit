@@ -296,13 +296,19 @@ export default function TestExecution() {
   const handleAddTestCases = () => {
     if (!selectedCycle || !selectedCases.length) return;
     
+    console.log('Adding test cases to cycle:', { 
+      cycleId: selectedCycle.id, 
+      testCaseIds: selectedCases 
+    });
+    
     addCasesMutation.mutate(
       {
         cycleId: selectedCycle.id,
         testCaseIds: selectedCases,
       },
       {
-        onSuccess: () => {
+        onSuccess: (data) => {
+          console.log('Add test cases API response:', data);
           toast({
             title: "Success",
             description: `Added ${selectedCases.length} test case(s) to cycle`,
@@ -313,6 +319,7 @@ export default function TestExecution() {
           refetchItems();
         },
         onError: (error) => {
+          console.error('Error adding test cases to cycle:', error);
           toast({
             title: "Error",
             description: "Failed to add test cases to cycle",
@@ -326,13 +333,19 @@ export default function TestExecution() {
   const handleAddTestSuite = () => {
     if (!selectedCycle || !selectedSuiteId) return;
     
+    console.log('Adding test suite to cycle:', {
+      cycleId: selectedCycle.id,
+      suiteId: selectedSuiteId
+    });
+    
     addSuiteMutation.mutate(
       {
         cycleId: selectedCycle.id,
         suiteId: selectedSuiteId,
       },
       {
-        onSuccess: () => {
+        onSuccess: (data) => {
+          console.log('Add test suite API response:', data);
           toast({
             title: "Success",
             description: "Added test suite to cycle",
@@ -343,6 +356,7 @@ export default function TestExecution() {
           refetchItems();
         },
         onError: (error) => {
+          console.error('Error adding test suite to cycle:', error);
           toast({
             title: "Error",
             description: "Failed to add test suite to cycle",

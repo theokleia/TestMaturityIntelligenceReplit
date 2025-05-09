@@ -14,15 +14,27 @@ interface AddTestSuiteParams {
 export function useAddTestSuiteToCycle() {
   return useMutation<TestCycleItem[], Error, AddTestSuiteParams>({
     mutationFn: async ({ cycleId, suiteId }) => {
-      const result = await apiRequest<TestCycleItem[]>(`/api/test-cycles/${cycleId}/add-suite`, {
-        method: 'POST',
-        body: JSON.stringify({ suiteId }),
-      });
-      return result;
+      console.log(`Attempting to add test suite ${suiteId} to cycle ${cycleId}`);
+      
+      try {
+        const result = await apiRequest<TestCycleItem[]>(`/api/test-cycles/${cycleId}/add-suite`, {
+          method: 'POST',
+          body: JSON.stringify({ suiteId }),
+        });
+        console.log('Add test suite API response:', result);
+        return result;
+      } catch (error) {
+        console.error('Error adding test suite to cycle:', error);
+        throw error;
+      }
     },
-    onSuccess: (_, { cycleId }) => {
+    onSuccess: (data, { cycleId }) => {
+      console.log(`Successfully added test suite to cycle ${cycleId}`, data);
       // Invalidate the test cycle items query to refetch the data
       queryClient.invalidateQueries({ queryKey: [`/api/test-cycle-items/${cycleId}`] });
     },
+    onError: (error) => {
+      console.error('Error in add test suite mutation:', error);
+    }
   });
 }
