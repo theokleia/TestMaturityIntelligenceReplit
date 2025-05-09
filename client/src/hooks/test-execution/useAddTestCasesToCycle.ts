@@ -17,7 +17,8 @@ export function useAddTestCasesToCycle() {
       console.log(`Attempting to add test cases to cycle: ${cycleId}`, testCaseIds);
       
       try {
-        const result = await apiRequest<TestCycleItem[]>(`/api/test-cycles/${cycleId}/add-cases`, {
+        // Use the correct API endpoint that matches server route
+        const result = await apiRequest<TestCycleItem[]>(`/api/test-cycles/${cycleId}/add-test-cases`, {
           method: 'POST',
           body: JSON.stringify({ testCaseIds }),
         });

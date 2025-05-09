@@ -17,9 +17,9 @@ export function useAddTestSuiteToCycle() {
       console.log(`Attempting to add test suite ${suiteId} to cycle ${cycleId}`);
       
       try {
-        const result = await apiRequest<TestCycleItem[]>(`/api/test-cycles/${cycleId}/add-suite`, {
+        // Use the correct API endpoint that matches server route
+        const result = await apiRequest<TestCycleItem[]>(`/api/test-cycles/${cycleId}/add-suite/${suiteId}`, {
           method: 'POST',
-          body: JSON.stringify({ suiteId }),
         });
         console.log('Add test suite API response:', result);
         return result;
