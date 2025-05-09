@@ -544,6 +544,7 @@ export default function TestExecution() {
                                     size="sm"
                                     onClick={() => {
                                       setSelectedCycleItem(item);
+                                      setSelectedTestCaseId(item.testCaseId);
                                       setTestRunDialogOpen(true);
                                     }}
                                   >
@@ -1082,15 +1083,17 @@ export default function TestExecution() {
               {/* Previous runs section */}
               <div className="bg-atmf-card rounded-lg p-4">
                 <h3 className="text-lg font-medium mb-3">Previous Runs</h3>
-                {isLoadingRuns ? (
+                {isLoadingHistory ? (
                   <div className="text-center py-4">Loading previous runs...</div>
-                ) : runs && runs.length > 0 ? (
+                ) : testRunHistory && testRunHistory.length > 0 ? (
                   <div className="space-y-3 max-h-[200px] overflow-y-auto">
-                    {runs.map((run) => (
+                    {testRunHistory.map((run) => (
                       <div key={run.id} className="flex items-center justify-between border-b pb-2 last:border-b-0">
                         <div className="flex items-center gap-3">
                           {renderStatusBadge(run.status)}
-                          <span className="text-sm">{new Date(run.executedAt || '').toLocaleString()}</span>
+                          <span className="text-sm">
+                            {run.cycleName ? `${run.cycleName} - ` : ''}{run.executedAt ? new Date(run.executedAt).toLocaleString() : 'Unknown date'}
+                          </span>
                         </div>
                         <div className="text-sm text-muted-foreground">{run.notes}</div>
                       </div>
@@ -1193,7 +1196,7 @@ export default function TestExecution() {
                   {testRunHistory.map((run) => (
                     <TableRow key={run.id}>
                       <TableCell>{run.cycleName || `Cycle #${run.cycleId || 'Unknown'}`}</TableCell>
-                      <TableCell>{new Date(run.executedAt).toLocaleString()}</TableCell>
+                      <TableCell>{run.executedAt ? new Date(run.executedAt).toLocaleString() : 'Unknown date'}</TableCell>
                       <TableCell>{renderStatusBadge(run.status)}</TableCell>
                       <TableCell className="max-w-xs truncate">{run.notes || "-"}</TableCell>
                     </TableRow>
