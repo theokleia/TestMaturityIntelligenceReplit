@@ -301,6 +301,8 @@ export default function TestExecution() {
       testCaseIds: selectedCases 
     });
     
+    // Use the correct API endpoint path
+    console.log(`Using endpoint: /api/test-cycles/${selectedCycle.id}/add-test-cases`);
     addCasesMutation.mutate(
       {
         cycleId: selectedCycle.id,
@@ -338,6 +340,8 @@ export default function TestExecution() {
       suiteId: selectedSuiteId
     });
     
+    // Use the correct API endpoint path
+    console.log(`Using endpoint: /api/test-cycles/${selectedCycle.id}/add-suite/${selectedSuiteId}`);
     addSuiteMutation.mutate(
       {
         cycleId: selectedCycle.id,
@@ -801,7 +805,7 @@ export default function TestExecution() {
                 <Button variant="outline" type="button" onClick={() => setNewCycleDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" isLoading={createCycleMutation.isPending}>Create Test Cycle</Button>
+                <Button type="submit" isPending={createCycleMutation.isPending}>Create Test Cycle</Button>
               </DialogFooter>
             </form>
           </Form>
