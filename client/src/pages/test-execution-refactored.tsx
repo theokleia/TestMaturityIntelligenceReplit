@@ -313,21 +313,32 @@ export default function TestExecutionPage() {
   };
   
   // Handle clicking the history button (history icon)
-  const handleViewTestCaseHistory = (testCaseId: number) => {
+  const handleViewTestCaseHistory = async (testCaseId: number) => {
     setSelectedTestCaseId(testCaseId);
     
-    // Log before refetch
-    console.log("Before refetch - testCaseId:", testCaseId);
-    console.log("Before refetch - allTestCaseRuns:", allTestCaseRuns);
-    
-    // Fetch all history for this test case and wait for it to complete
-    refetchCaseHistory().then((result) => {
-      console.log("After refetch - result:", result);
-      console.log("After refetch - allTestCaseRuns:", allTestCaseRuns);
+    try {
+      // Explicitly await the refetch to ensure data is loaded
+      const result = await refetchCaseHistory();
+      console.log("History data fetched:", result.data);
       
-      // Now open the history dialog
-      setHistoryDialogOpen(true);
-    });
+      // Only open the dialog if we have data
+      if (result.data) {
+        setHistoryDialogOpen(true);
+      } else {
+        toast({
+          title: "No history found",
+          description: "No previous test runs found for this test case",
+          variant: "default",
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching test history:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load test history",
+        variant: "destructive",
+      });
+    }
   };
   
   const handleCreateTestRun = (data: any) => {

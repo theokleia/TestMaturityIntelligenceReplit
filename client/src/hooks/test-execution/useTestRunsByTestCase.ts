@@ -8,7 +8,7 @@ import type { TestRun } from "./types";
  */
 export function useTestRunsByTestCase(testCaseId?: number) {
   return useQuery<TestRun[]>({
-    queryKey: testCaseId ? [`/api/test-runs/by-test-case/${testCaseId}`] : undefined,
+    queryKey: [`/api/test-runs/test-case/${testCaseId || 0}`],
     enabled: !!testCaseId,
   });
 }
