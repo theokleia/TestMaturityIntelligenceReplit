@@ -127,10 +127,15 @@ export default function TestExecution() {
   const handleCreateCycle = (data: z.infer<typeof testCycleSchema>) => {
     if (!projectId) return;
     
-    createCycleMutation.mutate({
+    // Convert string dates to Date objects
+    const payload = {
       ...data,
-      projectId
-    }, {
+      projectId,
+      startDate: data.startDate ? new Date(data.startDate) : undefined,
+      endDate: data.endDate ? new Date(data.endDate) : undefined
+    };
+    
+    createCycleMutation.mutate(payload, {
       onSuccess: (newCycle) => {
         toast({
           title: "Test Cycle Created",
@@ -183,7 +188,7 @@ export default function TestExecution() {
       cycleItemId: selectedCycleItem.id,
       status,
       notes: "Executed manually",
-      executedAt: new Date().toISOString(),
+      executedAt: new Date(),
     }, {
       onSuccess: () => {
         toast({
