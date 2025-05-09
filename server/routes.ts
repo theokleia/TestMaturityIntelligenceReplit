@@ -1215,6 +1215,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to update test cycle item" });
     }
   });
+  
+  // Delete a test cycle item
+  app.delete("/api/test-cycle-items/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Get the item first to retrieve the cycleId for the response
+      const item = await storage.getTestCycleItem(id);
+      if (!item) {
+        return res.status(404).json({ message: "Test cycle item not found" });
+      }
+      
+      // Remove the item from the cycle
+      const result = await storage.removeTestCycleItem(id);
+      
+      if (!result) {
+        return res.status(404).json({ message: "Failed to remove test case from cycle" });
+      }
+      
+      res.json({ 
+        message: "Test case removed from cycle successfully",
+        cycleId: item.cycleId
+      });
+    } catch (error) {
+      console.error("Error removing test case from cycle:", error);
+      res.status(500).json({ message: "Failed to remove test case from cycle" });
+    }
+  });
 
   // Add test cases to cycle
   app.post("/api/test-cycles/:cycleId/add-test-cases", async (req, res) => {

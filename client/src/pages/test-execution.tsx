@@ -302,7 +302,7 @@ export default function TestExecution() {
       editCycleForm.reset({
         name: selectedCycle.name,
         description: selectedCycle.description || "",
-        status: selectedCycle.status,
+        status: selectedCycle.status || "created",
         startDate: selectedCycle.startDate 
           ? new Date(selectedCycle.startDate).toISOString().split('T')[0] 
           : undefined,

@@ -127,6 +127,18 @@ export function useAddTestSuiteToCycle() {
   });
 }
 
+export function useRemoveTestCaseFromCycle() {
+  return useMutation({
+    mutationFn: ({ itemId, cycleId }: { itemId: number, cycleId: number }) => 
+      apiRequest(`/api/test-cycle-items/${itemId}`, { 
+        method: 'DELETE'
+      }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [`/api/test-cycle-items/${variables.cycleId}`] });
+    }
+  });
+}
+
 export function useUpdateTestCycleItem(id: number) {
   return useMutation({
     mutationFn: (data: Partial<InsertTestCycleItem>) => 
