@@ -24,8 +24,10 @@ function Router() {
       <Route path="/assessments" component={Assessments} />
       <Route path="/ai-insights" component={AiInsights} />
       <Route path="/test-management" component={TestManagement} />
-      <Route path="/test-execution" component={TestExecution} />
-      <Route path="/test-execution-refactored" component={TestExecutionRefactored} />
+      {/* Using the refactored component for the main test execution route */}
+      <Route path="/test-execution" component={TestExecutionRefactored} />
+      {/* Keeping the old route for reference until we're sure the refactored version works properly */}
+      <Route path="/test-execution-old" component={TestExecution} />
       <Route path="/projects" component={Projects} />
       <Route path="/project-health" component={ProjectHealth} />
       <Route path="/settings" component={Settings} />
