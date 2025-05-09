@@ -81,10 +81,10 @@ export function TestCycleTable({
             <TableRow key={cycle.id}>
               <TableCell className="font-medium">{cycle.name}</TableCell>
               <TableCell>
-                <StatusBadge variant="cycle" status={cycle.status} />
+                <StatusBadge variant="status" status={cycle.status || 'not-started'} />
               </TableCell>
-              <TableCell>{formatDate(cycle.startDate)}</TableCell>
-              <TableCell>{formatDate(cycle.endDate)}</TableCell>
+              <TableCell>{cycle.startDate ? formatDate(cycle.startDate) : '—'}</TableCell>
+              <TableCell>{cycle.endDate ? formatDate(cycle.endDate) : '—'}</TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end space-x-2">
                   <Button 

@@ -76,16 +76,16 @@ export function TestCaseListForCycle({
               </TableCell>
               <TableCell>
                 <StatusBadge 
-                  variant="run" 
+                  variant="test" 
                   status={item.status || "not-run"} 
                 />
               </TableCell>
               <TableCell>
-                {latestRun ? formatDate(latestRun.createdAt) : "Never"}
+                {latestRun?.executedAt ? formatDate(latestRun.executedAt) : "Never"}
               </TableCell>
               <TableCell>
-                {latestRun ? (
-                  <StatusBadge variant="run" status={latestRun.status} />
+                {latestRun?.status ? (
+                  <StatusBadge variant="test" status={latestRun.status} />
                 ) : (
                   "—"
                 )}
