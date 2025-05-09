@@ -708,10 +708,15 @@ export async function generateWhisperSuggestions(
     
     // Determine page context based on path
     let pageContext = "";
+    let isTestExecutionPage = false;
+    
     if (contextPath.includes("project-health")) {
       pageContext = "Project Health Dashboard - Viewing health metrics, indicators, and quality trends";
     } else if (contextPath.includes("assessments")) {
       pageContext = "Test Maturity Assessments - Evaluating testing maturity and planning improvements";
+    } else if (contextPath.includes("test-execution")) {
+      pageContext = "Test Execution - Executing test cases, recording results, and tracking test cycles";
+      isTestExecutionPage = true;
     } else if (contextPath.includes("test-management")) {
       pageContext = "Test Management - Managing test cases, suites, and execution";
     } else if (contextPath.includes("ai-insights")) {
