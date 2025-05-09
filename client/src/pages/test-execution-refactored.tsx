@@ -55,7 +55,8 @@ import {
   TestCycleTable,
   TestCycleFormDialog,
   TestCaseListForCycle,
-  TestExecutionDialog
+  TestExecutionDialog,
+  TestHistoryDialog
 } from "@/components/test-execution";
 
 export default function TestExecutionPage() {
@@ -646,14 +647,11 @@ export default function TestExecutionPage() {
         />
         
         {/* Test Case History Dialog */}
-        <TestExecutionDialog
+        <TestHistoryDialog
           open={historyDialogOpen}
           onOpenChange={setHistoryDialogOpen}
-          onSubmit={() => {}} // No-op since we're just viewing history
           testCase={selectedTestCaseId ? testCasesMap[selectedTestCaseId] : undefined}
-          previousRuns={allTestCaseRuns}
-          showHistory={true}
-          isPending={false}
+          testRuns={allTestCaseRuns}
         />
       </PageContainer>
     </AppLayout>
