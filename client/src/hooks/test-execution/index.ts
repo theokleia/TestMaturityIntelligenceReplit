@@ -55,8 +55,8 @@ export function useCreateTestCycle() {
   });
 }
 
-export function useUpdateTestCycle(id: number) {
-  return useMutation({
+export function useUpdateTestCycle() {
+  return (id: number) => useMutation({
     mutationFn: (data: Partial<InsertTestCycle>) => 
       apiRequest(`/api/test-cycles/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
     onSuccess: (response, variables) => {

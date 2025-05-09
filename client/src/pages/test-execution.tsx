@@ -142,7 +142,7 @@ export default function TestExecution() {
   
   // Mutations
   const createCycleMutation = useCreateTestCycle();
-  const updateCycleMutation = useUpdateTestCycle;
+  const updateTestCycleMutation = useUpdateTestCycle();
   const addCasesMutation = useAddTestCasesToCycle();
   const addSuiteMutation = useAddTestSuiteToCycle();
   const removeTestCaseMutation = useRemoveTestCaseFromCycle();
@@ -269,8 +269,8 @@ export default function TestExecution() {
       endDate: data.endDate ? new Date(data.endDate) : undefined
     };
     
-    // Create an instance of the update cycle mutation
-    const updateCycle = updateCycleMutation(selectedCycle.id);
+    // Get update cycle mutation for this specific cycle ID
+    const updateCycle = updateTestCycleMutation(selectedCycle.id);
     
     // Execute the mutation
     updateCycle.mutate(payload, {
