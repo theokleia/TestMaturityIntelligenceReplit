@@ -669,7 +669,7 @@ export class DatabaseStorage implements IStorage {
   async updateTestCycleItem(id: number, testCycleItem: Partial<InsertTestCycleItem>): Promise<TestCycleItem | undefined> {
     const [updatedItem] = await db
       .update(testCycleItems)
-      .set({ ...testCycleItem, updatedAt: new Date() })
+      .set({ ...testCycleItem, updatedAt: new Date().toISOString() })
       .where(eq(testCycleItems.id, id))
       .returning();
     return updatedItem || undefined;

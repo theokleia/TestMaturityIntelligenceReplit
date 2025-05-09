@@ -188,7 +188,7 @@ export default function TestExecution() {
       cycleItemId: selectedCycleItem.id,
       status,
       notes: "Executed manually",
-      executedAt: new Date(),
+      executedAt: new Date().toISOString(),
     }, {
       onSuccess: () => {
         toast({
@@ -215,7 +215,9 @@ export default function TestExecution() {
   }, [testCycles, selectedCycle]);
   
   // Render status badge
-  const renderStatusBadge = (status: string) => {
+  const renderStatusBadge = (status: string | null) => {
+    if (!status) return <StatusBadge variant="muted">Unknown</StatusBadge>;
+    
     const statusMap: Record<string, { variant: StatusBadgeVariant, label: string }> = {
       "not-run": { variant: "muted", label: "Not Run" },
       "pass": { variant: "success", label: "Pass" },
@@ -348,7 +350,7 @@ export default function TestExecution() {
                     <div className="p-4 bg-atmf-card rounded-lg">
                       <span className="text-sm text-muted-foreground">Created</span>
                       <div className="mt-1">
-                        {new Date(selectedCycle.createdAt).toLocaleDateString()}
+                        {selectedCycle.createdAt ? new Date(selectedCycle.createdAt).toLocaleDateString() : "Unknown"}
                       </div>
                     </div>
                     

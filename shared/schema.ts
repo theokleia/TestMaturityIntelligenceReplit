@@ -162,8 +162,8 @@ export const testCycleItems = pgTable("test_cycle_items", {
   suiteId: integer("suite_id").references(() => testSuites.id, { onDelete: "set null" }),
   assignedUserId: integer("assigned_user_id").references(() => users.id),
   status: varchar("status", { length: 30 }).default("not-run"), // not-run, pass, fail, skip, blocked
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
 });
 
 // Execution runs for each test case in a cycle
@@ -171,7 +171,7 @@ export const testRuns = pgTable("test_runs", {
   id: serial("id").primaryKey(),
   cycleItemId: integer("cycle_item_id").notNull().references(() => testCycleItems.id, { onDelete: "cascade" }),
   executedBy: integer("executed_by").references(() => users.id),
-  executedAt: timestamp("executed_at").defaultNow(),
+  executedAt: timestamp("executed_at", { mode: 'string' }).defaultNow(),
   duration: integer("duration"), // in seconds
   status: varchar("status", { length: 30 }).notNull(), // pass, fail, skip, blocked, cancelled
   notes: text("notes"),
