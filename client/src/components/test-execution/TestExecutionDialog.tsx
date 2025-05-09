@@ -57,7 +57,6 @@ interface TestExecutionDialogProps {
   onSubmit: (data: FormValues) => void;
   testCase?: TestCase;
   previousRuns?: TestRun[];
-  showHistory?: boolean;
   isPending?: boolean;
 }
 
@@ -67,7 +66,6 @@ export function TestExecutionDialog({
   onSubmit,
   testCase,
   previousRuns = [],
-  showHistory = true,
   isPending = false
 }: TestExecutionDialogProps) {
   const [activeTab, setActiveTab] = useState("details");

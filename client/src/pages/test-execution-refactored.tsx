@@ -304,16 +304,18 @@ export default function TestExecutionPage() {
     );
   };
   
+  // Handle clicking the execute button (play icon)
   const handleExecuteTestCase = (cycleItemId: number, testCaseId: number) => {
     setSelectedCycleItem(cycleItemId);
     setSelectedTestCaseId(testCaseId);
-    setExecutionDialogOpen(true);
+    setExecutionDialogOpen(true); // Opens execution dialog for running a test
   };
   
+  // Handle clicking the history button (history icon)
   const handleViewTestCaseHistory = (testCaseId: number) => {
     setSelectedTestCaseId(testCaseId);
-    refetchCaseHistory();
-    setHistoryDialogOpen(true);
+    refetchCaseHistory(); // Fetch all history for this test case
+    setHistoryDialogOpen(true); // Opens history dialog for viewing past results
   };
   
   const handleCreateTestRun = (data: any) => {
