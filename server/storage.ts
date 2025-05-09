@@ -577,6 +577,152 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return updatedTestCase || undefined;
   }
+  
+  // Test Cycles
+  async getTestCycles(projectId?: number): Promise<TestCycle[]> {
+    if (projectId) {
+      return db
+        .select()
+        .from(testCycles)
+        .where(eq(testCycles.projectId, projectId))
+        .orderBy(desc(testCycles.createdAt));
+    }
+    return db
+      .select()
+      .from(testCycles)
+      .orderBy(desc(testCycles.createdAt));
+  }
+  
+  async getTestCycle(id: number): Promise<TestCycle | undefined> {
+    const [cycle] = await db
+      .select()
+      .from(testCycles)
+      .where(eq(testCycles.id, id));
+    return cycle || undefined;
+  }
+  
+  async createTestCycle(testCycle: InsertTestCycle): Promise<TestCycle> {
+    const [newCycle] = await db
+      .insert(testCycles)
+      .values(testCycle)
+      .returning();
+    return newCycle;
+  }
+  
+  async updateTestCycle(id: number, testCycle: Partial<InsertTestCycle>): Promise<TestCycle | undefined> {
+    const [updatedCycle] = await db
+      .update(testCycles)
+      .set({ ...testCycle, updatedAt: new Date() })
+      .where(eq(testCycles.id, id))
+      .returning();
+    return updatedCycle || undefined;
+  }
+  
+  // Test Cycle Items
+  async getTestCycleItems(cycleId: number): Promise<TestCycleItem[]> {
+    return db
+      .select()
+      .from(testCycleItems)
+      .where(eq(testCycleItems.cycleId, cycleId))
+      .orderBy(asc(testCycleItems.id));
+  }
+  
+  async getTestCycleItem(id: number): Promise<TestCycleItem | undefined> {
+    const [item] = await db
+      .select()
+      .from(testCycleItems)
+      .where(eq(testCycleItems.id, id));
+    return item || undefined;
+  }
+  
+  async createTestCycleItem(testCycleItem: InsertTestCycleItem): Promise<TestCycleItem> {
+    const [newItem] = await db
+      .insert(testCycleItems)
+      .values(testCycleItem)
+      .returning();
+    return newItem;
+  }
+  
+  async updateTestCycleItem(id: number, testCycleItem: Partial<InsertTestCycleItem>): Promise<TestCycleItem | undefined> {
+    const [updatedItem] = await db
+      .update(testCycleItems)
+      .set({ ...testCycleItem, updatedAt: new Date() })
+      .where(eq(testCycleItems.id, id))
+      .returning();
+    return updatedItem || undefined;
+  }
+  
+  async addTestCasesToCycle(cycleId: number, testCaseIds: number[], suiteId?: number): Promise<TestCycleItem[]> {
+    const items: InsertTestCycleItem[] = testCaseIds.map(testCaseId => ({
+      cycleId,
+      testCaseId,
+      suiteId,
+      status: 'not-run'
+    }));
+    
+    return db
+      .insert(testCycleItems)
+      .values(items)
+      .returning();
+  }
+  
+  // Test Runs
+  async getTestRuns(cycleItemId: number): Promise<TestRun[]> {
+    return db
+      .select()
+      .from(testRuns)
+      .where(eq(testRuns.cycleItemId, cycleItemId))
+      .orderBy(desc(testRuns.executedAt));
+  }
+  
+  async getTestRun(id: number): Promise<TestRun | undefined> {
+    const [run] = await db
+      .select()
+      .from(testRuns)
+      .where(eq(testRuns.id, id));
+    return run || undefined;
+  }
+  
+  async createTestRun(testRun: InsertTestRun): Promise<TestRun> {
+    const [newRun] = await db
+      .insert(testRuns)
+      .values(testRun)
+      .returning();
+    
+    // Update the corresponding cycle item status based on this test run
+    if (newRun) {
+      await db
+        .update(testCycleItems)
+        .set({ 
+          status: newRun.status,
+          updatedAt: new Date()
+        })
+        .where(eq(testCycleItems.id, newRun.cycleItemId));
+    }
+    
+    return newRun;
+  }
+  
+  async updateTestRun(id: number, testRun: Partial<InsertTestRun>): Promise<TestRun | undefined> {
+    const [updatedRun] = await db
+      .update(testRuns)
+      .set(testRun)
+      .where(eq(testRuns.id, id))
+      .returning();
+    
+    // Update the corresponding cycle item status if the status changed
+    if (updatedRun && testRun.status) {
+      await db
+        .update(testCycleItems)
+        .set({ 
+          status: testRun.status,
+          updatedAt: new Date()
+        })
+        .where(eq(testCycleItems.id, updatedRun.cycleItemId));
+    }
+    
+    return updatedRun || undefined;
+  }
 
   // Initialize database with sample data
   async initSampleData() {

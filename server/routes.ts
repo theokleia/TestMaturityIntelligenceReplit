@@ -10,7 +10,10 @@ import {
   insertAssessmentSchema,
   insertTestSuiteSchema,
   insertTestCaseSchema,
-  insertProjectSchema
+  insertProjectSchema,
+  insertTestCycleSchema,
+  insertTestCycleItemSchema,
+  insertTestRunSchema
 } from "@shared/schema";
 import { 
   generateMaturityInsights, 
