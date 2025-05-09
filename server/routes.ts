@@ -1279,15 +1279,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { cycleId, testCaseIds, suiteId } = req.body;
       
+      // Helper function to safely parse integers
+      const safeParseInt = (value: string | number | undefined): number | undefined => {
+        if (value === undefined || value === null) return undefined;
+        if (typeof value === 'number') return isNaN(value) ? undefined : value;
+        const parsed = parseInt(value as string);
+        return isNaN(parsed) ? undefined : parsed;
+      };
+      
       if (!cycleId) {
         return res.status(400).json({ message: "cycleId is required" });
       }
       
+      const parsedCycleId = safeParseInt(cycleId);
+      if (parsedCycleId === undefined) {
+        return res.status(400).json({ message: "Invalid cycleId format" });
+      }
+      
+      const parsedSuiteId = safeParseInt(suiteId);
+      
       // If suiteId is provided but no test case IDs, add the entire suite
-      if (suiteId && (!testCaseIds || testCaseIds.length === 0)) {
+      if (parsedSuiteId !== undefined && (!testCaseIds || testCaseIds.length === 0)) {
         const addedItems = await storage.addTestSuiteToCycle(
-          parseInt(cycleId), 
-          parseInt(suiteId)
+          parsedCycleId, 
+          parsedSuiteId
         );
         
         return res.status(200).json(addedItems);
@@ -1298,10 +1313,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "testCaseIds array is required" });
       }
       
+      // Safely parse all test case IDs, filtering out any invalid ones
+      const parsedTestCaseIds = testCaseIds
+        .map(id => safeParseInt(id))
+        .filter(id => id !== undefined) as number[];
+        
+      if (parsedTestCaseIds.length === 0) {
+        return res.status(400).json({ message: "No valid test case IDs provided" });
+      }
+      
       const addedItems = await storage.addTestCasesToCycle(
-        parseInt(cycleId), 
-        testCaseIds.map(id => parseInt(id)), 
-        suiteId ? parseInt(suiteId) : undefined
+        parsedCycleId, 
+        parsedTestCaseIds, 
+        parsedSuiteId
       );
       
       res.status(200).json(addedItems);
@@ -1314,8 +1338,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Add entire test suite to cycle
   app.post("/api/test-cycles/:cycleId/add-suite/:suiteId", async (req, res) => {
     try {
-      const cycleId = parseInt(req.params.cycleId);
-      const suiteId = parseInt(req.params.suiteId);
+      // Helper function to safely parse integers
+      const safeParseInt = (value: string | undefined): number | undefined => {
+        if (!value) return undefined;
+        const parsed = parseInt(value);
+        return isNaN(parsed) ? undefined : parsed;
+      };
+      
+      const cycleId = safeParseInt(req.params.cycleId);
+      const suiteId = safeParseInt(req.params.suiteId);
+      
+      if (cycleId === undefined) {
+        return res.status(400).json({ message: "Invalid cycleId format" });
+      }
+      
+      if (suiteId === undefined) {
+        return res.status(400).json({ message: "Invalid suiteId format" });
+      }
       
       const addedItems = await storage.addTestSuiteToCycle(cycleId, suiteId);
       
@@ -1329,7 +1368,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Test Runs API endpoints
   app.get("/api/test-runs/:cycleItemId", async (req, res) => {
     try {
-      const cycleItemId = parseInt(req.params.cycleItemId);
+      // Helper function to safely parse integers
+      const safeParseInt = (value: string | undefined): number | undefined => {
+        if (!value) return undefined;
+        const parsed = parseInt(value);
+        return isNaN(parsed) ? undefined : parsed;
+      };
+      
+      const cycleItemId = safeParseInt(req.params.cycleItemId);
+      
+      if (cycleItemId === undefined) {
+        return res.status(400).json({ message: "Invalid cycleItemId format" });
+      }
+      
       const testRuns = await storage.getTestRuns(cycleItemId);
       res.json(testRuns);
     } catch (error) {
@@ -1341,7 +1392,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all test runs for a specific test case
   app.get("/api/test-runs/test-case/:testCaseId", async (req, res) => {
     try {
-      const testCaseId = parseInt(req.params.testCaseId);
+      // Helper function to safely parse integers
+      const safeParseInt = (value: string | undefined): number | undefined => {
+        if (!value) return undefined;
+        const parsed = parseInt(value);
+        return isNaN(parsed) ? undefined : parsed;
+      };
+      
+      const testCaseId = safeParseInt(req.params.testCaseId);
+      
+      if (testCaseId === undefined) {
+        return res.status(400).json({ message: "Invalid testCaseId format" });
+      }
+      
       const testRuns = await storage.getTestRunsByTestCase(testCaseId);
       res.json(testRuns);
     } catch (error) {
@@ -1352,7 +1415,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/test-runs/detail/:id", async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      // Helper function to safely parse integers
+      const safeParseInt = (value: string | undefined): number | undefined => {
+        if (!value) return undefined;
+        const parsed = parseInt(value);
+        return isNaN(parsed) ? undefined : parsed;
+      };
+      
+      const id = safeParseInt(req.params.id);
+      
+      if (id === undefined) {
+        return res.status(400).json({ message: "Invalid id format" });
+      }
+      
       const testRun = await storage.getTestRun(id);
       
       if (!testRun) {
@@ -1382,7 +1457,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/test-runs/:id", async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      // Helper function to safely parse integers
+      const safeParseInt = (value: string | undefined): number | undefined => {
+        if (!value) return undefined;
+        const parsed = parseInt(value);
+        return isNaN(parsed) ? undefined : parsed;
+      };
+      
+      const id = safeParseInt(req.params.id);
+      
+      if (id === undefined) {
+        return res.status(400).json({ message: "Invalid id format" });
+      }
+      
       const updateData = insertTestRunSchema.partial().parse(req.body);
       
       const updatedTestRun = await storage.updateTestRun(id, updateData);
