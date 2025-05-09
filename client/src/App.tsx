@@ -6,6 +6,7 @@ import Dashboard from "@/pages/dashboard";
 import Assessments from "@/pages/assessments";
 import AiInsights from "@/pages/ai-insights";
 import TestManagement from "@/pages/test-management";
+import TestExecution from "@/pages/test-execution";
 import DesignSystem from "@/pages/design-system";
 import Documentation from "@/pages/documentation";
 import Projects from "@/pages/projects";
