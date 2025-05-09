@@ -115,6 +115,7 @@ export interface IStorage {
   // Test Runs
   getTestRuns(cycleItemId: number): Promise<TestRun[]>;
   getTestRun(id: number): Promise<TestRun | undefined>;
+  getTestRunsByTestCase(testCaseId: number): Promise<TestRun[]>;
   createTestRun(testRun: InsertTestRun): Promise<TestRun>;
   updateTestRun(id: number, testRun: Partial<InsertTestRun>): Promise<TestRun | undefined>;
 }
