@@ -1091,6 +1091,202 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test Cycles API endpoints
+  app.get("/api/test-cycles", async (req, res) => {
+    try {
+      const projectId = req.query.projectId ? parseInt(req.query.projectId as string) : undefined;
+      const testCycles = await storage.getTestCycles(projectId);
+      res.json(testCycles);
+    } catch (error) {
+      console.error("Error fetching test cycles:", error);
+      res.status(500).json({ message: "Failed to fetch test cycles" });
+    }
+  });
+
+  app.get("/api/test-cycles/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const testCycle = await storage.getTestCycle(id);
+      
+      if (!testCycle) {
+        return res.status(404).json({ message: "Test cycle not found" });
+      }
+      
+      res.json(testCycle);
+    } catch (error) {
+      console.error("Error fetching test cycle:", error);
+      res.status(500).json({ message: "Failed to fetch test cycle" });
+    }
+  });
+
+  app.post("/api/test-cycles", async (req, res) => {
+    try {
+      const testCycleData = insertTestCycleSchema.parse(req.body);
+      const newTestCycle = await storage.createTestCycle(testCycleData);
+      res.status(201).json(newTestCycle);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data format", errors: error.errors });
+      }
+      console.error("Error creating test cycle:", error);
+      res.status(500).json({ message: "Failed to create test cycle" });
+    }
+  });
+
+  app.patch("/api/test-cycles/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updateData = insertTestCycleSchema.partial().parse(req.body);
+      
+      const updatedTestCycle = await storage.updateTestCycle(id, updateData);
+      
+      if (!updatedTestCycle) {
+        return res.status(404).json({ message: "Test cycle not found" });
+      }
+      
+      res.json(updatedTestCycle);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data format", errors: error.errors });
+      }
+      console.error("Error updating test cycle:", error);
+      res.status(500).json({ message: "Failed to update test cycle" });
+    }
+  });
+
+  // Test Cycle Items API endpoints
+  app.get("/api/test-cycle-items/:cycleId", async (req, res) => {
+    try {
+      const cycleId = parseInt(req.params.cycleId);
+      const testCycleItems = await storage.getTestCycleItems(cycleId);
+      res.json(testCycleItems);
+    } catch (error) {
+      console.error("Error fetching test cycle items:", error);
+      res.status(500).json({ message: "Failed to fetch test cycle items" });
+    }
+  });
+
+  app.post("/api/test-cycle-items", async (req, res) => {
+    try {
+      const testCycleItemData = insertTestCycleItemSchema.parse(req.body);
+      const newTestCycleItem = await storage.createTestCycleItem(testCycleItemData);
+      res.status(201).json(newTestCycleItem);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data format", errors: error.errors });
+      }
+      console.error("Error creating test cycle item:", error);
+      res.status(500).json({ message: "Failed to create test cycle item" });
+    }
+  });
+
+  app.patch("/api/test-cycle-items/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updateData = insertTestCycleItemSchema.partial().parse(req.body);
+      
+      const updatedTestCycleItem = await storage.updateTestCycleItem(id, updateData);
+      
+      if (!updatedTestCycleItem) {
+        return res.status(404).json({ message: "Test cycle item not found" });
+      }
+      
+      res.json(updatedTestCycleItem);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data format", errors: error.errors });
+      }
+      console.error("Error updating test cycle item:", error);
+      res.status(500).json({ message: "Failed to update test cycle item" });
+    }
+  });
+
+  // Add test cases to cycle
+  app.post("/api/test-cycles/:cycleId/add-test-cases", async (req, res) => {
+    try {
+      const cycleId = parseInt(req.params.cycleId);
+      const { testCaseIds, suiteId } = req.body;
+      
+      if (!testCaseIds || !Array.isArray(testCaseIds) || testCaseIds.length === 0) {
+        return res.status(400).json({ message: "testCaseIds array is required" });
+      }
+      
+      const addedItems = await storage.addTestCasesToCycle(
+        cycleId, 
+        testCaseIds.map(id => parseInt(id)), 
+        suiteId ? parseInt(suiteId) : undefined
+      );
+      
+      res.status(201).json(addedItems);
+    } catch (error) {
+      console.error("Error adding test cases to cycle:", error);
+      res.status(500).json({ message: "Failed to add test cases to cycle" });
+    }
+  });
+
+  // Test Runs API endpoints
+  app.get("/api/test-runs/:cycleItemId", async (req, res) => {
+    try {
+      const cycleItemId = parseInt(req.params.cycleItemId);
+      const testRuns = await storage.getTestRuns(cycleItemId);
+      res.json(testRuns);
+    } catch (error) {
+      console.error("Error fetching test runs:", error);
+      res.status(500).json({ message: "Failed to fetch test runs" });
+    }
+  });
+
+  app.get("/api/test-runs/detail/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const testRun = await storage.getTestRun(id);
+      
+      if (!testRun) {
+        return res.status(404).json({ message: "Test run not found" });
+      }
+      
+      res.json(testRun);
+    } catch (error) {
+      console.error("Error fetching test run:", error);
+      res.status(500).json({ message: "Failed to fetch test run" });
+    }
+  });
+
+  app.post("/api/test-runs", async (req, res) => {
+    try {
+      const testRunData = insertTestRunSchema.parse(req.body);
+      const newTestRun = await storage.createTestRun(testRunData);
+      res.status(201).json(newTestRun);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data format", errors: error.errors });
+      }
+      console.error("Error creating test run:", error);
+      res.status(500).json({ message: "Failed to create test run" });
+    }
+  });
+
+  app.patch("/api/test-runs/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updateData = insertTestRunSchema.partial().parse(req.body);
+      
+      const updatedTestRun = await storage.updateTestRun(id, updateData);
+      
+      if (!updatedTestRun) {
+        return res.status(404).json({ message: "Test run not found" });
+      }
+      
+      res.json(updatedTestRun);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data format", errors: error.errors });
+      }
+      console.error("Error updating test run:", error);
+      res.status(500).json({ message: "Failed to update test run" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
