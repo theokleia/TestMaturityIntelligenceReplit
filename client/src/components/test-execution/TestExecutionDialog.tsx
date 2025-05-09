@@ -303,7 +303,7 @@ export function TestExecutionDialog({
             variant="outline" 
             onClick={() => onOpenChange(false)}
           >
-            Cancel
+            Close
           </Button>
         </DialogFooter>
       </DialogContent>

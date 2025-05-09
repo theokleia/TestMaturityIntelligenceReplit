@@ -640,6 +640,7 @@ export default function TestExecutionPage() {
             run.cycleItemId === selectedCycleItem
           )}
           showHistory={false}
+          isPending={createRunMutation.isPending}
         />
         
         {/* Test Case History Dialog */}
