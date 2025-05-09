@@ -123,6 +123,10 @@ export default function TestExecutionPage() {
     refetch: refetchCaseHistory
   } = useTestRunsByTestCase(selectedTestCaseId || undefined);
   
+  // Add state for history test runs that will be managed separately
+  // and shown in the history dialog
+  const [historyTestRuns, setHistoryTestRuns] = useState<TestRun[]>([]);
+  
   // Mutations
   const createCycleMutation = useCreateTestCycle();
   const updateCycleMutation = useUpdateTestCycle();
@@ -314,15 +318,24 @@ export default function TestExecutionPage() {
   
   // Handle clicking the history button (history icon)
   const handleViewTestCaseHistory = async (testCaseId: number) => {
+    // First set the selected test case ID 
     setSelectedTestCaseId(testCaseId);
     
     try {
-      // Explicitly await the refetch to ensure data is loaded
-      const result = await refetchCaseHistory();
-      console.log("History data fetched:", result.data);
+      // Make a direct fetch to get the most current data
+      const response = await fetch(`/api/test-runs/test-case/${testCaseId}`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch test runs: ${response.statusText}`);
+      }
+      
+      const testRunsData = await response.json();
+      console.log("Direct fetch test history data:", testRunsData);
       
       // Only open the dialog if we have data
-      if (result.data) {
+      if (testRunsData && testRunsData.length > 0) {
+        // Force update the test runs data
+        setHistoryTestRuns(testRunsData);
         setHistoryDialogOpen(true);
       } else {
         toast({
@@ -673,7 +686,7 @@ export default function TestExecutionPage() {
           open={historyDialogOpen}
           onOpenChange={setHistoryDialogOpen}
           testCase={selectedTestCaseId ? testCasesMap[selectedTestCaseId] : undefined}
-          testRuns={allTestCaseRuns}
+          testRuns={historyTestRuns}
         />
       </PageContainer>
     </AppLayout>
