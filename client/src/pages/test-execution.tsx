@@ -51,8 +51,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -60,12 +58,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { StatusBadgeVariant, StatusBadge } from "@/components/design-system/status-badge";
 import { TabView } from "@/components/design-system/tab-view";
 import {
   PlayCircle,
@@ -73,35 +72,62 @@ import {
   Plus,
   Check,
   X,
-  SkipForward,
-  AlertCircle,
   Clock,
+  AlertCircle,
   ListChecks,
-  Trash2
+  Trash2,
+  AlertTriangle
 } from "lucide-react";
+import { format } from "date-fns";
 import { z } from "zod";
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { StatusBadge, type StatusBadgeVariant } from "@/components/design-system/status-badge";
+import { useForm } from "react-hook-form";
 
-// Schema for creating a test cycle
+// Test cycle form schema
 const testCycleSchema = z.object({
-  name: z.string().min(1, "Name is required"),
+  name: z.string().min(1, "Cycle name is required"),
   description: z.string().optional(),
-  status: z.string().default("created"),
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
+  status: z.string().default("planned"),
+  startDate: z.date().optional().nullable(),
+  endDate: z.date().optional().nullable(),
 });
 
-// Test Execution Page
+type TestCycleFormValues = z.infer<typeof testCycleSchema>;
+
+// Test run form schema
+const testRunSchema = z.object({
+  status: z.string().min(1, "Status is required"),
+  notes: z.string().optional().nullable(),
+});
+
+type TestRunFormValues = z.infer<typeof testRunSchema>;
+
+// Helper function to render status badge with appropriate color
+function renderStatusBadge(status: string): JSX.Element {
+  const statusMap: Record<string, { variant: StatusBadgeVariant, label: string }> = {
+    "planned": { variant: "muted", label: "Planned" },
+    "in_progress": { variant: "warning", label: "In Progress" },
+    "completed": { variant: "default", label: "Completed" },
+    "blocked": { variant: "danger", label: "Blocked" },
+    "passed": { variant: "success", label: "Passed" },
+    "failed": { variant: "danger", label: "Failed" },
+    "skipped": { variant: "muted", label: "Skipped" },
+    "not_executed": { variant: "muted", label: "Not Executed" },
+  };
+  
+  const config = statusMap[status] || { variant: "muted", label: status };
+  
+  return <StatusBadge variant={config.variant}>{config.label}</StatusBadge>;
+}
+
 export default function TestExecution() {
   const { toast } = useToast();
   const { selectedProject } = useProject();
   const projectId = selectedProject?.id;
   
   // State
-  const [selectedCycle, setSelectedCycle] = useState<TestCycle | null>(null);
   const [activeTab, setActiveTab] = useState("cycles");
+  const [selectedCycle, setSelectedCycle] = useState<TestCycle | null>(null);
   const [newCycleDialogOpen, setNewCycleDialogOpen] = useState(false);
   const [editCycleDialogOpen, setEditCycleDialogOpen] = useState(false);
   const [selectCasesDialogOpen, setSelectCasesDialogOpen] = useState(false);
@@ -113,270 +139,526 @@ export default function TestExecution() {
   const [selectedCycleItem, setSelectedCycleItem] = useState<TestCycleItem | null>(null);
   const [selectedTestCaseId, setSelectedTestCaseId] = useState<number | null>(null);
   const [testRunNotes, setTestRunNotes] = useState("");
-  
-  // Forms
-  const newCycleForm = useForm<z.infer<typeof testCycleSchema>>({
-    resolver: zodResolver(testCycleSchema),
-    defaultValues: {
-      name: "",
-      description: "",
-      status: "created"
-    },
-  });
-  
-  const editCycleForm = useForm<z.infer<typeof testCycleSchema>>({
-    resolver: zodResolver(testCycleSchema),
-    defaultValues: {
-      name: "",
-      description: "",
-      status: "created"
-    },
-  });
-  
+
   // Queries
-  const { data: testCycles, isLoading: isLoadingCycles } = useTestCycles(projectId);
-  const { data: cycleItems, isLoading: isLoadingItems } = useTestCycleItems(selectedCycle?.id || 0);
-  const { data: runs, isLoading: isLoadingRuns } = useTestRuns(selectedCycleItem?.id || 0);
-  const { data: testRunHistory, isLoading: isLoadingHistory } = useTestRunsByTestCase(selectedTestCaseId || 0);
-  const { testCases, isLoading: isLoadingCases } = useTestCases({
-    projectId,
-  });
-  const { testSuites, isLoading: isLoadingSuites } = useTestSuites({
-    projectId,
-  });
+  const { 
+    data: testCycles,
+    isLoading: isLoadingCycles, 
+    refetch: refetchCycles
+  } = useTestCycles(projectId);
+  
+  const {
+    data: cycleItems,
+    isLoading: isLoadingItems,
+    refetch: refetchItems
+  } = useTestCycleItems(selectedCycle?.id);
+  
+  const {
+    data: testSuites,
+    isLoading: isLoadingSuites
+  } = useTestSuites({ projectId });
+  
+  const {
+    data: testCases,
+    isLoading: isLoadingCases
+  } = useTestCases({ projectId });
+  
+  const {
+    data: testRuns,
+    isLoading: isLoadingRuns,
+    refetch: refetchRuns
+  } = useTestRuns(selectedCycleItem?.id);
+  
+  const {
+    data: testRunHistory,
+    isLoading: isLoadingHistory
+  } = useTestRunsByTestCase(selectedTestCaseId);
   
   // Mutations
   const createCycleMutation = useCreateTestCycle();
-  const updateCycleMutation = useUpdateTestCycle(selectedCycle?.id || 0);
+  const updateCycleMutation = useUpdateTestCycle();
   const addCasesMutation = useAddTestCasesToCycle();
   const addSuiteMutation = useAddTestSuiteToCycle();
-  const removeTestCaseMutation = useRemoveTestCaseFromCycle();
-  const updateItemMutation = useUpdateTestCycleItem(selectedCycleItem?.id || 0);
+  const removeCaseMutation = useRemoveTestCaseFromCycle();
+  const updateCycleItemMutation = useUpdateTestCycleItem();
   const createRunMutation = useCreateTestRun();
   
-  // Handlers
-  const handleCreateCycle = (data: z.infer<typeof testCycleSchema>) => {
-    if (!projectId) return;
-    
-    // Convert string dates to Date objects
-    const payload = {
-      ...data,
-      projectId,
-      startDate: data.startDate ? new Date(data.startDate) : undefined,
-      endDate: data.endDate ? new Date(data.endDate) : undefined
-    };
-    
-    createCycleMutation.mutate(payload, {
-      onSuccess: (newCycle) => {
-        toast({
-          title: "Test Cycle Created",
-          description: `"${newCycle.name}" has been created successfully.`,
-        });
-        setNewCycleDialogOpen(false);
-        newCycleForm.reset();
-        setSelectedCycle(newCycle);
-        setActiveTab("execution");
-      },
-      onError: (error) => {
-        toast({
-          title: "Error",
-          description: "Failed to create test cycle. Please try again.",
-          variant: "destructive",
-        });
-      }
-    });
-  };
-  
-  const handleAddCases = () => {
-    if (!selectedCycle || selectedCases.length === 0) return;
-    
-    addCasesMutation.mutate({
-      cycleId: selectedCycle.id,
-      testCaseIds: selectedCases
-    }, {
-      onSuccess: () => {
-        toast({
-          title: "Test Cases Added",
-          description: `${selectedCases.length} test cases added to cycle.`,
-        });
-        setSelectCasesDialogOpen(false);
-        setSelectedCases([]);
-      },
-      onError: (error) => {
-        toast({
-          title: "Error",
-          description: "Failed to add test cases. Please try again.",
-          variant: "destructive",
-        });
-      }
-    });
-  };
-  
-  const handleAddSuite = () => {
-    if (!selectedCycle || !selectedSuiteId) return;
-    
-    addSuiteMutation.mutate({
-      cycleId: selectedCycle.id,
-      suiteId: selectedSuiteId
-    }, {
-      onSuccess: (result) => {
-        toast({
-          title: "Test Suite Added",
-          description: `Test suite with ${result.length} test cases added to cycle.`,
-        });
-        setSelectSuiteDialogOpen(false);
-        setSelectedSuiteId(null);
-      },
-      onError: (error) => {
-        toast({
-          title: "Error",
-          description: "Failed to add test suite. Please try again.",
-          variant: "destructive",
-        });
-      }
-    });
-  };
-  
-  const handleRunTest = (status: string) => {
-    if (!selectedCycleItem) return;
-    
-    createRunMutation.mutate({
-      cycleItemId: selectedCycleItem.id,
-      status,
-      notes: testRunNotes || `Test ${status} - executed manually`,
-      executedAt: new Date().toISOString(),
-    }, {
-      onSuccess: () => {
-        toast({
-          title: "Test Executed",
-          description: `Test status updated to ${status}.`,
-        });
-        setTestRunDialogOpen(false);
-        setTestRunNotes(""); // Reset notes for next execution
-      },
-      onError: (error) => {
-        toast({
-          title: "Error",
-          description: "Failed to execute test. Please try again.",
-          variant: "destructive",
-        });
-      }
-    });
-  };
-  
-  const handleEditCycle = (data: z.infer<typeof testCycleSchema>) => {
-    if (!selectedCycle) return;
-    
-    // Convert string dates to Date objects
-    const payload = {
-      ...data,
-      startDate: data.startDate ? new Date(data.startDate) : undefined,
-      endDate: data.endDate ? new Date(data.endDate) : undefined
-    };
-    
-    // Execute the mutation directly
-    updateCycleMutation.mutate(payload, {
-      onSuccess: (updatedCycle: any) => {
-        toast({
-          title: "Test Cycle Updated",
-          description: `"${updatedCycle.name}" has been updated successfully.`,
-        });
-        setEditCycleDialogOpen(false);
-        setSelectedCycle(updatedCycle);
-      },
-      onError: (error: any) => {
-        toast({
-          title: "Error",
-          description: "Failed to update test cycle. Please try again.",
-          variant: "destructive",
-        });
-      }
-    });
-  };
-  
-  const handleRemoveTestCase = (item: TestCycleItem) => {
-    if (!selectedCycle) return;
-    
-    removeTestCaseMutation.mutate({
-      itemId: item.id,
-      cycleId: selectedCycle.id
-    }, {
-      onSuccess: () => {
-        toast({
-          title: "Test Case Removed",
-          description: "Test case has been removed from the cycle successfully.",
-        });
-      },
-      onError: (error) => {
-        toast({
-          title: "Error",
-          description: "Failed to remove test case from cycle. Please try again.",
-          variant: "destructive",
-        });
-      }
-    });
-  };
-  
-  // Effect to auto-select first cycle if none selected
-  useEffect(() => {
-    if (testCycles && testCycles.length > 0 && !selectedCycle) {
-      setSelectedCycle(testCycles[0]);
+  // Forms
+  const cycleForm = useForm<TestCycleFormValues>({
+    resolver: zodResolver(testCycleSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      status: "planned",
+      startDate: null,
+      endDate: null,
     }
-  }, [testCycles, selectedCycle]);
+  });
   
-  // Effect to populate edit form when a cycle is selected for editing
+  const runForm = useForm<TestRunFormValues>({
+    resolver: zodResolver(testRunSchema),
+    defaultValues: {
+      status: "not_executed",
+      notes: "",
+    }
+  });
+  
+  // Effects
   useEffect(() => {
     if (selectedCycle && editCycleDialogOpen) {
-      editCycleForm.reset({
+      cycleForm.reset({
         name: selectedCycle.name,
         description: selectedCycle.description || "",
-        status: selectedCycle.status || "created",
-        startDate: selectedCycle.startDate 
-          ? new Date(selectedCycle.startDate).toISOString().split('T')[0] 
-          : undefined,
-        endDate: selectedCycle.endDate 
-          ? new Date(selectedCycle.endDate).toISOString().split('T')[0] 
-          : undefined,
+        status: selectedCycle.status,
+        startDate: selectedCycle.startDate ? new Date(selectedCycle.startDate) : null,
+        endDate: selectedCycle.endDate ? new Date(selectedCycle.endDate) : null,
       });
     }
-  }, [selectedCycle, editCycleDialogOpen]);
+  }, [selectedCycle, editCycleDialogOpen, cycleForm]);
   
-  // Render status badge
-  const renderStatusBadge = (status: string | null) => {
-    if (!status) return <StatusBadge variant="muted">Unknown</StatusBadge>;
+  useEffect(() => {
+    if (selectedCycleItem && testRunDialogOpen) {
+      runForm.reset({
+        status: selectedCycleItem.status || "not_executed",
+        notes: "",
+      });
+    }
+  }, [selectedCycleItem, testRunDialogOpen, runForm]);
+  
+  // Helper Functions
+  const getTestCaseDetails = (id: number): TestCase | undefined => {
+    return testCases?.find(tc => tc.id === id);
+  };
+  
+  // Handlers
+  const handleCreateCycle = (data: TestCycleFormValues) => {
+    if (!projectId) return;
     
-    const statusMap: Record<string, { variant: StatusBadgeVariant, label: string }> = {
-      "not-run": { variant: "muted", label: "Not Run" },
-      "pass": { variant: "success", label: "Pass" },
-      "fail": { variant: "danger", label: "Fail" },
-      "skip": { variant: "warning", label: "Skipped" },
-      "blocked": { variant: "danger", label: "Blocked" },
-      "in-progress": { variant: "blue", label: "In Progress" },
-      "created": { variant: "blue", label: "Created" },
-      "completed": { variant: "success", label: "Completed" },
-    };
-    
-    const statusInfo = statusMap[status] || { variant: "muted", label: status };
-    
-    return (
-      <StatusBadge variant={statusInfo.variant}>
-        {statusInfo.label}
-      </StatusBadge>
+    createCycleMutation.mutate(
+      {
+        ...data,
+        projectId
+      },
+      {
+        onSuccess: (newCycle) => {
+          toast({
+            title: "Success",
+            description: "Test cycle created successfully",
+          });
+          
+          setNewCycleDialogOpen(false);
+          cycleForm.reset();
+          refetchCycles();
+          setSelectedCycle(newCycle);
+          setActiveTab("execution");
+        },
+        onError: (error) => {
+          toast({
+            title: "Error",
+            description: "Failed to create test cycle",
+            variant: "destructive",
+          });
+        }
+      }
     );
   };
   
-  // Get associated test case details
-  const getTestCaseDetails = (testCaseId: number): TestCase | undefined => {
-    return testCases?.find(tc => tc.id === testCaseId);
+  const handleUpdateCycle = (data: TestCycleFormValues) => {
+    if (!selectedCycle) return;
+    
+    updateCycleMutation.mutate(
+      {
+        id: selectedCycle.id,
+        ...data,
+      },
+      {
+        onSuccess: (updatedCycle) => {
+          toast({
+            title: "Success",
+            description: "Test cycle updated successfully",
+          });
+          
+          setEditCycleDialogOpen(false);
+          refetchCycles();
+          setSelectedCycle(updatedCycle);
+        },
+        onError: (error) => {
+          toast({
+            title: "Error",
+            description: "Failed to update test cycle",
+            variant: "destructive",
+          });
+        }
+      }
+    );
   };
+  
+  const handleAddTestCases = () => {
+    if (!selectedCycle || !selectedCases.length) return;
+    
+    addCasesMutation.mutate(
+      {
+        cycleId: selectedCycle.id,
+        testCaseIds: selectedCases,
+      },
+      {
+        onSuccess: () => {
+          toast({
+            title: "Success",
+            description: `Added ${selectedCases.length} test case(s) to cycle`,
+          });
+          
+          setSelectCasesDialogOpen(false);
+          setSelectedCases([]);
+          refetchItems();
+        },
+        onError: (error) => {
+          toast({
+            title: "Error",
+            description: "Failed to add test cases to cycle",
+            variant: "destructive",
+          });
+        }
+      }
+    );
+  };
+  
+  const handleAddTestSuite = () => {
+    if (!selectedCycle || !selectedSuiteId) return;
+    
+    addSuiteMutation.mutate(
+      {
+        cycleId: selectedCycle.id,
+        suiteId: selectedSuiteId,
+      },
+      {
+        onSuccess: () => {
+          toast({
+            title: "Success",
+            description: "Added test suite to cycle",
+          });
+          
+          setSelectSuiteDialogOpen(false);
+          setSelectedSuiteId(null);
+          refetchItems();
+        },
+        onError: (error) => {
+          toast({
+            title: "Error",
+            description: "Failed to add test suite to cycle",
+            variant: "destructive",
+          });
+        }
+      }
+    );
+  };
+  
+  const handleRemoveTestCase = (item: TestCycleItem) => {
+    removeCaseMutation.mutate(
+      {
+        id: item.id,
+      },
+      {
+        onSuccess: () => {
+          toast({
+            title: "Success",
+            description: "Test case removed from cycle",
+          });
+          
+          refetchItems();
+        },
+        onError: (error) => {
+          toast({
+            title: "Error",
+            description: "Failed to remove test case from cycle",
+            variant: "destructive",
+          });
+        }
+      }
+    );
+  };
+  
+  const handleCreateTestRun = (data: TestRunFormValues) => {
+    if (!selectedCycleItem || !selectedTestCaseId) return;
+    
+    createRunMutation.mutate(
+      {
+        cycleItemId: selectedCycleItem.id,
+        testCaseId: selectedTestCaseId,
+        status: data.status,
+        notes: data.notes || "",
+        steps: null,
+      },
+      {
+        onSuccess: () => {
+          toast({
+            title: "Success",
+            description: "Test run recorded successfully",
+          });
+          
+          // Update the cycle item status to match the test run
+          updateCycleItemMutation.mutate(
+            {
+              id: selectedCycleItem.id,
+              status: data.status,
+            },
+            {
+              onSuccess: () => {
+                refetchItems();
+                refetchRuns();
+                setTestRunDialogOpen(false);
+                runForm.reset();
+              }
+            }
+          );
+        },
+        onError: (error) => {
+          toast({
+            title: "Error",
+            description: "Failed to record test run",
+            variant: "destructive",
+          });
+        }
+      }
+    );
+  };
+  
+  // Define TabView content
+  const tabItems = [
+    {
+      id: "cycles",
+      label: "Test Cycles",
+      content: (
+        <div className="space-y-6">
+          <ATMFCard>
+            <ATMFCardHeader title="All Test Cycles" />
+            
+            <div className="p-6">
+              {isLoadingCycles ? (
+                <div className="text-center py-8">Loading test cycles...</div>
+              ) : testCycles && testCycles.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Start Date</TableHead>
+                      <TableHead>End Date</TableHead>
+                      <TableHead>Progress</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {testCycles.map((cycle) => (
+                      <TableRow 
+                        key={cycle.id}
+                        className={selectedCycle?.id === cycle.id ? "bg-primary/5" : ""}
+                        onClick={() => setSelectedCycle(cycle)}
+                      >
+                        <TableCell className="font-medium">{cycle.name}</TableCell>
+                        <TableCell>{renderStatusBadge(cycle.status)}</TableCell>
+                        <TableCell>{cycle.startDate ? new Date(cycle.startDate).toLocaleDateString() : "Not started"}</TableCell>
+                        <TableCell>{cycle.endDate ? new Date(cycle.endDate).toLocaleDateString() : "No end date"}</TableCell>
+                        <TableCell>-</TableCell>
+                        <TableCell className="text-right">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedCycle(cycle);
+                              setActiveTab("execution");
+                            }}
+                          >
+                            <PlayCircle size={16} className="mr-2" />
+                            Execute
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No test cycles found. Create a new test cycle to get started.
+                </div>
+              )}
+            </div>
+          </ATMFCard>
+        </div>
+      )
+    },
+    {
+      id: "execution",
+      label: "Test Execution",
+      content: selectedCycle ? (
+        <div className="space-y-6">
+          <ATMFCard>
+            <ATMFCardHeader 
+              title={selectedCycle.name} 
+              description={selectedCycle.description || "No description"} 
+              action={
+                <div className="flex space-x-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setEditCycleDialogOpen(true)}
+                  >
+                    <Calendar size={16} className="mr-2" />
+                    Edit Cycle
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setSelectSuiteDialogOpen(true)}
+                  >
+                    <ListChecks size={16} className="mr-2" />
+                    Add Test Suite
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setSelectCasesDialogOpen(true)}
+                  >
+                    <Plus size={16} className="mr-2" />
+                    Add Test Cases
+                  </Button>
+                </div>
+              }
+            />
+            
+            <div className="p-6 grid grid-cols-4 gap-6 bg-atmf-card/30">
+              <div className="p-4 bg-atmf-card rounded-lg">
+                <span className="text-sm text-muted-foreground">Status</span>
+                <div className="mt-1">{renderStatusBadge(selectedCycle.status)}</div>
+              </div>
+              
+              <div className="p-4 bg-atmf-card rounded-lg">
+                <span className="text-sm text-muted-foreground">Created</span>
+                <div className="mt-1">
+                  {selectedCycle.createdAt ? new Date(selectedCycle.createdAt).toLocaleDateString() : "Unknown"}
+                </div>
+              </div>
+              
+              <div className="p-4 bg-atmf-card rounded-lg">
+                <span className="text-sm text-muted-foreground">Start Date</span>
+                <div className="mt-1">
+                  {selectedCycle.startDate ? new Date(selectedCycle.startDate).toLocaleDateString() : "Not set"}
+                </div>
+              </div>
+              
+              <div className="p-4 bg-atmf-card rounded-lg">
+                <span className="text-sm text-muted-foreground">End Date</span>
+                <div className="mt-1">
+                  {selectedCycle.endDate ? new Date(selectedCycle.endDate).toLocaleDateString() : "Not set"}
+                </div>
+              </div>
+            </div>
+          </ATMFCard>
+          
+          <ATMFCard>
+            <ATMFCardHeader title="Test Cases" description="Execute test cases in this cycle" />
+            
+            <div className="p-6">
+              {isLoadingItems ? (
+                <div className="text-center py-8">Loading test cases...</div>
+              ) : cycleItems && cycleItems.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ID</TableHead>
+                      <TableHead>Test Case</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Last Executed</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {cycleItems.map((item) => {
+                      const testCase = getTestCaseDetails(item.testCaseId);
+                      return (
+                        <TableRow key={item.id}>
+                          <TableCell className="font-mono">{item.testCaseId}</TableCell>
+                          <TableCell>{testCase?.title || `Test Case #${item.testCaseId}`}</TableCell>
+                          <TableCell>{renderStatusBadge(item.status)}</TableCell>
+                          <TableCell>{item.updatedAt ? new Date(item.updatedAt).toLocaleString() : "Never"}</TableCell>
+                          <TableCell className="text-right space-x-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => {
+                                setSelectedCycleItem(item);
+                                setSelectedTestCaseId(item.testCaseId);
+                                setTestRunDialogOpen(true);
+                              }}
+                            >
+                              <PlayCircle size={16} className="mr-2" />
+                              Execute
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => {
+                                setSelectedTestCaseId(item.testCaseId);
+                                setHistoryDialogOpen(true);
+                              }}
+                            >
+                              <Clock size={16} className="mr-2" />
+                              History
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="text-red-500 hover:text-red-700 hover:bg-red-100/20"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveTestCase(item);
+                              }}
+                            >
+                              <Trash2 size={16} />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No test cases in this cycle. Add test cases to start execution.
+                </div>
+              )}
+            </div>
+          </ATMFCard>
+        </div>
+      ) : (
+        <div className="flex items-center justify-center p-12 border border-dashed rounded-lg">
+          <div className="text-center">
+            <AlertCircle className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+            <h3 className="text-lg font-medium mb-2">No Test Cycle Selected</h3>
+            <p className="text-muted-foreground mb-4">Please select a test cycle to view execution details.</p>
+            <Button variant="outline" onClick={() => setActiveTab("cycles")}>View Test Cycles</Button>
+          </div>
+        </div>
+      )
+    }
+  ];
 
   return (
-    <PageContainer withPadding className="py-8">
+    <PageContainer>
       <PageHeader
         title="Test Execution"
-        description="Execute test cases and manage test cycles"
-        actions={
-          <Button className="flex items-center gap-2" onClick={() => setNewCycleDialogOpen(true)}>
+        description="Execute test cases and record results"
+        action={
+          <Button 
+            onClick={() => {
+              cycleForm.reset({
+                name: "",
+                description: "",
+                status: "planned",
+                startDate: null,
+                endDate: null,
+              });
+              setNewCycleDialogOpen(true);
+            }}
+          >
             <Plus size={16} />
             <span>New Test Cycle</span>
           </Button>
@@ -384,294 +666,35 @@ export default function TestExecution() {
       />
       
       <PageContent>
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid grid-cols-2 w-[400px]">
-            <TabsTrigger value="cycles">Test Cycles</TabsTrigger>
-            <TabsTrigger value="execution" disabled={!selectedCycle}>Test Execution</TabsTrigger>
-          </TabsList>
-          
-          {/* Test Cycles Tab */}
-          <TabsContent value="cycles" className="space-y-6">
-            <ATMFCard>
-              <ATMFCardHeader title="All Test Cycles" />
-              
-              <div className="p-6">
-                {isLoadingCycles ? (
-                  <div className="text-center py-8">Loading test cycles...</div>
-                ) : testCycles && testCycles.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Start Date</TableHead>
-                        <TableHead>End Date</TableHead>
-                        <TableHead>Progress</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {testCycles.map((cycle) => (
-                        <TableRow 
-                          key={cycle.id}
-                          className={selectedCycle?.id === cycle.id ? "bg-primary/5" : ""}
-                          onClick={() => setSelectedCycle(cycle)}
-                        >
-                          <TableCell className="font-medium">{cycle.name}</TableCell>
-                          <TableCell>{renderStatusBadge(cycle.status)}</TableCell>
-                          <TableCell>{cycle.startDate ? new Date(cycle.startDate).toLocaleDateString() : "Not started"}</TableCell>
-                          <TableCell>{cycle.endDate ? new Date(cycle.endDate).toLocaleDateString() : "No end date"}</TableCell>
-                          <TableCell>-</TableCell>
-                          <TableCell className="text-right">
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedCycle(cycle);
-                                setActiveTab("execution");
-                              }}
-                            >
-                              <PlayCircle size={16} className="mr-2" />
-                              Execute
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No test cycles found. Create a new test cycle to get started.
-                  </div>
-                )}
-              </div>
-            </ATMFCard>
-          </TabsContent>
-          
-          {/* Test Execution Tab */}
-          <TabsContent value="execution" className="space-y-6">
-            <ATMFCard>
-              <ATMFCardHeader title="All Test Cycles" />
-              
-              <div className="p-6">
-                {isLoadingCycles ? (
-                  <div className="text-center py-8">Loading test cycles...</div>
-                ) : testCycles && testCycles.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Start Date</TableHead>
-                        <TableHead>End Date</TableHead>
-                        <TableHead>Progress</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {testCycles.map((cycle) => (
-                        <TableRow 
-                          key={cycle.id}
-                          className={selectedCycle?.id === cycle.id ? "bg-primary/5" : ""}
-                          onClick={() => setSelectedCycle(cycle)}
-                        >
-                          <TableCell className="font-medium">{cycle.name}</TableCell>
-                          <TableCell>{renderStatusBadge(cycle.status)}</TableCell>
-                          <TableCell>{cycle.startDate ? new Date(cycle.startDate).toLocaleDateString() : "Not started"}</TableCell>
-                          <TableCell>{cycle.endDate ? new Date(cycle.endDate).toLocaleDateString() : "No end date"}</TableCell>
-                          <TableCell>-</TableCell>
-                          <TableCell className="text-right">
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedCycle(cycle);
-                                setActiveTab("execution");
-                              }}
-                            >
-                              <PlayCircle size={16} className="mr-2" />
-                              Execute
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No test cycles found. Create a new test cycle to get started.
-                  </div>
-                )}
-              </div>
-            </ATMFCard>
-          </TabsContent>
-          
-          {/* Test Execution Tab */}
-          <TabsContent value="execution" className="space-y-6">
-            {selectedCycle && (
-              <>
-                <ATMFCard>
-                  <ATMFCardHeader 
-                    title={selectedCycle.name} 
-                    description={selectedCycle.description || "No description"} 
-                    action={
-                      <div className="flex space-x-2">
-                        <Button
-                          variant="outline"
-                          onClick={() => setEditCycleDialogOpen(true)}
-                        >
-                          <Calendar size={16} className="mr-2" />
-                          Edit Cycle
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => setSelectSuiteDialogOpen(true)}
-                        >
-                          <ListChecks size={16} className="mr-2" />
-                          Add Test Suite
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => setSelectCasesDialogOpen(true)}
-                        >
-                          <Plus size={16} className="mr-2" />
-                          Add Test Cases
-                        </Button>
-                      </div>
-                    }
-                  />
-                  
-                  <div className="p-6 grid grid-cols-4 gap-6 bg-atmf-card/30">
-                    <div className="p-4 bg-atmf-card rounded-lg">
-                      <span className="text-sm text-muted-foreground">Status</span>
-                      <div className="mt-1">{renderStatusBadge(selectedCycle.status)}</div>
-                    </div>
-                    
-                    <div className="p-4 bg-atmf-card rounded-lg">
-                      <span className="text-sm text-muted-foreground">Created</span>
-                      <div className="mt-1">
-                        {selectedCycle.createdAt ? new Date(selectedCycle.createdAt).toLocaleDateString() : "Unknown"}
-                      </div>
-                    </div>
-                    
-                    <div className="p-4 bg-atmf-card rounded-lg">
-                      <span className="text-sm text-muted-foreground">Start Date</span>
-                      <div className="mt-1">
-                        {selectedCycle.startDate ? new Date(selectedCycle.startDate).toLocaleDateString() : "Not set"}
-                      </div>
-                    </div>
-                    
-                    <div className="p-4 bg-atmf-card rounded-lg">
-                      <span className="text-sm text-muted-foreground">End Date</span>
-                      <div className="mt-1">
-                        {selectedCycle.endDate ? new Date(selectedCycle.endDate).toLocaleDateString() : "Not set"}
-                      </div>
-                    </div>
-                  </div>
-                </ATMFCard>
-                
-                <ATMFCard>
-                  <ATMFCardHeader title="Test Cases" description="Execute test cases in this cycle" />
-                  
-                  <div className="p-6">
-                    {isLoadingItems ? (
-                      <div className="text-center py-8">Loading test cases...</div>
-                    ) : cycleItems && cycleItems.length > 0 ? (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>ID</TableHead>
-                            <TableHead>Test Case</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Last Executed</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {cycleItems.map((item) => {
-                            const testCase = getTestCaseDetails(item.testCaseId);
-                            return (
-                              <TableRow key={item.id}>
-                                <TableCell className="font-mono">{item.testCaseId}</TableCell>
-                                <TableCell>{testCase?.title || `Test Case #${item.testCaseId}`}</TableCell>
-                                <TableCell>{renderStatusBadge(item.status)}</TableCell>
-                                <TableCell>{item.updatedAt ? new Date(item.updatedAt).toLocaleString() : "Never"}</TableCell>
-                                <TableCell className="text-right space-x-2">
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm"
-                                    onClick={() => {
-                                      setSelectedCycleItem(item);
-                                      setSelectedTestCaseId(item.testCaseId);
-                                      setTestRunDialogOpen(true);
-                                    }}
-                                  >
-                                    <PlayCircle size={16} className="mr-2" />
-                                    Execute
-                                  </Button>
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm"
-                                    onClick={() => {
-                                      setSelectedTestCaseId(item.testCaseId);
-                                      setHistoryDialogOpen(true);
-                                    }}
-                                  >
-                                    <Clock size={16} className="mr-2" />
-                                    History
-                                  </Button>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm"
-                                    className="text-red-500 hover:text-red-700 hover:bg-red-100/20"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleRemoveTestCase(item);
-                                    }}
-                                  >
-                                    <Trash2 size={16} />
-                                  </Button>
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })}
-                        </TableBody>
-                      </Table>
-                    ) : (
-                      <div className="text-center py-8 text-muted-foreground">
-                        No test cases in this cycle. Add test cases to start execution.
-                      </div>
-                    )}
-                  </div>
-                </ATMFCard>
-              </>
-            )}
-          </TabsContent>
-        </Tabs>
+        {/* Using TabView component with underline variant for UI consistency */}
+        <TabView 
+          tabs={tabItems} 
+          activeTab={activeTab} 
+          onChange={setActiveTab} 
+          variant="underline"
+        />
       </PageContent>
       
-      {/* Create New Test Cycle Dialog */}
+      {/* New Test Cycle Dialog */}
       <Dialog open={newCycleDialogOpen} onOpenChange={setNewCycleDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[525px]">
           <DialogHeader>
             <DialogTitle>Create New Test Cycle</DialogTitle>
             <DialogDescription>
-              Create a new test cycle to organize and execute your test cases.
+              Define a new test cycle to group and execute test cases.
             </DialogDescription>
           </DialogHeader>
           
-          <Form {...newCycleForm}>
-            <form onSubmit={newCycleForm.handleSubmit(handleCreateCycle)} className="space-y-4">
+          <Form {...cycleForm}>
+            <form onSubmit={cycleForm.handleSubmit(handleCreateCycle)} className="space-y-4">
               <FormField
-                control={newCycleForm.control}
+                control={cycleForm.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Sprint 23 Regression" {...field} />
+                      <Input {...field} placeholder="Sprint 12 Regression Tests" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -679,13 +702,17 @@ export default function TestExecution() {
               />
               
               <FormField
-                control={newCycleForm.control}
+                control={cycleForm.control}
                 name="description"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Description</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Test cycle description..." {...field} />
+                      <Textarea
+                        {...field}
+                        placeholder="Enter test cycle description"
+                        rows={3}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -694,61 +721,73 @@ export default function TestExecution() {
               
               <div className="grid grid-cols-2 gap-4">
                 <FormField
-                  control={newCycleForm.control}
-                  name="startDate"
+                  control={cycleForm.control}
+                  name="status"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Start Date</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={newCycleForm.control}
-                  name="endDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>End Date</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
+                      <FormLabel>Status</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="planned">Planned</SelectItem>
+                          <SelectItem value="in_progress">In Progress</SelectItem>
+                          <SelectItem value="completed">Completed</SelectItem>
+                          <SelectItem value="blocked">Blocked</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
               
-              <FormField
-                control={newCycleForm.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="created">Created</SelectItem>
-                        <SelectItem value="in-progress">In Progress</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={cycleForm.control}
+                  name="startDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Start Date</FormLabel>
+                      <DatePicker
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        placeholder="Select start date"
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={cycleForm.control}
+                  name="endDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>End Date</FormLabel>
+                      <DatePicker
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        placeholder="Select end date"
+                        fromDate={cycleForm.watch("startDate") || undefined}
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
               
               <DialogFooter>
-                <Button type="submit" disabled={createCycleMutation.isPending}>
-                  {createCycleMutation.isPending ? "Creating..." : "Create Test Cycle"}
+                <Button variant="outline" type="button" onClick={() => setNewCycleDialogOpen(false)}>
+                  Cancel
                 </Button>
+                <Button type="submit" isLoading={createCycleMutation.isPending}>Create Test Cycle</Button>
               </DialogFooter>
             </form>
           </Form>
@@ -757,24 +796,24 @@ export default function TestExecution() {
       
       {/* Edit Test Cycle Dialog */}
       <Dialog open={editCycleDialogOpen} onOpenChange={setEditCycleDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[525px]">
           <DialogHeader>
             <DialogTitle>Edit Test Cycle</DialogTitle>
             <DialogDescription>
-              Update the details of this test cycle.
+              Update test cycle details.
             </DialogDescription>
           </DialogHeader>
           
-          <Form {...editCycleForm}>
-            <form onSubmit={editCycleForm.handleSubmit(handleEditCycle)} className="space-y-4">
+          <Form {...cycleForm}>
+            <form onSubmit={cycleForm.handleSubmit(handleUpdateCycle)} className="space-y-4">
               <FormField
-                control={editCycleForm.control}
+                control={cycleForm.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Sprint 23 Regression" {...field} />
+                      <Input {...field} placeholder="Sprint 12 Regression Tests" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -782,13 +821,17 @@ export default function TestExecution() {
               />
               
               <FormField
-                control={editCycleForm.control}
+                control={cycleForm.control}
                 name="description"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Description</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Test cycle description..." {...field} />
+                      <Textarea
+                        {...field}
+                        placeholder="Enter test cycle description"
+                        rows={3}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -797,61 +840,73 @@ export default function TestExecution() {
               
               <div className="grid grid-cols-2 gap-4">
                 <FormField
-                  control={editCycleForm.control}
-                  name="startDate"
+                  control={cycleForm.control}
+                  name="status"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Start Date</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={editCycleForm.control}
-                  name="endDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>End Date</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
+                      <FormLabel>Status</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="planned">Planned</SelectItem>
+                          <SelectItem value="in_progress">In Progress</SelectItem>
+                          <SelectItem value="completed">Completed</SelectItem>
+                          <SelectItem value="blocked">Blocked</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
               
-              <FormField
-                control={editCycleForm.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="created">Created</SelectItem>
-                        <SelectItem value="in-progress">In Progress</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={cycleForm.control}
+                  name="startDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Start Date</FormLabel>
+                      <DatePicker
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        placeholder="Select start date"
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={cycleForm.control}
+                  name="endDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>End Date</FormLabel>
+                      <DatePicker
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        placeholder="Select end date"
+                        fromDate={cycleForm.watch("startDate") || undefined}
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
               
               <DialogFooter>
-                <Button type="submit">
-                  Update Test Cycle
+                <Button variant="outline" type="button" onClick={() => setEditCycleDialogOpen(false)}>
+                  Cancel
                 </Button>
+                <Button type="submit" isLoading={updateCycleMutation.isPending}>Update Test Cycle</Button>
               </DialogFooter>
             </form>
           </Form>
@@ -860,7 +915,7 @@ export default function TestExecution() {
       
       {/* Select Test Cases Dialog */}
       <Dialog open={selectCasesDialogOpen} onOpenChange={setSelectCasesDialogOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Add Test Cases to Cycle</DialogTitle>
             <DialogDescription>
@@ -868,82 +923,60 @@ export default function TestExecution() {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="max-h-[400px] overflow-y-auto">
+          <div className="space-y-4">
             {isLoadingCases ? (
               <div className="text-center py-8">Loading test cases...</div>
             ) : testCases && testCases.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12">
-                      <span className="sr-only">Select</span>
-                    </TableHead>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Priority</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {testCases.map((testCase) => (
-                    <TableRow key={testCase.id}>
-                      <TableCell>
-                        <input
-                          type="checkbox"
-                          className="w-4 h-4"
-                          checked={selectedCases.includes(testCase.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedCases([...selectedCases, testCase.id]);
-                            } else {
-                              setSelectedCases(selectedCases.filter(id => id !== testCase.id));
-                            }
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell className="font-mono">{testCase.id}</TableCell>
-                      <TableCell>{testCase.title}</TableCell>
-                      <TableCell>
-                        <StatusBadge variant={
-                          testCase.priority === "high" ? "danger" :
-                          testCase.priority === "medium" ? "warning" : "muted"
-                        }>
-                          {testCase.priority.charAt(0).toUpperCase() + testCase.priority.slice(1)}
-                        </StatusBadge>
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge variant={
-                          testCase.status === "passed" ? "success" :
-                          testCase.status === "failed" ? "danger" : "muted"
-                        }>
-                          {testCase.status.charAt(0).toUpperCase() + testCase.status.slice(1)}
-                        </StatusBadge>
-                      </TableCell>
+              <ScrollArea className="h-[400px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[50px]"></TableHead>
+                      <TableHead>ID</TableHead>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Priority</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {testCases.map((testCase) => (
+                      <TableRow key={testCase.id}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedCases.includes(testCase.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedCases(prev => [...prev, testCase.id]);
+                              } else {
+                                setSelectedCases(prev => prev.filter(id => id !== testCase.id));
+                              }
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell className="font-mono">{testCase.id}</TableCell>
+                        <TableCell>{testCase.title}</TableCell>
+                        <TableCell>{testCase.priority}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
-                No test cases available to add.
+                No test cases found for this project.
               </div>
             )}
           </div>
           
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setSelectCasesDialogOpen(false)}
-            >
+            <Button variant="outline" onClick={() => setSelectCasesDialogOpen(false)}>
               Cancel
             </Button>
-            <Button
-              onClick={handleAddCases}
-              disabled={selectedCases.length === 0 || addCasesMutation.isPending}
+            <Button 
+              disabled={selectedCases.length === 0} 
+              onClick={handleAddTestCases}
+              isLoading={addCasesMutation.isPending}
             >
-              {addCasesMutation.isPending 
-                ? "Adding Cases..." 
-                : `Add ${selectedCases.length} Cases`}
+              Add {selectedCases.length} Test Case{selectedCases.length !== 1 ? 's' : ''}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -951,7 +984,7 @@ export default function TestExecution() {
       
       {/* Select Test Suite Dialog */}
       <Dialog open={selectSuiteDialogOpen} onOpenChange={setSelectSuiteDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Add Test Suite to Cycle</DialogTitle>
             <DialogDescription>
@@ -959,320 +992,264 @@ export default function TestExecution() {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="max-h-[400px] overflow-y-auto">
+          <div className="space-y-4">
             {isLoadingSuites ? (
               <div className="text-center py-8">Loading test suites...</div>
             ) : testSuites && testSuites.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12">
-                      <span className="sr-only">Select</span>
-                    </TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Priority</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              <Select 
+                onValueChange={(value) => setSelectedSuiteId(Number(value))}
+                value={selectedSuiteId?.toString()}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a test suite" />
+                </SelectTrigger>
+                <SelectContent>
                   {testSuites.map((suite) => (
-                    <TableRow key={suite.id}>
-                      <TableCell>
-                        <input
-                          type="radio"
-                          className="w-4 h-4"
-                          checked={selectedSuiteId === suite.id}
-                          onChange={() => setSelectedSuiteId(suite.id)}
-                        />
-                      </TableCell>
-                      <TableCell className="font-medium">{suite.name}</TableCell>
-                      <TableCell>{suite.description}</TableCell>
-                      <TableCell>
-                        <StatusBadge variant={
-                          suite.status === "active" ? "success" :
-                          suite.status === "draft" ? "muted" : "warning"
-                        }>
-                          {suite.status.charAt(0).toUpperCase() + suite.status.slice(1)}
-                        </StatusBadge>
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge variant={
-                          suite.priority === "high" ? "danger" :
-                          suite.priority === "medium" ? "warning" : "muted"
-                        }>
-                          {suite.priority.charAt(0).toUpperCase() + suite.priority.slice(1)}
-                        </StatusBadge>
-                      </TableCell>
-                    </TableRow>
+                    <SelectItem key={suite.id} value={suite.id.toString()}>
+                      {suite.name}
+                    </SelectItem>
                   ))}
-                </TableBody>
-              </Table>
+                </SelectContent>
+              </Select>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
-                No test suites available to add.
+                No test suites found for this project.
               </div>
             )}
           </div>
           
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setSelectSuiteDialogOpen(false)}
-            >
+            <Button variant="outline" onClick={() => setSelectSuiteDialogOpen(false)}>
               Cancel
             </Button>
-            <Button
-              onClick={handleAddSuite}
-              disabled={!selectedSuiteId || addSuiteMutation.isPending}
+            <Button 
+              disabled={!selectedSuiteId} 
+              onClick={handleAddTestSuite}
+              isLoading={addSuiteMutation.isPending}
             >
-              {addSuiteMutation.isPending 
-                ? "Adding Suite..." 
-                : "Add Test Suite"}
+              Add Suite
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
       
-      {/* Execute Test Dialog */}
+      {/* Test Run Dialog */}
       <Dialog open={testRunDialogOpen} onOpenChange={setTestRunDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[700px]">
           <DialogHeader>
-            <DialogTitle>Execute Test</DialogTitle>
+            <DialogTitle>Execute Test Case</DialogTitle>
             <DialogDescription>
-              {selectedCycleItem && getTestCaseDetails(selectedCycleItem.testCaseId)?.title}
+              Record test execution results.
             </DialogDescription>
           </DialogHeader>
           
-          {selectedCycleItem && (
+          {selectedCycleItem && selectedTestCaseId && (
             <div className="space-y-6">
-              {/* Test case information section */}
-              <div className="bg-atmf-card rounded-lg p-4">
-                <h3 className="text-lg font-medium mb-3">Test Case Details</h3>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <div className="text-sm text-muted-foreground">ID</div>
-                    <div className="font-mono">{selectedCycleItem.testCaseId}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Current Status</div>
-                    <div>{renderStatusBadge(selectedCycleItem.status)}</div>
-                  </div>
-                  
-                  {/* Test case details */}
-                  {getTestCaseDetails(selectedCycleItem.testCaseId) && (
-                    <>
-                      <div className="col-span-2">
-                        <div className="text-sm text-muted-foreground">Description</div>
-                        <div className="mt-1">
-                          {getTestCaseDetails(selectedCycleItem.testCaseId)?.description || "No description available"}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Priority</div>
-                        <div className="mt-1">
-                          <StatusBadge variant={
-                            getTestCaseDetails(selectedCycleItem.testCaseId)?.priority === "high" ? "danger" :
-                            getTestCaseDetails(selectedCycleItem.testCaseId)?.priority === "medium" ? "warning" : "muted"
-                          }>
-                            {getTestCaseDetails(selectedCycleItem.testCaseId)?.priority?.charAt(0).toUpperCase() + 
-                              getTestCaseDetails(selectedCycleItem.testCaseId)?.priority?.slice(1) || "Unknown"}
-                          </StatusBadge>
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Severity</div>
-                        <div className="mt-1">
-                          <StatusBadge variant={
-                            getTestCaseDetails(selectedCycleItem.testCaseId)?.severity === "critical" ? "danger" :
-                            getTestCaseDetails(selectedCycleItem.testCaseId)?.severity === "major" ? "warning" :
-                            getTestCaseDetails(selectedCycleItem.testCaseId)?.severity === "minor" ? "muted" : "default"
-                          }>
-                            {getTestCaseDetails(selectedCycleItem.testCaseId)?.severity?.charAt(0).toUpperCase() + 
-                              getTestCaseDetails(selectedCycleItem.testCaseId)?.severity?.slice(1) || "Unknown"}
-                          </StatusBadge>
-                        </div>
-                      </div>
-                    </>
-                  )}
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <h3 className="font-medium text-sm text-muted-foreground mb-1">Test Case ID</h3>
+                  <p className="font-mono">{selectedTestCaseId}</p>
+                </div>
+                <div>
+                  <h3 className="font-medium text-sm text-muted-foreground mb-1">Current Status</h3>
+                  <div>{renderStatusBadge(selectedCycleItem.status)}</div>
                 </div>
               </div>
               
-              {/* Test steps section */}
-              <div className="bg-atmf-card rounded-lg p-4">
-                <h3 className="text-lg font-medium mb-3">Test Steps</h3>
-                {getTestCaseDetails(selectedCycleItem.testCaseId)?.steps ? (
-                  <div className="space-y-3">
-                    {(() => {
-                      try {
-                        // Try to parse as JSON if it's a string
-                        const steps = typeof getTestCaseDetails(selectedCycleItem.testCaseId)?.steps === 'string' 
-                          ? JSON.parse(getTestCaseDetails(selectedCycleItem.testCaseId)?.steps as string) 
-                          : getTestCaseDetails(selectedCycleItem.testCaseId)?.steps || [];
-                        
-                        return Array.isArray(steps) ? steps.map((step: any, index: number) => (
-                          <div key={index} className="border-b pb-3 last:border-b-0">
-                            <div className="flex gap-2">
-                              <div className="min-w-[25px] h-6 flex items-center justify-center rounded-full bg-atmf-badge text-xs">
-                                {index + 1}
-                              </div>
-                              <div>
-                                <div className="font-medium">{step.step || step.action || step.description || "Step " + (index + 1)}</div>
-                                {step.expected && (
-                                  <div className="text-sm text-muted-foreground mt-1">
-                                    <span className="font-medium text-primary">Expected:</span> {step.expected}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
+              <div>
+                <h3 className="font-medium text-sm text-muted-foreground mb-1">Test Case</h3>
+                <p className="font-medium">{getTestCaseDetails(selectedTestCaseId)?.title}</p>
+              </div>
+              
+              <div>
+                <h3 className="font-medium text-sm text-muted-foreground mb-1">Description</h3>
+                <p>{getTestCaseDetails(selectedTestCaseId)?.description || "No description available"}</p>
+              </div>
+              
+              {getTestCaseDetails(selectedTestCaseId)?.steps && (
+                <div>
+                  <h3 className="font-medium text-sm text-muted-foreground mb-1">Test Steps</h3>
+                  <div className="space-y-2 mt-2">
+                    {typeof getTestCaseDetails(selectedTestCaseId)?.steps === 'string' 
+                      ? <p>{getTestCaseDetails(selectedTestCaseId)?.steps}</p>
+                      : getTestCaseDetails(selectedTestCaseId)?.steps?.map((step, index) => (
+                        <div key={index} className="flex items-start gap-2 p-2 border rounded-md">
+                          <div className="font-mono text-sm bg-muted w-6 h-6 flex items-center justify-center rounded">
+                            {index + 1}
                           </div>
-                        )) : (
-                          <div className="text-muted-foreground">Steps data format not recognized</div>
-                        );
-                      } catch (error) {
-                        console.error("Failed to parse steps:", error);
-                        return <div className="text-muted-foreground">Unable to display steps</div>;
-                      }
-                    })()}
-                  </div>
-                ) : (
-                  <div className="text-muted-foreground">No test steps available</div>
-                )}
-              </div>
-              
-              {/* Previous runs section */}
-              <div className="bg-atmf-card rounded-lg p-4">
-                <h3 className="text-lg font-medium mb-3">Previous Runs</h3>
-                {isLoadingHistory ? (
-                  <div className="text-center py-4">Loading previous runs...</div>
-                ) : testRunHistory && testRunHistory.length > 0 ? (
-                  <div className="space-y-3 max-h-[200px] overflow-y-auto">
-                    {testRunHistory.map((run) => (
-                      <div key={run.id} className="flex items-center justify-between border-b pb-2 last:border-b-0">
-                        <div className="flex items-center gap-3">
-                          {renderStatusBadge(run.status)}
-                          <span className="text-sm">
-                            {run.cycleName ? `${run.cycleName} - ` : ''}{run.executedAt ? new Date(run.executedAt).toLocaleString() : 'Unknown date'}
-                          </span>
+                          <div>
+                            <p>{step.description}</p>
+                            {step.expected && (
+                              <p className="text-sm text-muted-foreground mt-1">
+                                Expected: {step.expected}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                        <div className="text-sm text-muted-foreground">{run.notes}</div>
-                      </div>
-                    ))}
+                      ))
+                    }
                   </div>
+                </div>
+              )}
+              
+              <Separator />
+              
+              <div>
+                <h3 className="font-medium mb-2">Previous Runs</h3>
+                {isLoadingRuns ? (
+                  <div className="text-center py-4">Loading previous runs...</div>
+                ) : testRuns && testRuns.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Notes</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {testRuns.map((run) => (
+                        <TableRow key={run.id}>
+                          <TableCell>{new Date(run.createdAt).toLocaleString()}</TableCell>
+                          <TableCell>{renderStatusBadge(run.status)}</TableCell>
+                          <TableCell className="truncate max-w-[200px]">{run.notes || "-"}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 ) : (
-                  <div className="text-muted-foreground">No previous runs</div>
+                  <div className="text-center py-4 text-muted-foreground">
+                    No previous runs for this test case in this cycle.
+                  </div>
                 )}
               </div>
               
-              {/* Test notes section */}
-              <div className="p-4 bg-atmf-card rounded-lg">
-                <h3 className="text-lg font-medium mb-3">Test Run Notes</h3>
-                <Textarea 
-                  value={testRunNotes}
-                  onChange={(e) => setTestRunNotes(e.target.value)}
-                  placeholder="Add any notes, observations, or issues found during test execution..."
-                  className="min-h-[100px]"
-                />
-              </div>
-
-              {/* Test execution buttons section */}
-              <div className="p-4 bg-atmf-card rounded-lg">
-                <h3 className="text-lg font-medium mb-3">Update Test Status</h3>
-                <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                  <Button
-                    variant="outline"
-                    className="flex-col h-auto py-4 border-green-500/20 hover:bg-green-500/10"
-                    onClick={() => handleRunTest("pass")}
-                  >
-                    <Check className="h-8 w-8 mb-2 text-green-500" />
-                    <span>Pass</span>
-                  </Button>
+              <Separator />
+              
+              <Form {...runForm}>
+                <form onSubmit={runForm.handleSubmit(handleCreateTestRun)} className="space-y-4">
+                  <FormField
+                    control={runForm.control}
+                    name="status"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Status</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select result" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="passed">Passed</SelectItem>
+                            <SelectItem value="failed">Failed</SelectItem>
+                            <SelectItem value="blocked">Blocked</SelectItem>
+                            <SelectItem value="skipped">Skipped</SelectItem>
+                            <SelectItem value="not_executed">Not Executed</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   
-                  <Button
-                    variant="outline"
-                    className="flex-col h-auto py-4 border-red-500/20 hover:bg-red-500/10"
-                    onClick={() => handleRunTest("fail")}
-                  >
-                    <X className="h-8 w-8 mb-2 text-red-500" />
-                    <span>Fail</span>
-                  </Button>
+                  <FormField
+                    control={runForm.control}
+                    name="notes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Notes</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            {...field}
+                            placeholder="Enter test run notes, observations, or defect details"
+                            rows={3}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   
-                  <Button
-                    variant="outline"
-                    className="flex-col h-auto py-4 border-yellow-500/20 hover:bg-yellow-500/10"
-                    onClick={() => handleRunTest("skip")}
-                  >
-                    <SkipForward className="h-8 w-8 mb-2 text-yellow-500" />
-                    <span>Skip</span>
-                  </Button>
-                  
-                  <Button
-                    variant="outline"
-                    className="flex-col h-auto py-4 border-orange-500/20 hover:bg-orange-500/10"
-                    onClick={() => handleRunTest("blocked")}
-                  >
-                    <AlertCircle className="h-8 w-8 mb-2 text-orange-500" />
-                    <span>Blocked</span>
-                  </Button>
-                </div>
-              </div>
+                  <DialogFooter>
+                    <Button variant="outline" type="button" onClick={() => setTestRunDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" isLoading={createRunMutation.isPending}>
+                      Save Test Run
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
             </div>
           )}
-          
-          <DialogFooter className="mt-4">
-            <Button variant="ghost" onClick={() => setTestRunDialogOpen(false)}>
-              Cancel
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
       
-      {/* Test Run History Dialog */}
+      {/* Test History Dialog */}
       <Dialog open={historyDialogOpen} onOpenChange={setHistoryDialogOpen}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="sm:max-w-[700px]">
           <DialogHeader>
-            <DialogTitle>Test Run History</DialogTitle>
+            <DialogTitle>Test Case History</DialogTitle>
             <DialogDescription>
-              {selectedTestCaseId ? 
-                `Viewing all test runs for test case #${selectedTestCaseId} across all cycles.` : 
-                "Select a test case to view its history."}
+              View all execution history for this test case across all cycles.
             </DialogDescription>
           </DialogHeader>
           
-          <div className="max-h-[500px] overflow-y-auto mt-2">
-            {isLoadingHistory ? (
-              <div className="text-center py-8">Loading test run history...</div>
-            ) : testRunHistory && testRunHistory.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Cycle</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Notes</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {testRunHistory.map((run) => (
-                    <TableRow key={run.id}>
-                      <TableCell>{run.cycleName || `Cycle #${run.cycleId || 'Unknown'}`}</TableCell>
-                      <TableCell>{run.executedAt ? new Date(run.executedAt).toLocaleString() : 'Unknown date'}</TableCell>
-                      <TableCell>{renderStatusBadge(run.status)}</TableCell>
-                      <TableCell className="max-w-xs truncate">{run.notes || "-"}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                No previous test runs found for this test case.
+          {selectedTestCaseId && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="font-medium text-sm text-muted-foreground mb-1">Test Case ID</h3>
+                <p className="font-mono">{selectedTestCaseId}</p>
               </div>
-            )}
-          </div>
-          
-          <DialogFooter>
-            <Button onClick={() => setHistoryDialogOpen(false)}>Close</Button>
-          </DialogFooter>
+              
+              <div>
+                <h3 className="font-medium text-sm text-muted-foreground mb-1">Test Case</h3>
+                <p className="font-medium">{getTestCaseDetails(selectedTestCaseId)?.title}</p>
+              </div>
+              
+              <div>
+                <h3 className="font-medium mb-2">Execution History</h3>
+                {isLoadingHistory ? (
+                  <div className="text-center py-4">Loading history...</div>
+                ) : testRunHistory && testRunHistory.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Cycle</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Notes</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {testRunHistory.map((run) => (
+                        <TableRow key={run.id}>
+                          <TableCell>{run.cycleName || "Unknown Cycle"}</TableCell>
+                          <TableCell>{new Date(run.createdAt).toLocaleString()}</TableCell>
+                          <TableCell>{renderStatusBadge(run.status)}</TableCell>
+                          <TableCell className="truncate max-w-[200px]">{run.notes || "-"}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="text-center py-4 text-muted-foreground">
+                    No execution history found for this test case.
+                  </div>
+                )}
+              </div>
+              
+              <DialogFooter>
+                <Button onClick={() => setHistoryDialogOpen(false)}>
+                  Close
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </PageContainer>
