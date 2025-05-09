@@ -14,26 +14,31 @@ import Projects from "@/pages/projects";
 import Settings from "@/pages/settings";
 import ProjectHealth from "@/pages/project-health";
 import TestFetch from "@/pages/test-fetch";
+import AuthPage from "@/pages/auth-page";
 import Layout from "@/components/layout/layout";
 import { ProjectProvider } from "@/context/ProjectContext";
+import { AuthProvider } from "@/hooks/use-auth";
+import { ProtectedRoute } from "@/lib/protected-route";
 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Dashboard} />
-      <Route path="/assessments" component={Assessments} />
-      <Route path="/ai-insights" component={AiInsights} />
-      <Route path="/test-management" component={TestManagement} />
+      <ProtectedRoute path="/" component={Dashboard} />
+      <ProtectedRoute path="/assessments" component={Assessments} />
+      <ProtectedRoute path="/ai-insights" component={AiInsights} />
+      <ProtectedRoute path="/test-management" component={TestManagement} />
       {/* Using the refactored component for the main test execution route */}
-      <Route path="/test-execution" component={TestExecutionRefactored} />
+      <ProtectedRoute path="/test-execution" component={TestExecutionRefactored} />
       {/* Keeping the old route for reference until we're sure the refactored version works properly */}
-      <Route path="/test-execution-old" component={TestExecution} />
-      <Route path="/projects" component={Projects} />
-      <Route path="/project-health" component={ProjectHealth} />
-      <Route path="/settings" component={Settings} />
-      <Route path="/design-system" component={DesignSystem} />
-      <Route path="/documentation" component={Documentation} />
-      <Route path="/test-fetch" component={TestFetch} />
+      <ProtectedRoute path="/test-execution-old" component={TestExecution} />
+      <ProtectedRoute path="/projects" component={Projects} />
+      <ProtectedRoute path="/project-health" component={ProjectHealth} />
+      <ProtectedRoute path="/settings" component={Settings} />
+      <ProtectedRoute path="/design-system" component={DesignSystem} />
+      <ProtectedRoute path="/documentation" component={Documentation} />
+      <ProtectedRoute path="/test-fetch" component={TestFetch} />
+      {/* Auth route is public */}
+      <Route path="/auth" component={AuthPage} />
       {/* Additional routes go here */}
       <Route component={NotFound} />
     </Switch>
@@ -43,11 +48,13 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ProjectProvider>
-        <Layout>
-          <Router />
-        </Layout>
-      </ProjectProvider>
+      <AuthProvider>
+        <ProjectProvider>
+          <Layout>
+            <Router />
+          </Layout>
+        </ProjectProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
