@@ -66,6 +66,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import { TabView } from "@/components/design-system/tab-view";
 import {
   PlayCircle,
   Calendar,
