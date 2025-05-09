@@ -328,7 +328,7 @@ export default function TestExecution() {
                   <ATMFCardHeader 
                     title={selectedCycle.name} 
                     description={selectedCycle.description || "No description"} 
-                    actions={
+                    action={
                       <Button
                         variant="outline"
                         onClick={() => setSelectCasesDialogOpen(true)}

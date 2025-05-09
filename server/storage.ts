@@ -718,7 +718,7 @@ export class DatabaseStorage implements IStorage {
         .update(testCycleItems)
         .set({ 
           status: newRun.status,
-          updatedAt: new Date()
+          updatedAt: new Date().toISOString()
         })
         .where(eq(testCycleItems.id, newRun.cycleItemId));
     }
@@ -739,7 +739,7 @@ export class DatabaseStorage implements IStorage {
         .update(testCycleItems)
         .set({ 
           status: testRun.status,
-          updatedAt: new Date()
+          updatedAt: new Date().toISOString()
         })
         .where(eq(testCycleItems.id, updatedRun.cycleItemId));
     }
