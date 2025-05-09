@@ -375,9 +375,11 @@ export default function ProjectSettings() {
                     value={settings.jiraApiKey}
                     onChange={(e) => handleChange("jiraApiKey", e.target.value)}
                   />
-                  <p className="text-xs text-atmf-muted">
-                    For Jira Cloud, use your email address followed by the API token in this format: <span className="text-blue-400">your-email@example.com:your-api-token</span>
-                  </p>
+                  <div className="text-xs text-atmf-muted space-y-1">
+                    <p>For Jira Cloud, use your email address followed by the API token in this format:</p>
+                    <p className="text-blue-400 bg-gray-900/50 p-1 rounded">your-email@example.com:your-api-token</p>
+                    <p>Get your API token at: <span className="text-blue-400">https://id.atlassian.com/manage-profile/security/api-tokens</span></p>
+                  </div>
                 </div>
                 
                 <div className="space-y-2">

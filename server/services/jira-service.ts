@@ -58,32 +58,48 @@ export async function fetchJiraIssues(project: Project): Promise<JiraIssue[] | n
     url.searchParams.append('fields', 'summary,description,issuetype,status,priority,components,labels');
 
     // Make the API call with appropriate authentication
-    // For Jira Cloud, we should use Basic authentication
-    // The API key format from the user may already include the email, if not, we'll extract it
-    let authHeader = '';
+    // For Jira Cloud API v3, we need to use Basic authentication with an API token
     
-    // Check if API key includes email:token format
+    // Try different authentication methods to be flexible with user input
+    let authHeader = '';
+    let email = '';
+    let apiToken = '';
+    
+    console.log("Attempting to connect to Jira with API key...");
+    
     if (project.jiraApiKey.includes(':')) {
-      // Already in email:token format, encode directly
-      authHeader = 'Basic ' + Buffer.from(project.jiraApiKey).toString('base64');
+      // Parse email:token format
+      [email, apiToken] = project.jiraApiKey.split(':');
+      console.log(`Using Basic auth with email: ${email}`);
+      authHeader = 'Basic ' + Buffer.from(`${email}:${apiToken}`).toString('base64');
     } else if (project.jiraApiKey.includes('@')) {
-      // Looks like just an email, we should notify user to use proper format
+      // Looks like just an email was provided
       console.error('API key appears to be just an email. Format should be email:token');
+      // Fall back to Bearer as a last resort
       authHeader = `Bearer ${project.jiraApiKey}`;
     } else {
-      // Just a token was provided, try Bearer auth
+      // Assume it's just a token with no email
+      console.log('API key format does not include email. Attempting with token only.');
+      // For Jira, when only token is provided, try Bearer auth first
       authHeader = `Bearer ${project.jiraApiKey}`;
     }
     
     console.log(`Using auth method: ${authHeader.startsWith('Basic') ? 'Basic' : 'Bearer'}`);
     
+    const headers: Record<string, string> = {
+      'Authorization': authHeader,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
+    
+    // Sometimes Jira requires these additional headers
+    if (email) {
+      headers['X-Atlassian-Token'] = 'no-check';
+    }
+    
     const response = await fetch(url.toString(), {
       method: 'GET',
-      headers: {
-        'Authorization': authHeader,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      }
+      headers: headers
     });
 
     if (!response.ok) {
