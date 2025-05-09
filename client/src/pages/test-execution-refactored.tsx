@@ -343,14 +343,22 @@ export default function TestExecutionPage() {
   };
   
   // Prepare test case selection options for dialog
-  console.log('Test cases from API:', testCases);
-  console.log('Cycle items:', cycleItems);
+  console.log('[DEBUG] Test cases from API:', JSON.stringify(testCases));
+  console.log('[DEBUG] Is test cases empty?', testCases.length === 0);
+  console.log('[DEBUG] Project ID:', projectId);
+  console.log('[DEBUG] Test cases isLoading:', isLoadingCases);
+  
+  // Check if we can directly fetch test cases to verify the API
+  fetch(`/api/test-cases?projectId=${projectId}`)
+    .then(res => res.json())
+    .then(data => console.log('[DEBUG] Direct API fetch test cases:', data))
+    .catch(err => console.error('[DEBUG] Direct API fetch error:', err));
   
   const availableTestCases = testCases.filter(testCase => {
     return !cycleItems.some(item => item.testCaseId === testCase.id);
   });
   
-  console.log('Available test cases for selection:', availableTestCases);
+  console.log('[DEBUG] Available test cases for selection:', availableTestCases.length);
   
   // Define TabView content
   const tabItems = [

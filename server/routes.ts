@@ -590,15 +590,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Test Cases API endpoints
   app.get("/api/test-cases", async (req, res) => {
     try {
+      // Helper function to safely parse integers
+      const safeParseInt = (value: string | undefined): number | undefined => {
+        if (!value) return undefined;
+        const parsed = parseInt(value);
+        return isNaN(parsed) ? undefined : parsed;
+      };
+      
       const filters = {
-        suiteId: req.query.suiteId ? parseInt(req.query.suiteId as string) : undefined,
-        userId: req.query.userId ? parseInt(req.query.userId as string) : undefined,
+        suiteId: safeParseInt(req.query.suiteId as string),
+        userId: safeParseInt(req.query.userId as string),
         status: req.query.status ? (req.query.status as string) : undefined,
         priority: req.query.priority ? (req.query.priority as string) : undefined,
         severity: req.query.severity ? (req.query.severity as string) : undefined,
         aiGenerated: req.query.aiGenerated ? (req.query.aiGenerated === 'true') : undefined,
         automatable: req.query.automatable ? (req.query.automatable === 'true') : undefined,
-        projectId: req.query.projectId ? parseInt(req.query.projectId as string) : undefined
+        projectId: safeParseInt(req.query.projectId as string)
       };
       
       const testCases = await storage.getTestCases(filters);
