@@ -3,6 +3,7 @@ import { useProject } from "@/context/ProjectContext";
 import { 
   useTestCycles, 
   useCreateTestCycle, 
+  useUpdateTestCycle,
   useTestCycleItems,
   useAddTestCasesToCycle,
   useAddTestSuiteToCycle,
@@ -98,6 +99,7 @@ export default function TestExecution() {
   const [selectedCycle, setSelectedCycle] = useState<TestCycle | null>(null);
   const [activeTab, setActiveTab] = useState("cycles");
   const [newCycleDialogOpen, setNewCycleDialogOpen] = useState(false);
+  const [editCycleDialogOpen, setEditCycleDialogOpen] = useState(false);
   const [selectCasesDialogOpen, setSelectCasesDialogOpen] = useState(false);
   const [selectSuiteDialogOpen, setSelectSuiteDialogOpen] = useState(false);
   const [testRunDialogOpen, setTestRunDialogOpen] = useState(false);
@@ -108,6 +110,15 @@ export default function TestExecution() {
   
   // Forms
   const newCycleForm = useForm<z.infer<typeof testCycleSchema>>({
+    resolver: zodResolver(testCycleSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      status: "created"
+    },
+  });
+  
+  const editCycleForm = useForm<z.infer<typeof testCycleSchema>>({
     resolver: zodResolver(testCycleSchema),
     defaultValues: {
       name: "",
@@ -129,6 +140,7 @@ export default function TestExecution() {
   
   // Mutations
   const createCycleMutation = useCreateTestCycle();
+  const updateCycleMutation = useUpdateTestCycle;
   const addCasesMutation = useAddTestCasesToCycle();
   const addSuiteMutation = useAddTestSuiteToCycle();
   const updateItemMutation = useUpdateTestCycleItem(selectedCycleItem?.id || 0);
@@ -244,12 +256,62 @@ export default function TestExecution() {
     });
   };
   
+  const handleEditCycle = (data: z.infer<typeof testCycleSchema>) => {
+    if (!selectedCycle) return;
+    
+    // Convert string dates to Date objects
+    const payload = {
+      ...data,
+      startDate: data.startDate ? new Date(data.startDate) : undefined,
+      endDate: data.endDate ? new Date(data.endDate) : undefined
+    };
+    
+    // Create an instance of the update cycle mutation
+    const updateCycle = updateCycleMutation(selectedCycle.id);
+    
+    // Execute the mutation
+    updateCycle.mutate(payload, {
+      onSuccess: (updatedCycle: any) => {
+        toast({
+          title: "Test Cycle Updated",
+          description: `"${updatedCycle.name}" has been updated successfully.`,
+        });
+        setEditCycleDialogOpen(false);
+        setSelectedCycle(updatedCycle);
+      },
+      onError: (error: any) => {
+        toast({
+          title: "Error",
+          description: "Failed to update test cycle. Please try again.",
+          variant: "destructive",
+        });
+      }
+    });
+  };
+  
   // Effect to auto-select first cycle if none selected
   useEffect(() => {
     if (testCycles && testCycles.length > 0 && !selectedCycle) {
       setSelectedCycle(testCycles[0]);
     }
   }, [testCycles, selectedCycle]);
+  
+  // Effect to populate edit form when a cycle is selected for editing
+  useEffect(() => {
+    if (selectedCycle && editCycleDialogOpen) {
+      editCycleForm.reset({
+        name: selectedCycle.name,
+        description: selectedCycle.description || "",
+        status: selectedCycle.status,
+        startDate: selectedCycle.startDate 
+          ? new Date(selectedCycle.startDate).toISOString().split('T')[0] 
+          : undefined,
+        endDate: selectedCycle.endDate 
+          ? new Date(selectedCycle.endDate).toISOString().split('T')[0] 
+          : undefined,
+      });
+    }
+  }, [selectedCycle, editCycleDialogOpen]);
   
   // Render status badge
   const renderStatusBadge = (status: string | null) => {
@@ -369,6 +431,13 @@ export default function TestExecution() {
                     description={selectedCycle.description || "No description"} 
                     action={
                       <div className="flex space-x-2">
+                        <Button
+                          variant="outline"
+                          onClick={() => setEditCycleDialogOpen(true)}
+                        >
+                          <Calendar size={16} className="mr-2" />
+                          Edit Cycle
+                        </Button>
                         <Button
                           variant="outline"
                           onClick={() => setSelectSuiteDialogOpen(true)}
@@ -569,6 +638,109 @@ export default function TestExecution() {
               <DialogFooter>
                 <Button type="submit" disabled={createCycleMutation.isPending}>
                   {createCycleMutation.isPending ? "Creating..." : "Create Test Cycle"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Edit Test Cycle Dialog */}
+      <Dialog open={editCycleDialogOpen} onOpenChange={setEditCycleDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Test Cycle</DialogTitle>
+            <DialogDescription>
+              Update the details of this test cycle.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...editCycleForm}>
+            <form onSubmit={editCycleForm.handleSubmit(handleEditCycle)} className="space-y-4">
+              <FormField
+                control={editCycleForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Sprint 23 Regression" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={editCycleForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Test cycle description..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={editCycleForm.control}
+                  name="startDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Start Date</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={editCycleForm.control}
+                  name="endDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>End Date</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <FormField
+                control={editCycleForm.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="created">Created</SelectItem>
+                        <SelectItem value="in-progress">In Progress</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <DialogFooter>
+                <Button type="submit">
+                  Update Test Cycle
                 </Button>
               </DialogFooter>
             </form>
