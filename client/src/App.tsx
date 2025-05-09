@@ -7,6 +7,7 @@ import Assessments from "@/pages/assessments";
 import AiInsights from "@/pages/ai-insights";
 import TestManagement from "@/pages/test-management";
 import TestExecution from "@/pages/test-execution";
+import TestExecutionRefactored from "@/pages/test-execution-refactored";
 import DesignSystem from "@/pages/design-system";
 import Documentation from "@/pages/documentation";
 import Projects from "@/pages/projects";
@@ -24,6 +25,7 @@ function Router() {
       <Route path="/ai-insights" component={AiInsights} />
       <Route path="/test-management" component={TestManagement} />
       <Route path="/test-execution" component={TestExecution} />
+      <Route path="/test-execution-refactored" component={TestExecutionRefactored} />
       <Route path="/projects" component={Projects} />
       <Route path="/project-health" component={ProjectHealth} />
       <Route path="/settings" component={Settings} />
