@@ -385,12 +385,10 @@ export class DatabaseStorage implements IStorage {
     status?: string;
     projectId?: number;
   }): Promise<Assessment[]> {
-    let queryBuilder = db.select().from(assessments);
+    // Collect conditions for the query
+    const conditions = [];
     
-    // Apply filters if provided
     if (filters) {
-      const conditions = [];
-      
       if (filters.dimensionId !== undefined) {
         conditions.push(eq(assessments.dimensionId, filters.dimensionId));
       }
@@ -410,13 +408,21 @@ export class DatabaseStorage implements IStorage {
       if (filters.projectId !== undefined) {
         conditions.push(eq(assessments.projectId, filters.projectId));
       }
-      
-      if (conditions.length > 0) {
-        queryBuilder = queryBuilder.where(and(...conditions));
-      }
     }
     
-    return await queryBuilder.orderBy(desc(assessments.createdAt));
+    // Apply conditions if any, otherwise return all records
+    if (conditions.length > 0) {
+      return db
+        .select()
+        .from(assessments)
+        .where(and(...conditions))
+        .orderBy(desc(assessments.createdAt));
+    }
+    
+    return db
+      .select()
+      .from(assessments)
+      .orderBy(desc(assessments.createdAt));
   }
 
   async getAssessment(id: number): Promise<Assessment | undefined> {
@@ -447,11 +453,10 @@ export class DatabaseStorage implements IStorage {
     aiGenerated?: boolean;
     projectId?: number;
   }): Promise<TestSuite[]> {
-    let queryBuilder = db.select().from(testSuites);
+    // Collect conditions for the query
+    const conditions = [];
     
     if (filters) {
-      const conditions = [];
-      
       if (filters.userId !== undefined) {
         conditions.push(eq(testSuites.userId, filters.userId));
       }
@@ -475,13 +480,21 @@ export class DatabaseStorage implements IStorage {
       if (filters.projectId !== undefined) {
         conditions.push(eq(testSuites.projectId, filters.projectId));
       }
-      
-      if (conditions.length > 0) {
-        queryBuilder = queryBuilder.where(and(...conditions));
-      }
     }
     
-    return await queryBuilder.orderBy(desc(testSuites.createdAt));
+    // Apply conditions if any, otherwise return all records
+    if (conditions.length > 0) {
+      return db
+        .select()
+        .from(testSuites)
+        .where(and(...conditions))
+        .orderBy(desc(testSuites.createdAt));
+    }
+    
+    return db
+      .select()
+      .from(testSuites)
+      .orderBy(desc(testSuites.createdAt));
   }
 
   async getTestSuite(id: number): Promise<TestSuite | undefined> {
@@ -514,11 +527,10 @@ export class DatabaseStorage implements IStorage {
     automatable?: boolean;
     projectId?: number;
   }): Promise<TestCase[]> {
-    let queryBuilder = db.select().from(testCases);
+    // Collect conditions for the query
+    const conditions = [];
     
     if (filters) {
-      const conditions = [];
-      
       if (filters.suiteId !== undefined) {
         conditions.push(eq(testCases.suiteId, filters.suiteId));
       }
@@ -550,13 +562,21 @@ export class DatabaseStorage implements IStorage {
       if (filters.projectId !== undefined) {
         conditions.push(eq(testCases.projectId, filters.projectId));
       }
-      
-      if (conditions.length > 0) {
-        queryBuilder = queryBuilder.where(and(...conditions));
-      }
     }
     
-    return await queryBuilder.orderBy(desc(testCases.createdAt));
+    // Apply conditions if any, otherwise return all records
+    if (conditions.length > 0) {
+      return db
+        .select()
+        .from(testCases)
+        .where(and(...conditions))
+        .orderBy(desc(testCases.createdAt));
+    }
+    
+    return db
+      .select()
+      .from(testCases)
+      .orderBy(desc(testCases.createdAt));
   }
 
   async getTestCase(id: number): Promise<TestCase | undefined> {
