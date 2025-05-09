@@ -835,7 +835,7 @@ export default function TestExecution() {
                                 {index + 1}
                               </div>
                               <div>
-                                <div className="font-medium">{step.action || step.description || "Step " + (index + 1)}</div>
+                                <div className="font-medium">{step.step || step.action || step.description || "Step " + (index + 1)}</div>
                                 {step.expected && (
                                   <div className="text-sm text-muted-foreground mt-1">
                                     <span className="font-medium text-primary">Expected:</span> {step.expected}
