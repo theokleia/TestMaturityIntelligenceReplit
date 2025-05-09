@@ -451,6 +451,65 @@ export default function TestExecution() {
           
           {/* Test Execution Tab */}
           <TabsContent value="execution" className="space-y-6">
+            <ATMFCard>
+              <ATMFCardHeader title="All Test Cycles" />
+              
+              <div className="p-6">
+                {isLoadingCycles ? (
+                  <div className="text-center py-8">Loading test cycles...</div>
+                ) : testCycles && testCycles.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Start Date</TableHead>
+                        <TableHead>End Date</TableHead>
+                        <TableHead>Progress</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {testCycles.map((cycle) => (
+                        <TableRow 
+                          key={cycle.id}
+                          className={selectedCycle?.id === cycle.id ? "bg-primary/5" : ""}
+                          onClick={() => setSelectedCycle(cycle)}
+                        >
+                          <TableCell className="font-medium">{cycle.name}</TableCell>
+                          <TableCell>{renderStatusBadge(cycle.status)}</TableCell>
+                          <TableCell>{cycle.startDate ? new Date(cycle.startDate).toLocaleDateString() : "Not started"}</TableCell>
+                          <TableCell>{cycle.endDate ? new Date(cycle.endDate).toLocaleDateString() : "No end date"}</TableCell>
+                          <TableCell>-</TableCell>
+                          <TableCell className="text-right">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedCycle(cycle);
+                                setActiveTab("execution");
+                              }}
+                            >
+                              <PlayCircle size={16} className="mr-2" />
+                              Execute
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No test cycles found. Create a new test cycle to get started.
+                  </div>
+                )}
+              </div>
+            </ATMFCard>
+          </TabsContent>
+          
+          {/* Test Execution Tab */}
+          <TabsContent value="execution" className="space-y-6">
             {selectedCycle && (
               <>
                 <ATMFCard>
