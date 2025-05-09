@@ -24,6 +24,7 @@ import {
 } from "@/components/design-system/page-container";
 import { ATMFCard, ATMFCardHeader } from "@/components/design-system/atmf-card";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Dialog,
   DialogContent,
@@ -39,6 +40,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Plus, ListChecks, Table as TableIcon } from "lucide-react";
 import { TabView } from "@/components/design-system/tab-view";
 import {
@@ -58,6 +68,8 @@ export default function TestExecutionPage() {
   const [selectedCycleId, setSelectedCycleId] = useState<number | null>(null);
   const [selectedCycleItem, setSelectedCycleItem] = useState<number | null>(null);
   const [selectedTestCaseId, setSelectedTestCaseId] = useState<number | null>(null);
+  const [selectedCases, setSelectedCases] = useState<number[]>([]);
+  const [selectedSuiteId, setSelectedSuiteId] = useState<number | null>(null);
   
   // Dialog states
   const [newCycleDialogOpen, setNewCycleDialogOpen] = useState(false);
@@ -478,44 +490,68 @@ export default function TestExecutionPage() {
         
         {/* Add Test Cases Dialog */}
         <Dialog open={addCasesDialogOpen} onOpenChange={setAddCasesDialogOpen}>
-          <DialogContent className="sm:max-w-[525px]">
+          <DialogContent className="sm:max-w-[700px] max-h-[90vh]">
             <DialogHeader>
-              <DialogTitle>Add Test Cases</DialogTitle>
+              <DialogTitle>Add Test Cases to Cycle</DialogTitle>
               <DialogDescription>
-                Select test cases to add to this test cycle.
+                Select test cases to add to the current test cycle.
               </DialogDescription>
             </DialogHeader>
             
-            {availableTestCases.length === 0 ? (
-              <div className="py-4 text-center text-muted-foreground">
-                All test cases have already been added to this cycle.
-              </div>
-            ) : (
-              <div className="py-4">
-                <Select onValueChange={(value) => handleAddTestCasesToCycle([parseInt(value)])}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a test case" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableTestCases.map(testCase => (
-                      <SelectItem 
-                        key={testCase.id} 
-                        value={testCase.id.toString()}
-                      >
-                        TC-{testCase.id}: {testCase.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            <div className="space-y-4">
+              {isLoadingCases ? (
+                <div className="text-center py-8">Loading test cases...</div>
+              ) : availableTestCases.length > 0 ? (
+                <ScrollArea className="h-[400px]">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[50px]"></TableHead>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Title</TableHead>
+                        <TableHead>Priority</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {availableTestCases.map((testCase) => (
+                        <TableRow key={testCase.id}>
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedCases.includes(testCase.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedCases(prev => [...prev, testCase.id]);
+                                } else {
+                                  setSelectedCases(prev => prev.filter(id => id !== testCase.id));
+                                }
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell className="font-mono">TC-{testCase.id}</TableCell>
+                          <TableCell>{testCase.title}</TableCell>
+                          <TableCell>{testCase.priority}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  All test cases have already been added to this cycle or no test cases exist for this project.
+                </div>
+              )}
+            </div>
             
             <DialogFooter>
-              <Button 
-                variant="outline" 
-                onClick={() => setAddCasesDialogOpen(false)}
-              >
+              <Button variant="outline" onClick={() => setAddCasesDialogOpen(false)}>
                 Cancel
+              </Button>
+              <Button 
+                disabled={selectedCases.length === 0} 
+                onClick={() => handleAddTestCasesToCycle(selectedCases)}
+                variant="default"
+              >
+                Add {selectedCases.length} Test Case{selectedCases.length !== 1 ? 's' : ''}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -531,29 +567,31 @@ export default function TestExecutionPage() {
               </DialogDescription>
             </DialogHeader>
             
-            {testSuites.length === 0 ? (
-              <div className="py-4 text-center text-muted-foreground">
-                No test suites available.
-              </div>
-            ) : (
-              <div className="py-4">
-                <Select onValueChange={(value) => handleAddTestSuiteToCycle(parseInt(value))}>
+            <div className="space-y-4">
+              {isLoadingSuites ? (
+                <div className="text-center py-8">Loading test suites...</div>
+              ) : testSuites.length > 0 ? (
+                <Select 
+                  onValueChange={(value) => setSelectedSuiteId(Number(value))}
+                  value={selectedSuiteId?.toString()}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a test suite" />
                   </SelectTrigger>
                   <SelectContent>
-                    {testSuites.map(suite => (
-                      <SelectItem 
-                        key={suite.id} 
-                        value={suite.id.toString()}
-                      >
+                    {testSuites.map((suite) => (
+                      <SelectItem key={suite.id} value={suite.id.toString()}>
                         {suite.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-            )}
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No test suites found for this project.
+                </div>
+              )}
+            </div>
             
             <DialogFooter>
               <Button 
@@ -561,6 +599,17 @@ export default function TestExecutionPage() {
                 onClick={() => setAddSuiteDialogOpen(false)}
               >
                 Cancel
+              </Button>
+              <Button 
+                disabled={!selectedSuiteId} 
+                onClick={() => {
+                  if (selectedSuiteId) {
+                    handleAddTestSuiteToCycle(selectedSuiteId);
+                  }
+                }}
+                variant="default"
+              >
+                Add Suite
               </Button>
             </DialogFooter>
           </DialogContent>
