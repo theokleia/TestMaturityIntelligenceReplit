@@ -83,7 +83,8 @@ export function StatusBadge({
     priority: "bg-amber-400",
     severity: "bg-rose-400",
     automation: "bg-emerald-400",
-    assessment: "bg-violet-400"
+    assessment: "bg-violet-400",
+    status: "bg-indigo-400"
   };
   
   // Use status as children if provided and no children

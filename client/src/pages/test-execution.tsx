@@ -25,6 +25,7 @@ import {
 } from "@/components/design-system/page-container";
 import { ATMFCard, ATMFCardHeader } from "@/components/design-system/atmf-card";
 import { Button } from "@/components/ui/button";
+import { formatDate } from "@/lib/utils";
 import { 
   Dialog,
   DialogContent,
@@ -107,7 +108,7 @@ function renderStatusBadge(status: string): JSX.Element {
   const statusMap: Record<string, { variant: StatusBadgeVariant, label: string }> = {
     "planned": { variant: "muted", label: "Planned" },
     "in_progress": { variant: "warning", label: "In Progress" },
-    "completed": { variant: "default", label: "Completed" },
+    "completed": { variant: "status", label: "Completed" },
     "blocked": { variant: "danger", label: "Blocked" },
     "passed": { variant: "success", label: "Passed" },
     "failed": { variant: "danger", label: "Failed" },
