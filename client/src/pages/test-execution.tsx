@@ -920,7 +920,7 @@ export default function TestExecution() {
                 <Button variant="outline" type="button" onClick={() => setEditCycleDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" isLoading={updateCycleMutation.isPending}>Update Test Cycle</Button>
+                <Button type="submit" isPending={updateCycleMutation.isPending}>Update Test Cycle</Button>
               </DialogFooter>
             </form>
           </Form>
@@ -988,7 +988,7 @@ export default function TestExecution() {
             <Button 
               disabled={selectedCases.length === 0} 
               onClick={handleAddTestCases}
-              isLoading={addCasesMutation.isPending}
+              isPending={addCasesMutation.isPending}
             >
               Add {selectedCases.length} Test Case{selectedCases.length !== 1 ? 's' : ''}
             </Button>
@@ -1039,7 +1039,7 @@ export default function TestExecution() {
             <Button 
               disabled={!selectedSuiteId} 
               onClick={handleAddTestSuite}
-              isLoading={addSuiteMutation.isPending}
+              isPending={addSuiteMutation.isPending}
             >
               Add Suite
             </Button>
@@ -1192,7 +1192,7 @@ export default function TestExecution() {
                     <Button variant="outline" type="button" onClick={() => setTestRunDialogOpen(false)}>
                       Cancel
                     </Button>
-                    <Button type="submit" isLoading={createRunMutation.isPending}>
+                    <Button type="submit" isPending={createRunMutation.isPending}>
                       Save Test Run
                     </Button>
                   </DialogFooter>
