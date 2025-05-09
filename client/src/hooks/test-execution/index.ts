@@ -21,11 +21,12 @@ export type {
 
 // Test Cycles
 export function useTestCycles(projectId?: number) {
-  const queryKey = projectId ? ['/api/test-cycles', { projectId }] : ['/api/test-cycles'];
+  // If projectId is provided, use it in the query parameter
+  // This will correctly pass projectId as a query parameter to the server
+  const url = projectId ? `/api/test-cycles?projectId=${projectId}` : '/api/test-cycles';
   
   return useQuery<TestCycle[]>({
-    queryKey,
-    enabled: !!projectId,
+    queryKey: [url],
   });
 }
 
@@ -40,8 +41,16 @@ export function useCreateTestCycle() {
   return useMutation({
     mutationFn: (data: InsertTestCycle) => 
       apiRequest('/api/test-cycles', { method: 'POST', body: JSON.stringify(data) }),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      // Invalidate all test cycles
       queryClient.invalidateQueries({ queryKey: ['/api/test-cycles'] });
+      
+      // Also invalidate project-specific query if project ID is available
+      if (variables.projectId) {
+        queryClient.invalidateQueries({ 
+          queryKey: [`/api/test-cycles?projectId=${variables.projectId}`] 
+        });
+      }
     }
   });
 }
@@ -50,9 +59,36 @@ export function useUpdateTestCycle(id: number) {
   return useMutation({
     mutationFn: (data: Partial<InsertTestCycle>) => 
       apiRequest(`/api/test-cycles/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
-    onSuccess: () => {
+    onSuccess: (response, variables) => {
+      // Invalidate all test cycles
       queryClient.invalidateQueries({ queryKey: ['/api/test-cycles'] });
+      
+      // Invalidate specific test cycle
       queryClient.invalidateQueries({ queryKey: ['/api/test-cycles', id] });
+      
+      // If updating project ID, invalidate both old and new project queries
+      if (variables.projectId) {
+        queryClient.invalidateQueries({ 
+          queryKey: [`/api/test-cycles?projectId=${variables.projectId}`] 
+        });
+      }
+      
+      // Get the full cycle data to find its current projectId
+      const getCycle = async () => {
+        try {
+          const cycleResponse = await fetch(`/api/test-cycles/${id}`);
+          const cycle = await cycleResponse.json();
+          
+          if (cycle && cycle.projectId) {
+            queryClient.invalidateQueries({ 
+              queryKey: [`/api/test-cycles?projectId=${cycle.projectId}`] 
+            });
+          }
+        } catch (error) {
+          console.error("Failed to get cycle data for invalidation:", error);
+        }
+      };
+      getCycle();
     }
   });
 }
