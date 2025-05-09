@@ -109,6 +109,7 @@ export interface IStorage {
   getTestCycleItem(id: number): Promise<TestCycleItem | undefined>;
   createTestCycleItem(testCycleItem: InsertTestCycleItem): Promise<TestCycleItem>;
   updateTestCycleItem(id: number, testCycleItem: Partial<InsertTestCycleItem>): Promise<TestCycleItem | undefined>;
+  removeTestCycleItem(id: number): Promise<boolean>;
   addTestCasesToCycle(cycleId: number, testCaseIds: number[], suiteId?: number): Promise<TestCycleItem[]>;
   
   // Test Runs
@@ -673,6 +674,20 @@ export class DatabaseStorage implements IStorage {
       .where(eq(testCycleItems.id, id))
       .returning();
     return updatedItem || undefined;
+  }
+  
+  async removeTestCycleItem(id: number): Promise<boolean> {
+    try {
+      const result = await db
+        .delete(testCycleItems)
+        .where(eq(testCycleItems.id, id));
+      
+      // In Drizzle ORM with PostgreSQL, the operation was successful if no error was thrown
+      return true;
+    } catch (error) {
+      console.error("Error removing test cycle item:", error);
+      return false;
+    }
   }
   
   async addTestCasesToCycle(cycleId: number, testCaseIds: number[], suiteId?: number): Promise<TestCycleItem[]> {
