@@ -202,32 +202,63 @@ function safelyExtractDescription(description: any): string {
   
   // Handle string descriptions (older API or simple cases)
   if (typeof description === 'string') {
-    return description.substring(0, 300) + (description.length > 300 ? '...' : '');
+    return description;
   }
   
   // Handle Atlassian Document Format (ADF) - common in Cloud API v3
   try {
     // If it has content array (Atlassian Document Format)
     if (description.content && Array.isArray(description.content)) {
-      // Try to extract paragraphs 
-      const textParts: string[] = [];
+      // Try to extract paragraphs with improved structure
+      const extractedParts: string[] = [];
       
+      // Process each top-level block
       description.content.forEach((block: any) => {
-        if (block.content && Array.isArray(block.content)) {
-          block.content.forEach((textBlock: any) => {
-            if (textBlock.text) {
-              textParts.push(textBlock.text);
+        // Handle headings with appropriate formatting
+        if (block.type === 'heading') {
+          const level = block.attrs?.level || 1;
+          const headingText = extractTextFromContentArray(block.content);
+          if (headingText) {
+            extractedParts.push(`${'#'.repeat(level)} ${headingText}`);
+          }
+        }
+        // Handle paragraphs
+        else if (block.type === 'paragraph') {
+          const paragraphText = extractTextFromContentArray(block.content);
+          if (paragraphText) {
+            extractedParts.push(paragraphText);
+          }
+        }
+        // Handle bullet lists
+        else if (block.type === 'bulletList' && block.content) {
+          block.content.forEach((listItem: any) => {
+            if (listItem.type === 'listItem' && listItem.content) {
+              listItem.content.forEach((itemContent: any) => {
+                const bulletText = extractTextFromContentArray(itemContent.content);
+                if (bulletText) {
+                  extractedParts.push(`- ${bulletText}`);
+                }
+              });
             }
           });
-        } else if (block.text) {
-          textParts.push(block.text);
+        }
+        // Handle code blocks
+        else if (block.type === 'codeBlock') {
+          const codeText = extractTextFromContentArray(block.content);
+          if (codeText) {
+            extractedParts.push(`\`\`\`\n${codeText}\n\`\`\``);
+          }
+        }
+        // Fallback for other block types
+        else {
+          const text = extractTextFromContentArray(block.content);
+          if (text) {
+            extractedParts.push(text);
+          }
         }
       });
       
-      const extractedText = textParts.join(' ');
-      if (extractedText) {
-        return extractedText.substring(0, 300) + (extractedText.length > 300 ? '...' : '');
-      }
+      return extractedParts.join('\n\n');
     }
     
     // Fallback for other formats: just indicate there's content
@@ -236,6 +267,44 @@ function safelyExtractDescription(description: any): string {
     console.error('Error extracting Jira description:', error);
     return 'Description available but in unknown format';
   }
+}
+
+// Helper function to extract text from content arrays
+function extractTextFromContentArray(contentArray: any[]): string {
+  if (!contentArray || !Array.isArray(contentArray)) {
+    return '';
+  }
+  
+  const textParts: string[] = [];
+  
+  contentArray.forEach((item: any) => {
+    // Direct text nodes
+    if (item.text) {
+      // Apply formatting if available
+      let formattedText = item.text;
+      
+      // Handle basic formatting marks
+      if (item.marks && Array.isArray(item.marks)) {
+        item.marks.forEach((mark: any) => {
+          if (mark.type === 'strong') {
+            formattedText = `**${formattedText}**`;
+          } else if (mark.type === 'em') {
+            formattedText = `*${formattedText}*`;
+          } else if (mark.type === 'code') {
+            formattedText = `\`${formattedText}\``;
+          }
+        });
+      }
+      
+      textParts.push(formattedText);
+    }
+    // Nested content
+    else if (item.content && Array.isArray(item.content)) {
+      textParts.push(extractTextFromContentArray(item.content));
+    }
+  });
+  
+  return textParts.join(' ');
 }
 
 // Function to get parent information if available
