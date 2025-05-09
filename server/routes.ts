@@ -1223,6 +1223,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to add test cases to cycle" });
     }
   });
+  
+  // Add test cases to cycle (alternative endpoint to match client hook)
+  app.post("/api/test-cycles/add-cases", async (req, res) => {
+    try {
+      const { cycleId, testCaseIds, suiteId } = req.body;
+      
+      if (!cycleId) {
+        return res.status(400).json({ message: "cycleId is required" });
+      }
+      
+      // If suiteId is provided but no test case IDs, add the entire suite
+      if (suiteId && (!testCaseIds || testCaseIds.length === 0)) {
+        const addedItems = await storage.addTestSuiteToCycle(
+          parseInt(cycleId), 
+          parseInt(suiteId)
+        );
+        
+        return res.status(200).json(addedItems);
+      }
+      
+      // Otherwise, require testCaseIds
+      if (!testCaseIds || !Array.isArray(testCaseIds) || testCaseIds.length === 0) {
+        return res.status(400).json({ message: "testCaseIds array is required" });
+      }
+      
+      const addedItems = await storage.addTestCasesToCycle(
+        parseInt(cycleId), 
+        testCaseIds.map(id => parseInt(id)), 
+        suiteId ? parseInt(suiteId) : undefined
+      );
+      
+      res.status(200).json(addedItems);
+    } catch (error) {
+      console.error("Error adding test cases to cycle:", error);
+      res.status(500).json({ message: "Failed to add test cases to cycle" });
+    }
+  });
+  
+  // Add entire test suite to cycle
+  app.post("/api/test-cycles/:cycleId/add-suite/:suiteId", async (req, res) => {
+    try {
+      const cycleId = parseInt(req.params.cycleId);
+      const suiteId = parseInt(req.params.suiteId);
+      
+      const addedItems = await storage.addTestSuiteToCycle(cycleId, suiteId);
+      
+      res.status(201).json(addedItems);
+    } catch (error) {
+      console.error("Error adding test suite to cycle:", error);
+      res.status(500).json({ message: "Failed to add test suite to cycle" });
+    }
+  });
 
   // Test Runs API endpoints
   app.get("/api/test-runs/:cycleItemId", async (req, res) => {

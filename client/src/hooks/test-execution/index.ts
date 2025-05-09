@@ -78,6 +78,19 @@ export function useAddTestCasesToCycle() {
   });
 }
 
+export function useAddTestSuiteToCycle() {
+  return useMutation({
+    mutationFn: ({ cycleId, suiteId }: { cycleId: number, suiteId: number }) => 
+      apiRequest('/api/test-cycles/add-cases', { 
+        method: 'POST', 
+        body: JSON.stringify({ cycleId, suiteId })
+      }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/test-cycle-items', variables.cycleId] });
+    }
+  });
+}
+
 export function useUpdateTestCycleItem(id: number) {
   return useMutation({
     mutationFn: (data: Partial<InsertTestCycleItem>) => 

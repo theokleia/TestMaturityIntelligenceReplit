@@ -689,6 +689,25 @@ export class DatabaseStorage implements IStorage {
       .returning();
   }
   
+  async addTestSuiteToCycle(cycleId: number, suiteId: number): Promise<TestCycleItem[]> {
+    // Get all test cases from the specified suite
+    const testCasesInSuite = await db
+      .select()
+      .from(testCases)
+      .where(eq(testCases.suiteId, suiteId));
+    
+    // If no test cases found, return empty array
+    if (!testCasesInSuite.length) {
+      return [];
+    }
+    
+    // Extract the test case IDs
+    const testCaseIds = testCasesInSuite.map(tc => tc.id);
+    
+    // Add all test cases to the cycle
+    return this.addTestCasesToCycle(cycleId, testCaseIds, suiteId);
+  }
+  
   // Test Runs
   async getTestRuns(cycleItemId: number): Promise<TestRun[]> {
     return db
