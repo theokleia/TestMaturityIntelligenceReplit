@@ -74,7 +74,7 @@ import {
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { StatusBadge } from "@/components/design-system/status-badge";
+import { StatusBadge, type StatusBadgeVariant } from "@/components/design-system/status-badge";
 
 // Schema for creating a test cycle
 const testCycleSchema = z.object({
@@ -113,7 +113,7 @@ export default function TestExecution() {
   // Queries
   const { data: testCycles, isLoading: isLoadingCycles } = useTestCycles(projectId);
   const { data: cycleItems, isLoading: isLoadingItems } = useTestCycleItems(selectedCycle?.id || 0);
-  const { data: testCases, isLoading: isLoadingCases } = useTestCases({
+  const { testCases, isLoading: isLoadingCases } = useTestCases({
     projectId,
   });
   
@@ -211,21 +211,21 @@ export default function TestExecution() {
   
   // Render status badge
   const renderStatusBadge = (status: string) => {
-    const statusMap: Record<string, { color: string, label: string }> = {
-      "not-run": { color: "gray", label: "Not Run" },
-      "pass": { color: "success", label: "Pass" },
-      "fail": { color: "destructive", label: "Fail" },
-      "skip": { color: "warning", label: "Skipped" },
-      "blocked": { color: "destructive", label: "Blocked" },
-      "in-progress": { color: "accent", label: "In Progress" },
-      "created": { color: "accent", label: "Created" },
-      "completed": { color: "success", label: "Completed" },
+    const statusMap: Record<string, { variant: StatusBadgeVariant, label: string }> = {
+      "not-run": { variant: "muted", label: "Not Run" },
+      "pass": { variant: "success", label: "Pass" },
+      "fail": { variant: "danger", label: "Fail" },
+      "skip": { variant: "warning", label: "Skipped" },
+      "blocked": { variant: "danger", label: "Blocked" },
+      "in-progress": { variant: "blue", label: "In Progress" },
+      "created": { variant: "blue", label: "Created" },
+      "completed": { variant: "success", label: "Completed" },
     };
     
-    const statusInfo = statusMap[status] || { color: "gray", label: status };
+    const statusInfo = statusMap[status] || { variant: "muted", label: status };
     
     return (
-      <StatusBadge color={statusInfo.color}>
+      <StatusBadge variant={statusInfo.variant}>
         {statusInfo.label}
       </StatusBadge>
     );
