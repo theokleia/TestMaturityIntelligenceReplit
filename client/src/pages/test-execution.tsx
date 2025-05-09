@@ -585,7 +585,7 @@ export default function TestExecution() {
                       <TableHead>ID</TableHead>
                       <TableHead>Test Case</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Last Executed</TableHead>
+                      <TableHead>Executions</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -597,7 +597,16 @@ export default function TestExecution() {
                           <TableCell className="font-mono">{item.testCaseId}</TableCell>
                           <TableCell>{testCase?.title || `Test Case #${item.testCaseId}`}</TableCell>
                           <TableCell>{renderStatusBadge(item.status)}</TableCell>
-                          <TableCell>{item.updatedAt ? new Date(item.updatedAt).toLocaleString() : "Never"}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center">
+                              <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-primary/10 text-xs font-medium">
+                                {item.status && item.status !== "not-run" ? 1 : 0}
+                              </span>
+                              <span className="ml-2 text-muted-foreground text-xs">
+                                {item.status && item.status !== "not-run" ? "execution" : "executions"}
+                              </span>
+                            </div>
+                          </TableCell>
                           <TableCell className="text-right space-x-2">
                             <Button 
                               variant="outline" 
