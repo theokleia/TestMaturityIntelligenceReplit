@@ -12,7 +12,8 @@ import {
   useCreateTestRun,
   useTestRuns,
   useTestRunsByTestCase,
-  TestCycle
+  TestCycle,
+  TestRun
 } from "@/hooks/test-execution";
 import { useTestCases, useTestSuites } from "@/hooks/test-management";
 import { useToast } from "@/hooks/use-toast";
