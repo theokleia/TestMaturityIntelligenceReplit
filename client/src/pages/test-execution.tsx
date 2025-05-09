@@ -5,12 +5,13 @@ import {
   useCreateTestCycle, 
   useTestCycleItems,
   useAddTestCasesToCycle,
+  useAddTestSuiteToCycle,
   useUpdateTestCycleItem,
   useCreateTestRun,
   TestCycle,
   TestCycleItem
 } from "@/hooks/test-execution";
-import { useTestCases, TestCase } from "@/hooks/test-management";
+import { useTestCases, useTestSuites, TestCase, TestSuite } from "@/hooks/test-management";
 import { useToast } from "@/hooks/use-toast";
 import { 
   PageContainer, 
@@ -96,8 +97,10 @@ export default function TestExecution() {
   const [activeTab, setActiveTab] = useState("cycles");
   const [newCycleDialogOpen, setNewCycleDialogOpen] = useState(false);
   const [selectCasesDialogOpen, setSelectCasesDialogOpen] = useState(false);
+  const [selectSuiteDialogOpen, setSelectSuiteDialogOpen] = useState(false);
   const [testRunDialogOpen, setTestRunDialogOpen] = useState(false);
   const [selectedCases, setSelectedCases] = useState<number[]>([]);
+  const [selectedSuiteId, setSelectedSuiteId] = useState<number | null>(null);
   const [selectedCycleItem, setSelectedCycleItem] = useState<TestCycleItem | null>(null);
   
   // Forms
@@ -116,10 +119,14 @@ export default function TestExecution() {
   const { testCases, isLoading: isLoadingCases } = useTestCases({
     projectId,
   });
+  const { testSuites, isLoading: isLoadingSuites } = useTestSuites({
+    projectId,
+  });
   
   // Mutations
   const createCycleMutation = useCreateTestCycle();
   const addCasesMutation = useAddTestCasesToCycle();
+  const addSuiteMutation = useAddTestSuiteToCycle();
   const updateItemMutation = useUpdateTestCycleItem(selectedCycleItem?.id || 0);
   const createRunMutation = useCreateTestRun();
   
@@ -175,6 +182,31 @@ export default function TestExecution() {
         toast({
           title: "Error",
           description: "Failed to add test cases. Please try again.",
+          variant: "destructive",
+        });
+      }
+    });
+  };
+  
+  const handleAddSuite = () => {
+    if (!selectedCycle || !selectedSuiteId) return;
+    
+    addSuiteMutation.mutate({
+      cycleId: selectedCycle.id,
+      suiteId: selectedSuiteId
+    }, {
+      onSuccess: (result) => {
+        toast({
+          title: "Test Suite Added",
+          description: `Test suite with ${result.length} test cases added to cycle.`,
+        });
+        setSelectSuiteDialogOpen(false);
+        setSelectedSuiteId(null);
+      },
+      onError: (error) => {
+        toast({
+          title: "Error",
+          description: "Failed to add test suite. Please try again.",
           variant: "destructive",
         });
       }
@@ -331,13 +363,22 @@ export default function TestExecution() {
                     title={selectedCycle.name} 
                     description={selectedCycle.description || "No description"} 
                     action={
-                      <Button
-                        variant="outline"
-                        onClick={() => setSelectCasesDialogOpen(true)}
-                      >
-                        <Plus size={16} className="mr-2" />
-                        Add Test Cases
-                      </Button>
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="outline"
+                          onClick={() => setSelectSuiteDialogOpen(true)}
+                        >
+                          <ListChecks size={16} className="mr-2" />
+                          Add Test Suite
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => setSelectCasesDialogOpen(true)}
+                        >
+                          <Plus size={16} className="mr-2" />
+                          Add Test Cases
+                        </Button>
+                      </div>
                     }
                   />
                   
@@ -616,6 +657,91 @@ export default function TestExecution() {
               {addCasesMutation.isPending 
                 ? "Adding Cases..." 
                 : `Add ${selectedCases.length} Cases`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Select Test Suite Dialog */}
+      <Dialog open={selectSuiteDialogOpen} onOpenChange={setSelectSuiteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Test Suite to Cycle</DialogTitle>
+            <DialogDescription>
+              Select a test suite to add all its test cases to the current cycle.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="max-h-[400px] overflow-y-auto">
+            {isLoadingSuites ? (
+              <div className="text-center py-8">Loading test suites...</div>
+            ) : testSuites && testSuites.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">
+                      <span className="sr-only">Select</span>
+                    </TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Priority</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {testSuites.map((suite) => (
+                    <TableRow key={suite.id}>
+                      <TableCell>
+                        <input
+                          type="radio"
+                          className="w-4 h-4"
+                          checked={selectedSuiteId === suite.id}
+                          onChange={() => setSelectedSuiteId(suite.id)}
+                        />
+                      </TableCell>
+                      <TableCell className="font-medium">{suite.name}</TableCell>
+                      <TableCell>{suite.description}</TableCell>
+                      <TableCell>
+                        <StatusBadge variant={
+                          suite.status === "active" ? "success" :
+                          suite.status === "draft" ? "muted" : "warning"
+                        }>
+                          {suite.status.charAt(0).toUpperCase() + suite.status.slice(1)}
+                        </StatusBadge>
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge variant={
+                          suite.priority === "high" ? "danger" :
+                          suite.priority === "medium" ? "warning" : "muted"
+                        }>
+                          {suite.priority.charAt(0).toUpperCase() + suite.priority.slice(1)}
+                        </StatusBadge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                No test suites available to add.
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setSelectSuiteDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddSuite}
+              disabled={!selectedSuiteId || addSuiteMutation.isPending}
+            >
+              {addSuiteMutation.isPending 
+                ? "Adding Suite..." 
+                : "Add Test Suite"}
             </Button>
           </DialogFooter>
         </DialogContent>
