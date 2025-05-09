@@ -101,7 +101,14 @@ export default function TestExecutionPage() {
   const { 
     testCases = [], 
     isLoading: isLoadingCases 
-  } = useTestCases({ projectId });
+  } = useTestCases({ 
+    projectId: projectId || undefined 
+  });
+  
+  // Debug logs
+  console.log("Project ID:", projectId);
+  console.log("Available test cases:", testCases);
+  console.log("Cycle items:", cycleItems);
   
   const { 
     data: testRuns = [], 
@@ -356,8 +363,13 @@ export default function TestExecutionPage() {
   
   // Prepare test case selection options for dialog
   const availableTestCases = testCases.filter(testCase => {
-    return !cycleItems.some(item => item.testCaseId === testCase.id);
+    // Only show test cases that aren't already in the cycle
+    const isInCycle = cycleItems.some(item => item.testCaseId === testCase.id);
+    console.log(`Test case ${testCase.id} (${testCase.title}) in cycle: ${isInCycle}`);
+    return !isInCycle;
   });
+  
+  console.log("Available test cases for dialog:", availableTestCases.length);
   
   // Define TabView content
   const tabItems = [
