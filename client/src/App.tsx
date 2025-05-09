@@ -23,6 +23,7 @@ function Router() {
       <Route path="/assessments" component={Assessments} />
       <Route path="/ai-insights" component={AiInsights} />
       <Route path="/test-management" component={TestManagement} />
+      <Route path="/test-execution" component={TestExecution} />
       <Route path="/projects" component={Projects} />
       <Route path="/project-health" component={ProjectHealth} />
       <Route path="/settings" component={Settings} />

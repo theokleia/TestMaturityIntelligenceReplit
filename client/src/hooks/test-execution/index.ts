@@ -39,7 +39,7 @@ export function useTestCycle(id: number) {
 export function useCreateTestCycle() {
   return useMutation({
     mutationFn: (data: InsertTestCycle) => 
-      apiRequest('/api/test-cycles', { method: 'POST', data }),
+      apiRequest('/api/test-cycles', { method: 'POST', body: JSON.stringify(data) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/test-cycles'] });
     }
@@ -49,7 +49,7 @@ export function useCreateTestCycle() {
 export function useUpdateTestCycle(id: number) {
   return useMutation({
     mutationFn: (data: Partial<InsertTestCycle>) => 
-      apiRequest(`/api/test-cycles/${id}`, { method: 'PATCH', data }),
+      apiRequest(`/api/test-cycles/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/test-cycles'] });
       queryClient.invalidateQueries({ queryKey: ['/api/test-cycles', id] });
@@ -70,7 +70,7 @@ export function useAddTestCasesToCycle() {
     mutationFn: ({ cycleId, testCaseIds, suiteId }: { cycleId: number, testCaseIds: number[], suiteId?: number }) => 
       apiRequest('/api/test-cycles/add-cases', { 
         method: 'POST', 
-        data: { cycleId, testCaseIds, suiteId } 
+        body: JSON.stringify({ cycleId, testCaseIds, suiteId })
       }),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/test-cycle-items', variables.cycleId] });
@@ -81,7 +81,7 @@ export function useAddTestCasesToCycle() {
 export function useUpdateTestCycleItem(id: number) {
   return useMutation({
     mutationFn: (data: Partial<InsertTestCycleItem>) => 
-      apiRequest(`/api/test-cycle-items/${id}`, { method: 'PATCH', data }),
+      apiRequest(`/api/test-cycle-items/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/test-cycle-items'] });
     }
@@ -99,7 +99,7 @@ export function useTestRuns(cycleItemId: number) {
 export function useCreateTestRun() {
   return useMutation({
     mutationFn: (data: InsertTestRun) => 
-      apiRequest('/api/test-runs', { method: 'POST', data }),
+      apiRequest('/api/test-runs', { method: 'POST', body: JSON.stringify(data) }),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/test-runs', variables.cycleItemId] });
       queryClient.invalidateQueries({ queryKey: ['/api/test-cycle-items'] });
@@ -110,7 +110,7 @@ export function useCreateTestRun() {
 export function useUpdateTestRun(id: number) {
   return useMutation({
     mutationFn: (data: Partial<InsertTestRun>) => 
-      apiRequest(`/api/test-runs/${id}`, { method: 'PATCH', data }),
+      apiRequest(`/api/test-runs/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ['/api/test-runs'] });
       queryClient.invalidateQueries({ queryKey: ['/api/test-cycle-items'] });

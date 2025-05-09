@@ -43,6 +43,12 @@ export function Sidebar() {
       icon: "bx-test-tube",
     },
     {
+      title: "Test Execution",
+      path: "/test-execution",
+      icon: "bx-play-circle",
+      badge: "New",
+    },
+    {
       title: "AI Insights",
       path: "/ai-insights",
       icon: "bx-bulb",
