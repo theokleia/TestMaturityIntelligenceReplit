@@ -1330,6 +1330,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch test runs" });
     }
   });
+  
+  // Get all test runs for a specific test case
+  app.get("/api/test-runs/test-case/:testCaseId", async (req, res) => {
+    try {
+      const testCaseId = parseInt(req.params.testCaseId);
+      const testRuns = await storage.getTestRunsByTestCase(testCaseId);
+      res.json(testRuns);
+    } catch (error) {
+      console.error("Error fetching test runs for test case:", error);
+      res.status(500).json({ message: "Failed to fetch test runs for test case" });
+    }
+  });
 
   app.get("/api/test-runs/detail/:id", async (req, res) => {
     try {

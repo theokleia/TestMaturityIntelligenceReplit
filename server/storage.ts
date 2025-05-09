@@ -741,6 +741,39 @@ export class DatabaseStorage implements IStorage {
     return run || undefined;
   }
   
+  async getTestRunsByTestCase(testCaseId: number): Promise<TestRun[]> {
+    // First get all cycle items that reference this test case
+    const cycleItems = await db
+      .select()
+      .from(testCycleItems)
+      .where(eq(testCycleItems.testCaseId, testCaseId));
+    
+    if (!cycleItems.length) {
+      return [];
+    }
+    
+    // Get the IDs of all cycle items
+    const cycleItemIds = cycleItems.map(item => item.id);
+    
+    // Get all runs for these cycle items
+    return db
+      .select({
+        run: testRuns,
+        cycleItem: testCycleItems,
+        cycle: testCycles
+      })
+      .from(testRuns)
+      .innerJoin(testCycleItems, eq(testRuns.cycleItemId, testCycleItems.id))
+      .innerJoin(testCycles, eq(testCycleItems.cycleId, testCycles.id))
+      .where(inArray(testRuns.cycleItemId, cycleItemIds))
+      .orderBy(desc(testRuns.executedAt))
+      .then(results => results.map(r => ({
+        ...r.run,
+        cycleName: r.cycle.name,
+        cycleId: r.cycle.id
+      })));
+  }
+  
   async createTestRun(testRun: InsertTestRun): Promise<TestRun> {
     const [newRun] = await db
       .insert(testRuns)

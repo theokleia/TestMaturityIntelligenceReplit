@@ -164,6 +164,13 @@ export function useTestRuns(cycleItemId: number) {
   });
 }
 
+export function useTestRunsByTestCase(testCaseId: number) {
+  return useQuery<(TestRun & { cycleName?: string, cycleId?: number })[]>({
+    queryKey: [`/api/test-runs/test-case/${testCaseId}`],
+    enabled: !!testCaseId,
+  });
+}
+
 export function useCreateTestRun() {
   return useMutation({
     mutationFn: (data: InsertTestRun) => 
@@ -171,13 +178,22 @@ export function useCreateTestRun() {
     onSuccess: (response, variables) => {
       queryClient.invalidateQueries({ queryKey: [`/api/test-runs/${variables.cycleItemId}`] });
       
-      // Get the cycle item to find its cycleId
+      // Get the cycle item to find its cycleId and testCaseId
       const getItem = async () => {
         try {
           const itemResponse = await fetch(`/api/test-cycle-items/item/${variables.cycleItemId}`);
           const item = await itemResponse.json();
-          if (item && item.cycleId) {
-            queryClient.invalidateQueries({ queryKey: [`/api/test-cycle-items/${item.cycleId}`] });
+          
+          if (item) {
+            // Invalidate cycle items for this cycle
+            if (item.cycleId) {
+              queryClient.invalidateQueries({ queryKey: [`/api/test-cycle-items/${item.cycleId}`] });
+            }
+            
+            // Invalidate test runs for this test case across all cycles
+            if (item.testCaseId) {
+              queryClient.invalidateQueries({ queryKey: [`/api/test-runs/test-case/${item.testCaseId}`] });
+            }
           } else {
             // Fallback to invalidate all test cycle items
             queryClient.invalidateQueries({ queryKey: ['/api/test-cycle-items'] });
@@ -207,12 +223,20 @@ export function useUpdateTestRun(id: number) {
             // Invalidate this specific run
             queryClient.invalidateQueries({ queryKey: [`/api/test-runs/${run.cycleItemId}`] });
             
-            // Get the cycle item to find its cycleId
+            // Get the cycle item to find its cycleId and testCaseId
             const itemResponse = await fetch(`/api/test-cycle-items/item/${run.cycleItemId}`);
             const item = await itemResponse.json();
             
-            if (item && item.cycleId) {
-              queryClient.invalidateQueries({ queryKey: [`/api/test-cycle-items/${item.cycleId}`] });
+            if (item) {
+              // Invalidate cycle items for this cycle
+              if (item.cycleId) {
+                queryClient.invalidateQueries({ queryKey: [`/api/test-cycle-items/${item.cycleId}`] });
+              }
+              
+              // Invalidate test runs for this test case across all cycles
+              if (item.testCaseId) {
+                queryClient.invalidateQueries({ queryKey: [`/api/test-runs/test-case/${item.testCaseId}`] });
+              }
             } else {
               // Fallback to invalidate all test cycle items
               queryClient.invalidateQueries({ queryKey: ['/api/test-cycle-items'] });
