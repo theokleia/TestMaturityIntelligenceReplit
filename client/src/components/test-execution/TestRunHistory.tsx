@@ -13,9 +13,9 @@ interface TestRunHistoryProps {
 }
 
 export function TestRunHistory({ runs }: TestRunHistoryProps) {
-  // Sort runs by date, newest first
+  // Sort runs by execution date, newest first
   const sortedRuns = [...runs].sort((a, b) => 
-    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    new Date(b.executedAt || 0).getTime() - new Date(a.executedAt || 0).getTime()
   );
 
   if (sortedRuns.length === 0) {
@@ -33,12 +33,12 @@ export function TestRunHistory({ runs }: TestRunHistoryProps) {
           <CardHeader className="py-3 px-4">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-medium flex items-center">
-                <span>Run on {formatDate(run.createdAt)}</span>
+                <span>Run on {formatDate(run.executedAt || '')}</span>
                 <span className="mx-2">•</span>
-                <StatusBadge variant="run" status={run.status} />
+                <StatusBadge variant="test" status={run.status || 'unknown'} />
               </CardTitle>
               <div className="text-xs text-muted-foreground">
-                {run.cycleId ? `Cycle ID: ${run.cycleId}` : ""}
+                {run.cycleName ? `Cycle: ${run.cycleName}` : ""}
               </div>
             </div>
           </CardHeader>
