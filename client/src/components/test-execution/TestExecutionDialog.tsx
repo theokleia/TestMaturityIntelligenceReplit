@@ -225,7 +225,7 @@ export function TestExecutionDialog({
                 <TableBody>
                   {previousRuns.map((run) => (
                     <TableRow key={run.id}>
-                      <TableCell>{run.createdAt ? new Date(run.createdAt).toLocaleString() : "N/A"}</TableCell>
+                      <TableCell>{run.executedAt ? new Date(run.executedAt).toLocaleString() : "N/A"}</TableCell>
                       <TableCell>{renderStatusBadge(run.status)}</TableCell>
                       <TableCell className="truncate max-w-[280px]">{run.notes || "-"}</TableCell>
                     </TableRow>
@@ -259,11 +259,11 @@ export function TestExecutionDialog({
                 />
               </div>
 
-              <div className="flex justify-center space-x-4 mt-6">
+              <div className="flex flex-wrap justify-center gap-4 mt-6">
                 <Button 
                   type="submit"
                   onClick={() => form.setValue("status", "passed")}
-                  className="bg-green-600 hover:bg-green-700 min-w-[100px]"
+                  className="bg-green-600 hover:bg-green-700 min-w-[90px]"
                 >
                   <Check className="mr-2 h-4 w-4" />
                   Pass
@@ -271,7 +271,7 @@ export function TestExecutionDialog({
                 <Button 
                   type="submit"
                   onClick={() => form.setValue("status", "failed")}
-                  className="bg-red-600 hover:bg-red-700 min-w-[100px]"
+                  className="bg-red-600 hover:bg-red-700 min-w-[90px]"
                 >
                   <X className="mr-2 h-4 w-4" />
                   Fail
@@ -279,10 +279,18 @@ export function TestExecutionDialog({
                 <Button 
                   type="submit"
                   onClick={() => form.setValue("status", "blocked")}
-                  className="bg-amber-600 hover:bg-amber-700 min-w-[100px]"
+                  className="bg-amber-600 hover:bg-amber-700 min-w-[90px]"
                 >
                   <AlertTriangle className="mr-2 h-4 w-4" />
                   Block
+                </Button>
+                <Button 
+                  type="submit"
+                  onClick={() => form.setValue("status", "skipped")}
+                  className="bg-blue-600 hover:bg-blue-700 min-w-[90px]"
+                >
+                  <span className="mr-2">⏭</span>
+                  Skip
                 </Button>
               </div>
             </form>
