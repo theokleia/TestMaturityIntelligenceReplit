@@ -43,17 +43,23 @@ export function WhisperAssistant() {
   );
   
   // Get the first test cycle for now - in the future we could handle the active cycle
-  const activeCycle = testCycles && testCycles.length > 0 ? testCycles[0] : undefined;
+  const activeCycle = testCycles && Array.isArray(testCycles) && testCycles.length > 0 ? testCycles[0] : undefined;
   
   // Fetch test cycle items for the active cycle
   const { data: cycleItems } = useTestCycleItems(
     isTestExecutionPage && activeCycle ? activeCycle.id : undefined
   );
   
+  // Cast cycleItems and testCases to arrays for TypeScript safety
+  const cycleItemsArray = cycleItems && Array.isArray(cycleItems) ? cycleItems : [];
+  
   // Fetch test cases for the project
   const { testCases } = useTestCases({
     projectId: isTestExecutionPage && selectedProject ? selectedProject.id : undefined
   });
+  
+  // Cast testCases to an array for TypeScript safety
+  const testCasesArray = testCases && Array.isArray(testCases) ? testCases : [];
   
   // Prepare test execution analytics data for whisper suggestions
   const prepareTestExecutionData = () => {
@@ -67,10 +73,6 @@ export function WhisperAssistant() {
       skipped: 0,
       'not-run': 0
     };
-    
-    // Need to cast these to proper arrays to avoid TypeScript errors
-    const cycleItemsArray = Array.isArray(cycleItems) ? cycleItems : [];
-    const testCasesArray = Array.isArray(testCases) ? testCases : [];
     
     cycleItemsArray.forEach(item => {
       const status = (item.status as string) || 'not-run';
@@ -89,7 +91,7 @@ export function WhisperAssistant() {
         const testCase = testCasesArray.find(tc => tc.id === item.testCaseId);
         return testCase ? { ...testCase, itemId: item.id } : null;
       })
-      .filter(Boolean)
+      .filter((tc): tc is NonNullable<typeof tc> => tc !== null) // Type guard to ensure we have non-null items
       .filter(tc => tc.priority === 'high')
       .map(tc => ({ id: tc.id, title: tc.title, priority: tc.priority }));
     
@@ -111,7 +113,7 @@ export function WhisperAssistant() {
   
   // Fetch whisper suggestions when location or project changes
   const { data, error, isLoading, refetch } = useQuery({
-    queryKey: ['/api/ai/whisper', selectedProject?.id, location, cycleItems?.length],
+    queryKey: ['/api/ai/whisper', selectedProject?.id, location, cycleItems ? (Array.isArray(cycleItems) ? cycleItems.length : 0) : 0],
     queryFn: async () => {
       if (!selectedProject) return null;
       

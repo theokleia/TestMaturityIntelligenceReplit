@@ -804,19 +804,66 @@ export async function generateWhisperSuggestions(
                                  contextPath.includes("ai-insights") || 
                                  contextPath === "/";
     
-    // For test execution page, add specific guidance related to test runs
+    // For test execution page, add specific data-driven analysis based on the contextData
     let testExecutionContext = "";
-    if (isTestExecutionPage) {
-      testExecutionContext = `
-      For the Test Execution page, please provide specialized suggestions:
-      1. Advise what tests to execute next based on priority and current status of test cases
-      2. Analyze pass/fail ratios and provide insights
-      3. Identify failed tests that don't have a preceding passed status and suggest adding them to a future cycle
-      4. Track test progress and estimate completion status based on the number of executed vs pending tests
-      
-      Prioritize high-risk, high-priority test cases that haven't been executed yet.
-      Consider suggesting specific actions based on the current test cycle progress.
-      `;
+    if (isTestExecutionPage && contextData) {
+      // Extract test execution metrics from contextData
+      try {
+        // Cast contextData to proper type 
+        const testExecutionData = contextData as {
+          activeCycle?: { id: number; name: string; status: string } | null;
+          statusCounts?: { passed: number; failed: number; blocked: number; skipped: number; 'not-run': number };
+          completionPercentage?: number;
+          totalTests?: number;
+          completedTests?: number;
+          highPriorityNotRun?: Array<{ id: number; title: string; priority: string }>;
+          failedTests?: number;
+        };
+        
+        // Construct detailed context with actual data for analysis
+        if (testExecutionData && testExecutionData.statusCounts && testExecutionData.activeCycle) {
+          const { statusCounts, completionPercentage, totalTests, highPriorityNotRun, failedTests } = testExecutionData;
+          const cycle = testExecutionData.activeCycle;
+          
+          testExecutionContext = `
+          Analyze the following ACTUAL TEST EXECUTION DATA for cycle "${cycle.name}" (status: ${cycle.status}):
+          
+          Current metrics:
+          - Total tests: ${totalTests || 0}
+          - Completion: ${completionPercentage || 0}% (${statusCounts.passed || 0} passed, ${statusCounts.failed || 0} failed, ${statusCounts.blocked || 0} blocked, ${statusCounts.skipped || 0} skipped, ${statusCounts['not-run'] || 0} not run)
+          - Failed tests: ${failedTests || 0}
+          
+          High priority test cases not yet executed:
+          ${highPriorityNotRun && highPriorityNotRun.length > 0 
+            ? highPriorityNotRun.map(tc => `- ${tc.title} (ID: ${tc.id})`).join('\n') 
+            : '- None'}
+          
+          Based on this ACTUAL DATA, provide specific, actionable suggestions:
+          
+          1. SPECIFICALLY identify which tests should be executed next (by name if available) based on priority and status
+          2. Provide PRECISE analysis of the current pass/fail ratio (${statusCounts.passed || 0}/${statusCounts.failed || 0}) and what it indicates
+          3. Comment on the test cycle progress (${completionPercentage || 0}%) and estimate remaining work
+          4. If there are failed tests, suggest concrete next steps
+          
+          Your suggestions must be SPECIFIC to this data, with actual percentages, test names, and metrics.
+          Don't just suggest users to analyze - YOU should provide the analysis based on real numbers.
+          `;
+        } else {
+          testExecutionContext = `
+          For the Test Execution page, analyze the available test data and provide specific insights.
+          Since detailed metrics are not available, focus on general best practices for test execution
+          but try to be as specific as possible with whatever data is available.
+          Don't just suggest users to analyze - YOU should provide the analysis.
+          `;
+        }
+      } catch (error) {
+        console.error("Error processing test execution data:", error);
+        testExecutionContext = `
+        For the Test Execution page, analyze the available test data and provide specific insights.
+        Focus on general best practices for test execution but try to be as specific as possible.
+        Don't just suggest users to analyze - YOU should provide the analysis.
+        `;
+      }
     }
     
     // Build a context-aware prompt
