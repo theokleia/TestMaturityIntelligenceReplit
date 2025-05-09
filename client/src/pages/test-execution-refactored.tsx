@@ -94,12 +94,12 @@ export default function TestExecutionPage() {
   } = useTestCycleItems(selectedCycleId || undefined);
   
   const { 
-    data: testSuites = [], 
+    testSuites = [], 
     isLoading: isLoadingSuites 
   } = useTestSuites({ projectId });
   
   const { 
-    data: testCases = [], 
+    testCases = [], 
     isLoading: isLoadingCases 
   } = useTestCases({ projectId });
   
@@ -550,6 +550,7 @@ export default function TestExecutionPage() {
                 disabled={selectedCases.length === 0} 
                 onClick={() => handleAddTestCasesToCycle(selectedCases)}
                 variant="default"
+                isPending={addCasesToCycleMutation.isPending}
               >
                 Add {selectedCases.length} Test Case{selectedCases.length !== 1 ? 's' : ''}
               </Button>
@@ -608,6 +609,7 @@ export default function TestExecutionPage() {
                   }
                 }}
                 variant="default"
+                isPending={addSuiteToCycleMutation.isPending}
               >
                 Add Suite
               </Button>
