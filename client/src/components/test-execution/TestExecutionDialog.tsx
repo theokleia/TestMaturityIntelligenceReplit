@@ -54,15 +54,19 @@ interface TestData {
 
 // Define a dynamic validation schema that can be updated based on selected status
 const getFormSchema = (status: string) => {
-  const baseSchema = {
-    status: z.string(),
-    notes: status === "failed" 
-      ? z.string().min(5, { message: "Notes are required for failed tests (min 5 characters)" }) 
-      : z.string().optional(),
-    createJiraTicket: z.boolean().optional(),
-  };
-  
-  return z.object(baseSchema);
+  if (status === "failed") {
+    return z.object({
+      status: z.string(),
+      notes: z.string().min(5, { message: "Notes are required for failed tests (min 5 characters)" }),
+      createJiraTicket: z.boolean().optional(),
+    });
+  } else {
+    return z.object({
+      status: z.string(),
+      notes: z.string().optional(),
+      createJiraTicket: z.boolean().optional(),
+    });
+  }
 };
 
 // Base schema for initialization
@@ -120,7 +124,13 @@ export function TestExecutionDialog({
   useEffect(() => {
     if (watchedStatus && watchedStatus !== currentStatus) {
       setCurrentStatus(watchedStatus);
-      form.clearErrors();
+      
+      // When switching to failed status, make sure to validate the form again
+      if (watchedStatus === "failed") {
+        form.trigger("notes");
+      } else {
+        form.clearErrors();
+      }
     }
   }, [watchedStatus, currentStatus, form]);
   
@@ -365,11 +375,17 @@ export function TestExecutionDialog({
                   Pass
                 </Button>
                 <Button 
-                  type="submit"
-                  onClick={() => {
+                  type="button" // Change to button type to handle validation ourselves
+                  onClick={async () => {
                     form.setValue("status", "failed");
                     if (hasJiraIntegration) {
                       form.setValue("createJiraTicket", true);
+                    }
+                    
+                    // Trigger validation and only submit if valid
+                    const isValid = await form.trigger("notes");
+                    if (isValid) {
+                      form.handleSubmit(handleSubmit)();
                     }
                   }}
                   className="bg-red-600 hover:bg-red-700 min-w-[90px]"

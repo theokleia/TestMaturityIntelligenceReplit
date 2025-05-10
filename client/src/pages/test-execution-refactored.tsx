@@ -381,7 +381,24 @@ export default function TestExecutionPage() {
           // If the test failed and user wants to create a Jira ticket
           if (data.status === "failed" && createJiraTicket && selectedProject) {
             try {
+              // Make sure we have all required data for Jira
+              if (!data.notes || data.notes.trim() === '') {
+                console.error("Cannot create Jira ticket: Notes are required");
+                toast({
+                  title: "Error",
+                  description: "Cannot create Jira ticket: Notes are required",
+                  variant: "destructive",
+                });
+                return;
+              }
+              
               // Create a Jira ticket with AI-generated content
+              console.log("Creating Jira ticket with data:", {
+                projectId: selectedProject.id,
+                summary: `Test Failure: ${testCase?.title || 'Untitled Test'}`,
+                notes: data.notes,
+              });
+              
               const response = await fetch('/api/jira/create-ticket', {
                 method: 'POST',
                 headers: {

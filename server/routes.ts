@@ -1638,8 +1638,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { projectId, summary, description, issueType, testCaseId, testRunId } = req.body;
       
+      // Log the incoming request for debugging
+      console.log("Jira ticket creation request:", {
+        projectId, 
+        summaryProvided: !!summary,
+        descriptionProvided: !!description,
+        issueType,
+        testCaseId,
+        testRunId
+      });
+      
       if (!projectId || !summary || !description) {
-        return res.status(400).json({ message: "Missing required fields" });
+        return res.status(400).json({ 
+          message: "Missing required fields",
+          details: {
+            projectIdMissing: !projectId,
+            summaryMissing: !summary,
+            descriptionMissing: !description
+          }
+        });
       }
 
       // Get the project to retrieve Jira credentials
