@@ -57,7 +57,7 @@ export function Sidebar() {
       icon: "bx-bulb",
     },
     {
-      title: "Documentation",
+      title: "ATMF",
       path: "/documentation",
       icon: "bx-book-alt",
     },

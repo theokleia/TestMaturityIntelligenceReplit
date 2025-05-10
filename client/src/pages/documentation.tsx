@@ -87,7 +87,7 @@ export default function Documentation() {
   return (
     <>
       <PageContainer 
-        title="Documentation"
+        title="ATMF"
         subtitle="Access comprehensive documentation about the Adaptive Testing Maturity Framework (ATMF)"
       >
         <Tabs defaultValue="framework" value={activeTab} onValueChange={setActiveTab} className="w-full">
