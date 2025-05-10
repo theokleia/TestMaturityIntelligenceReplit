@@ -402,9 +402,7 @@ export class DatabaseStorage implements IStorage {
         conditions.push(eq(assessments.templateId, filters.templateId));
       }
       
-      if (filters.userId !== undefined) {
-        conditions.push(eq(assessments.userId, filters.userId));
-      }
+      // Removed userId filter to allow all users to see all assessments
       
       if (filters.status !== undefined) {
         conditions.push(eq(assessments.status, filters.status));
@@ -462,9 +460,7 @@ export class DatabaseStorage implements IStorage {
     const conditions = [];
     
     if (filters) {
-      if (filters.userId !== undefined) {
-        conditions.push(eq(testSuites.userId, filters.userId));
-      }
+      // Removed userId filter to allow all users to see all test suites
       
       if (filters.status !== undefined) {
         conditions.push(eq(testSuites.status, filters.status));
@@ -540,9 +536,7 @@ export class DatabaseStorage implements IStorage {
         conditions.push(eq(testCases.suiteId, filters.suiteId));
       }
       
-      if (filters.userId !== undefined) {
-        conditions.push(eq(testCases.userId, filters.userId));
-      }
+      // Removed userId filter to allow all users to see all test cases
       
       if (filters.status !== undefined) {
         conditions.push(eq(testCases.status, filters.status));
