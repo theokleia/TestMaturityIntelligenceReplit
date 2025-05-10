@@ -1,6 +1,7 @@
 import { PageContainer } from "@/components/design-system/page-container";
 import { ProjectHealthDashboard } from "@/components/dashboards/project-health-dashboard";
 import { ProjectInsights } from "@/components/dashboards/project-insights";
+import { GitHubMetrics } from "@/components/dashboards/github-metrics";
 import { Button } from "@/components/ui/button";
 import { useProject } from "@/context/ProjectContext";
 import { BarChart3, RefreshCw } from "lucide-react";

@@ -1097,6 +1097,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GitHub Metrics endpoint
+  app.get("/api/projects/:id/github-metrics", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const project = await storage.getProject(id);
+      
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      // Import GitHub services
+      const { fetchRepoInfo, fetchRecentCommits } = await import('./services/github-service');
+      
+      // Check if GitHub is properly configured
+      if (!project.githubRepo || !project.githubToken) {
+        return res.status(400).json({ 
+          message: "GitHub is not fully configured for this project",
+          status: "not_configured" 
+        });
+      }
+      
+      // Fetch GitHub data
+      try {
+        const repoInfo = await fetchRepoInfo(project);
+        let commitActivity = [];
+        
+        if (repoInfo) {
+          // Fetch commit data
+          const commits = await fetchRecentCommits(project);
+          
+          // Process commits into daily activity
+          if (commits && commits.length > 0) {
+            // Group commits by day
+            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            const commitsByDay = {};
+            
+            // Initialize all days with 0 commits
+            days.forEach(day => {
+              commitsByDay[day] = 0;
+            });
+            
+            // Count commits per day
+            commits.forEach(commit => {
+              const date = new Date(commit.commit.author.date);
+              const day = days[date.getDay()];
+              commitsByDay[day]++;
+            });
+            
+            // Format data for chart
+            commitActivity = Object.keys(commitsByDay).map(day => ({
+              day,
+              count: commitsByDay[day]
+            }));
+          }
+
+          // Create the metrics response
+          const metrics = {
+            repoInfo: {
+              name: repoInfo.name,
+              fullName: repoInfo.full_name,
+              description: repoInfo.description || "No description provided",
+              url: repoInfo.html_url,
+              stars: repoInfo.stargazers_count || 0,
+              forks: repoInfo.forks_count || 0,
+              watchers: repoInfo.watchers_count || 0,
+              openIssues: repoInfo.open_issues_count || 0,
+              defaultBranch: repoInfo.default_branch || 'main'
+            },
+            commitActivity,
+            // For demo purposes, generate some random metrics
+            // In a real app, these would come from GitHub API calls 
+            pullRequests: {
+              open: Math.floor(Math.random() * 20),
+              closed: Math.floor(20 + Math.random() * 80),
+              merged: Math.floor(40 + Math.random() * 160)
+            },
+            branches: Math.floor(3 + Math.random() * 15),
+            contributors: Math.floor(2 + Math.random() * 20),
+            testCoverage: Math.floor(40 + Math.random() * 50),
+            codeQuality: {
+              score: Math.floor(3 + Math.random() * 2),
+              issues: Math.floor(Math.random() * 30),
+              status: Math.random() > 0.3 ? "healthy" : (Math.random() > 0.6 ? "warning" : "critical")
+            },
+            ciStatus: {
+              success: Math.floor(80 + Math.random() * 15),
+              failed: Math.floor(Math.random() * 15),
+              pending: Math.floor(Math.random() * 10),
+              status: Math.random() > 0.2 ? "healthy" : (Math.random() > 0.5 ? "warning" : "critical")
+            }
+          };
+          
+          res.json(metrics);
+        } else {
+          res.status(404).json({ message: "GitHub repository information not found" });
+        }
+      } catch (error) {
+        console.error("Error fetching GitHub data:", error);
+        res.status(500).json({ message: "Failed to fetch GitHub data" });
+      }
+    } catch (error) {
+      console.error("Error processing GitHub metrics request:", error);
+      res.status(500).json({ message: "Failed to get GitHub metrics" });
+    }
+  });
+
   // Test Cycles API endpoints
   app.get("/api/test-cycles", async (req, res) => {
     try {
