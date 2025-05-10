@@ -433,7 +433,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const filters = {
         dimensionId: req.query.dimensionId ? parseInt(req.query.dimensionId as string) : undefined,
         templateId: req.query.templateId ? parseInt(req.query.templateId as string) : undefined,
-        userId: req.query.userId ? parseInt(req.query.userId as string) : undefined,
+        // Removed userId filtering at the API level too
+        userId: undefined, // Skip userId filtering even if provided by frontend
         status: req.query.status ? (req.query.status as string) : undefined,
         projectId: req.query.projectId ? parseInt(req.query.projectId as string) : undefined
       };
@@ -501,7 +502,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/test-suites", async (req, res) => {
     try {
       const filters = {
-        userId: req.query.userId ? parseInt(req.query.userId as string) : undefined,
+        // Removed userId filtering at the API level too
+        userId: undefined, // Skip userId filtering even if provided by frontend
         status: req.query.status ? (req.query.status as string) : undefined,
         priority: req.query.priority ? (req.query.priority as string) : undefined,
         projectArea: req.query.projectArea ? (req.query.projectArea as string) : undefined,
@@ -595,7 +597,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const filters = {
         suiteId: req.query.suiteId ? parseInt(req.query.suiteId as string) : undefined,
-        userId: req.query.userId ? parseInt(req.query.userId as string) : undefined,
+        // Removed userId filtering at the API level too
+        userId: undefined, // Skip userId filtering even if provided by frontend
         status: req.query.status ? (req.query.status as string) : undefined,
         priority: req.query.priority ? (req.query.priority as string) : undefined,
         severity: req.query.severity ? (req.query.severity as string) : undefined,

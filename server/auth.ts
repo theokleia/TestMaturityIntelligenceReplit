@@ -74,9 +74,15 @@ export function setupAuth(app: Express) {
   passport.deserializeUser(async (id: number, done) => {
     try {
       const user = await storage.getUser(id);
-      done(null, user || undefined);
+      // Return null instead of undefined if user not found - this prevents deserialization errors
+      if (!user) {
+        return done(null, null);
+      }
+      done(null, user);
     } catch (error) {
-      done(error);
+      console.error('User deserialization error:', error);
+      // Don't pass error to done - return null user instead
+      done(null, null);
     }
   });
 
