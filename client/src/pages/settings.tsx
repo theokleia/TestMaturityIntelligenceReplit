@@ -127,6 +127,11 @@ export default function ProjectSettings() {
           updatePayload.jiraApiKey = settings.jiraApiKey;
         }
         
+        // Add Jira issue type for test failures
+        if (settings.jiraIssueType) {
+          updatePayload.jiraIssueType = settings.jiraIssueType;
+        }
+        
         // Add GitHub repo if provided
         if (settings.githubRepo) {
           updatePayload.githubRepo = settings.githubRepo;
@@ -424,6 +429,35 @@ export default function ProjectSettings() {
                     </p>
                   </div>
                 </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="jiraIssueType">
+                    Issue Type for Test Failures <span className="text-xs text-atmf-muted">(Automatic ticket creation)</span>
+                  </Label>
+                  <Select 
+                    value={settings.jiraIssueType} 
+                    onValueChange={(value) => handleChange("jiraIssueType", value)}
+                  >
+                    <SelectTrigger id="jiraIssueType" className="bg-atmf-main border-white/10 focus:border-white/20">
+                      <SelectValue placeholder="Select issue type" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-atmf-card border-white/10">
+                      <SelectItem value="Bug">Bug</SelectItem>
+                      <SelectItem value="Defect">Defect</SelectItem>
+                      <SelectItem value="Issue">Issue</SelectItem>
+                      <SelectItem value="Task">Task</SelectItem>
+                      <SelectItem value="Test">Test</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <div className="text-xs text-atmf-muted space-y-1">
+                    <p>
+                      Select the Jira issue type that will be created automatically when a test case fails
+                    </p>
+                    <p className="text-atmf-muted/70 text-[10px]">
+                      This setting enables AI-assisted ticket creation with detailed test failure information
+                    </p>
+                  </div>
+                </div>
 
                 <Button 
                   className="btn-atmf-secondary w-full mt-2" 
@@ -451,6 +485,11 @@ export default function ProjectSettings() {
                       {selectedProject.jiraJql && (
                         <p className="mt-1 text-xs text-atmf-muted">
                           <span className="text-blue-400">JQL Query:</span> {selectedProject.jiraJql}
+                        </p>
+                      )}
+                      {selectedProject.jiraIssueType && (
+                        <p className="mt-1 text-xs text-atmf-muted">
+                          <span className="text-blue-400">Issue Type for Test Failures:</span> {selectedProject.jiraIssueType}
                         </p>
                       )}
                     </div>

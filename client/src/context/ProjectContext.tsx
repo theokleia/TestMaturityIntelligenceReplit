@@ -12,6 +12,7 @@ export interface Project {
   jiraUrl?: string; // Add Jira base URL (optional)
   jiraJql?: string; // Add Jira JQL search query (optional)
   jiraApiKey?: string; // Add Jira API key (optional)
+  jiraIssueType?: string; // Add Jira issue type for test failures (optional)
   githubRepo?: string; // Add GitHub repository (optional)
   githubToken?: string; // Add GitHub token (optional)
   testCaseFormat?: "structured" | "plain"; // Format for test cases
