@@ -339,25 +339,51 @@ These templates provide structured guidance for evaluating your organization's t
     fetchDocument();
   }, [documentId]);
 
+  // Helper function to process text formatting without React Fragment issues
+  const formatText = (text: string) => {
+    if (!text) return null;
+    
+    // Simple regex-based approach to avoid React Fragment issues
+    const parts = [];
+    let currentIndex = 0;
+    
+    // Process bold formatting
+    text.replace(/\*\*(.*?)\*\*/g, (match, content, offset) => {
+      if (offset > currentIndex) {
+        parts.push(text.substring(currentIndex, offset));
+      }
+      parts.push(<strong key={`bold-${offset}`} className="font-bold">{content}</strong>);
+      currentIndex = offset + match.length;
+      return match;
+    });
+    
+    // Add remaining text
+    if (currentIndex < text.length) {
+      parts.push(text.substring(currentIndex));
+    }
+    
+    return parts;
+  };
+
   // Function to convert markdown to HTML with improved processing
   const formatMarkdown = (markdown: string) => {
     // Split the content by line breaks
     const lines = markdown.split("\n");
     
-    // Track list state
+    // Tracking variables for state
     let inOrderedList = false;
     let inUnorderedList = false;
     let inTable = false;
     let tableHeaders: string[] = [];
     let tableRows: string[][] = [];
-    let listItems: JSX.Element[] = [];
-    let result: JSX.Element[] = [];
+    let listItems: React.ReactNode[] = [];
+    let result: React.ReactNode[] = [];
     
     // Process each line
     lines.forEach((line, index) => {
       // Headers
       if (line.startsWith("# ")) {
-        // Close any open lists
+        // Close any open lists before header
         if (inOrderedList || inUnorderedList) {
           result.push(
             inOrderedList 
@@ -368,6 +394,12 @@ These templates provide structured guidance for evaluating your organization's t
           inOrderedList = false;
           inUnorderedList = false;
         }
+        
+        // Close table if open
+        if (inTable) {
+          addTableToResults();
+        }
+        
         result.push(<h1 key={index} className="text-2xl font-bold my-6 text-white">{line.substring(2)}</h1>);
         return;
       }
@@ -384,6 +416,12 @@ These templates provide structured guidance for evaluating your organization's t
           inOrderedList = false;
           inUnorderedList = false;
         }
+        
+        // Close table if open
+        if (inTable) {
+          addTableToResults();
+        }
+        
         result.push(<h2 key={index} className="text-xl font-bold my-5 text-white">{line.substring(3)}</h2>);
         return;
       }
@@ -400,24 +438,71 @@ These templates provide structured guidance for evaluating your organization's t
           inOrderedList = false;
           inUnorderedList = false;
         }
+        
+        // Close table if open
+        if (inTable) {
+          addTableToResults();
+        }
+        
         result.push(<h3 key={index} className="text-lg font-bold my-4 text-white">{line.substring(4)}</h3>);
         return;
       }
       
-      if (line.startsWith("#### ")) {
-        // Close any open lists
-        if (inOrderedList || inUnorderedList) {
-          result.push(
-            inOrderedList 
-              ? <ol key={`list-${index}`} className="list-decimal pl-8 my-4 space-y-1">{listItems}</ol>
-              : <ul key={`list-${index}`} className="list-disc pl-8 my-4 space-y-1">{listItems}</ul>
-          );
-          listItems = [];
-          inOrderedList = false;
-          inUnorderedList = false;
+      // Table row detection
+      if (line.trim().startsWith('|') && line.trim().endsWith('|')) {
+        const cells = line.trim().split('|').slice(1, -1).map(cell => cell.trim());
+        
+        // Check if this is a header separator row like |---|---|---|
+        const isSeparatorRow = cells.every(cell => /^-+$/.test(cell.replace(/:/g, '').trim()));
+        
+        if (isSeparatorRow) {
+          // This is a separator row, just mark that we're in a table
+          inTable = true;
+        } else if (!inTable) {
+          // This is the first row of a new table - it's the header
+          inTable = true;
+          tableHeaders = cells;
+        } else {
+          // This is a content row
+          tableRows.push(cells);
         }
-        result.push(<h4 key={index} className="text-base font-bold my-3 text-white">{line.substring(5)}</h4>);
         return;
+      } else if (inTable) {
+        // We've exited the table, add it to results
+        addTableToResults();
+      }
+      
+      // Helper function to add current table to results
+      function addTableToResults() {
+        result.push(
+          <div key={`table-${index}`} className="my-6 w-full overflow-x-auto rounded-lg border border-white/20">
+            <table className="w-full border-collapse">
+              <thead className="bg-card/80">
+                <tr>
+                  {tableHeaders.map((header, i) => (
+                    <th key={`th-${i}`} className="border-b border-white/20 p-3 text-left font-semibold text-white">
+                      {header}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {tableRows.map((row, rowIndex) => (
+                  <tr key={`tr-${rowIndex}`} className={rowIndex % 2 === 0 ? "bg-card/60" : "bg-card/30"}>
+                    {row.map((cell, cellIndex) => (
+                      <td key={`td-${rowIndex}-${cellIndex}`} className="border-t border-white/10 p-3 text-text-muted">
+                        {cell}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+        inTable = false;
+        tableHeaders = [];
+        tableRows = [];
       }
       
       // Lists
@@ -431,9 +516,7 @@ These templates provide structured guidance for evaluating your organization's t
         
         inUnorderedList = true;
         const content = line.substring(2);
-        // Process bold and italic in list items
-        const processedContent = processInlineFormatting(content);
-        listItems.push(<li key={`li-${index}`}>{processedContent}</li>);
+        listItems.push(<li key={`li-${index}`}>{content}</li>);
         return;
       }
       
@@ -447,9 +530,7 @@ These templates provide structured guidance for evaluating your organization's t
         
         inOrderedList = true;
         const content = line.replace(/^\d+\.\s/, '');
-        // Process bold and italic in list items
-        const processedContent = processInlineFormatting(content);
-        listItems.push(<li key={`li-${index}`}>{processedContent}</li>);
+        listItems.push(<li key={`li-${index}`}>{content}</li>);
         return;
       }
       
@@ -479,64 +560,9 @@ These templates provide structured guidance for evaluating your organization's t
         return;
       }
       
-      // Table row detection
-      if (line.trim().startsWith('|') && line.trim().endsWith('|')) {
-        const cells = line.trim().split('|').slice(1, -1).map(cell => cell.trim());
-        
-        // Check if this is a header separator row like |---|---|---|
-        const isSeparatorRow = cells.every(cell => /^-+$/.test(cell.replace(/:/g, '').trim()));
-        
-        if (isSeparatorRow) {
-          // This is a separator row, just mark that we're in a table
-          inTable = true;
-        } else if (!inTable) {
-          // This is the first row of a new table - it's the header
-          inTable = true;
-          tableHeaders = cells;
-        } else {
-          // This is a content row
-          tableRows.push(cells);
-        }
-        return;
-      } else if (inTable) {
-        // We've exited the table
-        const tableElement = (
-          <div key={`table-${index}`} className="my-6 w-full overflow-x-auto rounded-lg border border-white/20">
-            <table className="w-full border-collapse">
-              <thead className="bg-card/80">
-                <tr>
-                  {tableHeaders.map((header, i) => (
-                    <th key={`th-${i}`} className="border-b border-white/20 p-3 text-left font-semibold text-white">
-                      {processInlineFormatting(header)}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {tableRows.map((row, rowIndex) => (
-                  <tr key={`tr-${rowIndex}`} className={rowIndex % 2 === 0 ? "bg-card/60" : "bg-card/30"}>
-                    {row.map((cell, cellIndex) => (
-                      <td key={`td-${rowIndex}-${cellIndex}`} className="border-t border-white/10 p-3 text-text-muted">
-                        {processInlineFormatting(cell)}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        );
-        
-        result.push(tableElement);
-        inTable = false;
-        tableHeaders = [];
-        tableRows = [];
-      }
-      
       // Regular paragraph
       if (!inOrderedList && !inUnorderedList && !inTable) {
-        const processedContent = processInlineFormatting(line);
-        result.push(<p key={index} className="my-2 text-gray-300">{processedContent}</p>);
+        result.push(<p key={index} className="my-2 text-gray-300">{formatText(line)}</p>);
       }
     });
     
@@ -551,14 +577,14 @@ These templates provide structured guidance for evaluating your organization's t
     
     // Close any open table at the end
     if (inTable && tableHeaders.length > 0) {
-      const tableElement = (
+      result.push(
         <div key="final-table" className="my-6 w-full overflow-x-auto rounded-lg border border-white/20">
           <table className="w-full border-collapse">
             <thead className="bg-card/80">
               <tr>
                 {tableHeaders.map((header, i) => (
                   <th key={`th-${i}`} className="border-b border-white/20 p-3 text-left font-semibold text-white">
-                    {processInlineFormatting(header)}
+                    {header}
                   </th>
                 ))}
               </tr>
@@ -568,7 +594,7 @@ These templates provide structured guidance for evaluating your organization's t
                 <tr key={`tr-${rowIndex}`} className={rowIndex % 2 === 0 ? "bg-card/60" : "bg-card/30"}>
                   {row.map((cell, cellIndex) => (
                     <td key={`td-${rowIndex}-${cellIndex}`} className="border-t border-white/10 p-3 text-text-muted">
-                      {processInlineFormatting(cell)}
+                      {cell}
                     </td>
                   ))}
                 </tr>
@@ -577,113 +603,9 @@ These templates provide structured guidance for evaluating your organization's t
           </table>
         </div>
       );
-      
-      result.push(tableElement);
     }
     
     return result;
-  };
-  
-  // Function to process inline formatting (bold, italic, links)
-  const processInlineFormatting = (text: string) => {
-    if (!text) return null;
-    
-    // Process bold and italic
-    let segments = [];
-    let remainingText = text;
-    let lastIndex = 0;
-    
-    // Bold
-    const boldRegex = /\*\*(.*?)\*\*/g;
-    let boldMatch;
-    let segmentIndex = 0;
-    
-    while ((boldMatch = boldRegex.exec(text)) !== null) {
-      if (boldMatch.index > lastIndex) {
-        // Add text before the bold part
-        segments.push(
-          <span key={`text-${segmentIndex++}`}>
-            {remainingText.substring(0, boldMatch.index - lastIndex)}
-          </span>
-        );
-      }
-      
-      // Add the bold part
-      segments.push(
-        <strong key={`bold-${segmentIndex++}`} className="font-bold">
-          {boldMatch[1]}
-        </strong>
-      );
-      
-      // Update remaining text
-      remainingText = remainingText.substring(boldMatch.index - lastIndex + boldMatch[0].length);
-      lastIndex = boldMatch.index + boldMatch[0].length;
-    }
-    
-    // Add any remaining text
-    if (remainingText) {
-      segments.push(<span key={`text-${segmentIndex++}`}>{remainingText}</span>);
-    }
-    
-    // If no bold matches were found, process italic
-    if (segments.length === 0) {
-      segments = [<span key="original-text">{text}</span>];
-    }
-    
-    // Process italic in each segment that is a span (not already bold)
-    const processedSegments = segments.map((segment, index) => {
-      if (segment.type !== 'span') {
-        return segment;
-      }
-      
-      const segmentText = segment.props.children;
-      if (typeof segmentText !== 'string') {
-        return segment;
-      }
-      
-      const italicParts = [];
-      let italicRemaining = segmentText;
-      let italicLastIndex = 0;
-      let italicSegmentIndex = 0;
-      
-      const italicRegex = /\*(.*?)\*/g;
-      let italicMatch;
-      
-      while ((italicMatch = italicRegex.exec(segmentText)) !== null) {
-        if (italicMatch.index > italicLastIndex) {
-          // Add text before the italic part
-          italicParts.push(
-            <span key={`text-${index}-${italicSegmentIndex++}`}>
-              {italicRemaining.substring(0, italicMatch.index - italicLastIndex)}
-            </span>
-          );
-        }
-        
-        // Add the italic part
-        italicParts.push(
-          <em key={`italic-${index}-${italicSegmentIndex++}`} className="italic">
-            {italicMatch[1]}
-          </em>
-        );
-        
-        // Update remaining text
-        italicRemaining = italicRemaining.substring(italicMatch.index - italicLastIndex + italicMatch[0].length);
-        italicLastIndex = italicMatch.index + italicMatch[0].length;
-      }
-      
-      // Add any remaining text
-      if (italicRemaining) {
-        italicParts.push(
-          <span key={`text-${index}-${italicSegmentIndex++}`}>
-            {italicRemaining}
-          </span>
-        );
-      }
-      
-      return italicParts.length > 0 ? <React.Fragment key={`italic-wrapper-${index}`}>{italicParts}</React.Fragment> : segment;
-    });
-    
-    return <>{processedSegments}</>;
   };
 
   return (
@@ -734,7 +656,9 @@ These templates provide structured guidance for evaluating your organization's t
           {!loading && !error && (
             <div className="max-w-none">
               <div className="max-w-4xl mx-auto">
-                {formatMarkdown(content)}
+                <div className="prose prose-invert">
+                  {formatMarkdown(content)}
+                </div>
               </div>
             </div>
           )}
