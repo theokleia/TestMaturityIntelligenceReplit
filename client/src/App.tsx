@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import NotFound from "@/pages/not-found";
@@ -37,7 +37,7 @@ function Router() {
       <ProtectedRoute path="/atmf" component={ATMF} />
       {/* Redirect old documentation path to new ATMF path */}
       <Route path="/documentation">
-        <Redirect to="/atmf" />
+        {() => <Redirect to="/atmf" />}
       </Route>
       <ProtectedRoute path="/test-fetch" component={TestFetch} />
       {/* Auth route is public */}
