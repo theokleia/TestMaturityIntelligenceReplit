@@ -57,6 +57,8 @@ export default function ProjectSettings() {
         ...defaultSettings,
         // Pre-fill GitHub repo if set
         githubRepo: selectedProject.githubRepo || '',
+        // Pre-fill GitHub token if set (masked for security)
+        githubToken: selectedProject.githubToken ? '••••••••••••••••' : '',
         // Use the saved Jira URL if available
         jiraUrl: selectedProject.jiraUrl || '',
         // Use the saved Jira project ID if available
@@ -126,8 +128,8 @@ export default function ProjectSettings() {
           updatePayload.githubRepo = settings.githubRepo;
         }
         
-        // Add GitHub token if provided
-        if (settings.githubToken) {
+        // Add GitHub token if provided and not masked
+        if (settings.githubToken && settings.githubToken !== '••••••••••••••••') {
           updatePayload.githubToken = settings.githubToken;
         }
         

@@ -13,6 +13,7 @@ export interface Project {
   jiraJql?: string; // Add Jira JQL search query (optional)
   jiraApiKey?: string; // Add Jira API key (optional)
   githubRepo?: string; // Add GitHub repository (optional)
+  githubToken?: string; // Add GitHub token (optional)
   testCaseFormat?: "structured" | "plain"; // Format for test cases
   outputFormat?: "markdown" | "pdf" | "html"; // Format for output
 }
