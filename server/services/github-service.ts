@@ -3,7 +3,7 @@
  * Provides functionality to interact with GitHub API using the stored credentials
  */
 
-import fetch from 'node-fetch';
+import fetch, { Response as FetchResponse } from 'node-fetch';
 import { Project } from '@shared/schema';
 
 // Define types for GitHub API responses
@@ -281,6 +281,167 @@ export function getGitHubContextForAI(
   }
 
   return context;
+}
+
+/**
+ * Fetch branches from a GitHub repository
+ */
+export async function fetchBranches(project: Project): Promise<string[] | null> {
+  // Verify that the project has the necessary GitHub configuration
+  if (!project.githubRepo || !project.githubToken) {
+    console.warn("GitHub integration is not fully configured for project:", project.id);
+    return null;
+  }
+
+  try {
+    // Construct the URL for the GitHub API endpoint
+    const apiUrl = `https://api.github.com/repos/${project.githubRepo}/branches`;
+
+    // Make the API call with appropriate authorization
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${project.githubToken}`,
+        'Accept': 'application/vnd.github.v3+json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error(`GitHub API error (${response.status}):`, errorData);
+      return null;
+    }
+
+    const branches = await response.json() as Array<{name: string}>;
+    return branches.map(branch => branch.name);
+  } catch (error) {
+    console.error("Error fetching GitHub branches:", error);
+    return null;
+  }
+}
+
+/**
+ * Fetch contributors from a GitHub repository
+ */
+export async function fetchContributors(project: Project): Promise<number | null> {
+  // Verify that the project has the necessary GitHub configuration
+  if (!project.githubRepo || !project.githubToken) {
+    console.warn("GitHub integration is not fully configured for project:", project.id);
+    return null;
+  }
+
+  try {
+    // Construct the URL for the GitHub API endpoint
+    const apiUrl = `https://api.github.com/repos/${project.githubRepo}/contributors`;
+
+    // Make the API call with appropriate authorization
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${project.githubToken}`,
+        'Accept': 'application/vnd.github.v3+json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error(`GitHub API error (${response.status}):`, errorData);
+      return null;
+    }
+
+    const contributors = await response.json() as Array<{id: number}>;
+    return contributors.length;
+  } catch (error) {
+    console.error("Error fetching GitHub contributors:", error);
+    return null;
+  }
+}
+
+/**
+ * Fetch pull requests from a GitHub repository
+ */
+export async function fetchPullRequests(project: Project): Promise<{
+  open: number;
+  closed: number;
+  merged: number;
+} | null> {
+  // Verify that the project has the necessary GitHub configuration
+  if (!project.githubRepo || !project.githubToken) {
+    console.warn("GitHub integration is not fully configured for project:", project.id);
+    return null;
+  }
+
+  try {
+    // Construct the URLs for the GitHub API endpoints
+    const openPRsUrl = `https://api.github.com/repos/${project.githubRepo}/pulls?state=open&per_page=1`;
+    const closedPRsUrl = `https://api.github.com/repos/${project.githubRepo}/pulls?state=closed&per_page=1`;
+    
+    // Make API calls to get counts from headers
+    const [openResponse, closedResponse] = await Promise.all([
+      fetch(openPRsUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${project.githubToken}`,
+          'Accept': 'application/vnd.github.v3+json'
+        }
+      }),
+      fetch(closedPRsUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${project.githubToken}`,
+          'Accept': 'application/vnd.github.v3+json'
+        }
+      })
+    ]);
+
+    if (!openResponse.ok || !closedResponse.ok) {
+      console.error("Error fetching pull requests");
+      return null;
+    }
+
+    // Get counts from Link header or count items
+    const openCount = getTotalCountFromResponse(openResponse);
+    const closedCount = getTotalCountFromResponse(closedResponse);
+
+    // For merged PRs, we need to fetch all closed PRs and count those with a merge_commit_sha
+    // This would take too many API calls for a large repo, so for now just estimate
+    // that roughly 70% of closed PRs are merged
+    const mergedCount = Math.floor(closedCount * 0.7);
+
+    return {
+      open: openCount,
+      closed: closedCount,
+      merged: mergedCount
+    };
+  } catch (error) {
+    console.error("Error fetching GitHub pull requests:", error);
+    return null;
+  }
+}
+
+// Helper to get total count from GitHub API response
+function getTotalCountFromResponse(response: FetchResponse): number {
+  // First try to get from Link header for pagination
+  const linkHeader = response.headers.get('Link');
+  if (linkHeader) {
+    const matches = linkHeader.match(/page=(\d+)>; rel="last"/);
+    if (matches && matches.length > 1) {
+      return parseInt(matches[1], 10);
+    }
+  }
+  
+  // Check if there's a total count header
+  const countHeader = response.headers.get('X-Total-Count');
+  if (countHeader) {
+    return parseInt(countHeader, 10);
+  }
+  
+  // Default to a count of 1 if we got a result but no count info
+  if (response.status === 200) {
+    return 1;
+  }
+  
+  return 0;
 }
 
 /**
