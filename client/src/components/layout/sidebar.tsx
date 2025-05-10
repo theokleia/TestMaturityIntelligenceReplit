@@ -32,7 +32,6 @@ export function Sidebar() {
       title: "Project Health",
       path: "/project-health",
       icon: "bx-line-chart",
-      badge: "New",
     },
     {
       title: "Assessments",
@@ -49,7 +48,6 @@ export function Sidebar() {
       title: "Test Execution",
       path: "/test-execution",
       icon: "bx-play-circle",
-      badge: "New",
     },
     {
       title: "AI Insights",

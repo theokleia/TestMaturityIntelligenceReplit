@@ -22,6 +22,7 @@ export const projects = pgTable("projects", {
   jiraUrl: text("jira_url"), // Added jiraUrl field to store the Jira base URL
   jiraJql: text("jira_jql"),
   jiraApiKey: text("jira_api_key"), // Changed from varchar(100) to text to support longer API keys
+  jiraIssueType: varchar("jira_issue_type", { length: 50 }).default("Bug"), // Added field for Jira issue type for test failures
   githubRepo: varchar("github_repo", { length: 100 }),
   githubToken: text("github_token"), // Added GitHub token field
   testCaseFormat: varchar("test_case_format", { length: 20 }).default("structured"),
