@@ -3,10 +3,10 @@ import { useState } from "react";
 import { PageContainer } from "@/components/design-system/page-container";
 import { ATMFCard } from "@/components/design-system/atmf-card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Book, ArrowRight, FileText, BookOpen, Users, FileCode } from "lucide-react";
 import { IconWrapper } from "@/components/design-system/icon-wrapper";
 import { DocumentViewer } from "@/components/documentation/document-viewer";
+import { TabView } from "@/components/design-system/tab-view";
 
 interface DocumentCard {
   id: string;
@@ -82,7 +82,8 @@ export default function ATMF() {
     }
   ];
   
-  const filteredDocuments = documentSections.find(section => section.id === activeTab)?.documents || [];
+  // Display documents based on active tab
+  const activeSection = documentSections.find(section => section.id === activeTab);
   
   return (
     <>
@@ -90,51 +91,50 @@ export default function ATMF() {
         title="ATMF"
         subtitle="Access comprehensive documentation about the Adaptive Testing Maturity Framework (ATMF)"
       >
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <div className="mb-6">
-            <TabsList className="space-x-2 bg-transparent border-0">
-              {documentSections.map((section) => (
-                <TabsTrigger 
-                  key={section.id} 
-                  value={section.id}
-                  className="bg-transparent data-[state=active]:bg-primary data-[state=active]:text-white h-10 px-4 border-0"
-                >
-                  {section.title}
-                </TabsTrigger>
-              ))}
-            </TabsList>
+        {/* Tabs Navigation */}
+        <div className="mb-6">
+          <TabView
+            tabs={documentSections.map(section => ({
+              id: section.id,
+              label: section.title,
+              content: null // Content is rendered separately below
+            }))}
+            activeTab={activeTab}
+            onChange={setActiveTab}
+            variant="underline"
+            contentClassName="hidden" // Hide the default content rendering
+          />
+        </div>
+
+        {/* Documents Grid */}
+        {activeSection && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {activeSection.documents.map((doc) => (
+              <ATMFCard key={doc.id} neonEffect={doc.color} className="flex flex-col h-full">
+                <div className="p-6 flex-1">
+                  <div className="flex items-start mb-4">
+                    <IconWrapper color={doc.color} size="md">
+                      {doc.icon}
+                    </IconWrapper>
+                  </div>
+                  <h3 className="text-lg font-semibold mb-2">{doc.title}</h3>
+                  <p className="text-sm text-text-muted mb-4">{doc.description}</p>
+                </div>
+                <div className="px-6 pb-6 mt-auto">
+                  <Button 
+                    className="w-full justify-between group" 
+                    onClick={() => setSelectedDocument({ id: doc.id, title: doc.title })}
+                  >
+                    Read Document
+                    <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  </Button>
+                </div>
+              </ATMFCard>
+            ))}
           </div>
-          
-          {documentSections.map((section) => (
-            <TabsContent key={section.id} value={section.id} className="mt-0">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {section.documents.map((doc) => (
-                  <ATMFCard key={doc.id} neonEffect={doc.color} className="flex flex-col h-full">
-                    <div className="p-6 flex-1">
-                      <div className="flex items-start mb-4">
-                        <IconWrapper color={doc.color} size="md">
-                          {doc.icon}
-                        </IconWrapper>
-                      </div>
-                      <h3 className="text-lg font-semibold mb-2">{doc.title}</h3>
-                      <p className="text-sm text-text-muted mb-4">{doc.description}</p>
-                    </div>
-                    <div className="px-6 pb-6 mt-auto">
-                      <Button 
-                        className="w-full justify-between group" 
-                        onClick={() => setSelectedDocument({ id: doc.id, title: doc.title })}
-                      >
-                        Read Document
-                        <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                      </Button>
-                    </div>
-                  </ATMFCard>
-                ))}
-              </div>
-            </TabsContent>
-          ))}
-        </Tabs>
+        )}
         
+        {/* Recent Updates Section */}
         <div className="mt-12">
           <h2 className="text-xl font-bold mb-6">Recent Updates</h2>
           <div className="glassmorphism border border-white/10 rounded-xl p-6">
@@ -178,6 +178,7 @@ export default function ATMF() {
           </div>
         </div>
         
+        {/* Popular Resources Section */}
         <div className="mt-12">
           <h2 className="text-xl font-bold mb-6">Popular Resources</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -223,6 +224,7 @@ export default function ATMF() {
         </div>
       </PageContainer>
       
+      {/* Document Viewer Modal */}
       {selectedDocument && (
         <DocumentViewer
           documentId={selectedDocument.id}
