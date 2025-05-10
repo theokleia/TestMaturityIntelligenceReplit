@@ -350,9 +350,13 @@ export default function Projects() {
                   </ATMFCardFooter>
                 </ATMFCard>
               ))
-            ) : filteredProjects.length > 0 ? (
+            ) : activeProjects.length > 0 ? (
               // Actual project cards when loaded
-              filteredProjects.map(project => (
+              (searchTerm.trim() === '' ? activeProjects : activeProjects.filter(
+                (project) => 
+                  project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  (project.description && project.description.toLowerCase().includes(searchTerm.toLowerCase()))
+              )).map(project => (
                 <ATMFCard 
                   key={project.id} 
                   className={selectedProject?.id === project.id ? "neon-border-blue" : ""}
@@ -483,9 +487,13 @@ export default function Projects() {
                   </ATMFCardFooter>
                 </ATMFCard>
               ))
-            ) : filteredProjects.length > 0 ? (
+            ) : archivedProjects.length > 0 ? (
               // Archived project cards when loaded
-              filteredProjects.map(project => (
+              (searchTerm.trim() === '' ? archivedProjects : archivedProjects.filter(
+                (project) => 
+                  project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  (project.description && project.description.toLowerCase().includes(searchTerm.toLowerCase()))
+              )).map(project => (
                 <ATMFCard key={project.id} className="opacity-80 border border-white/5 hover:border-white/10">
                   <ATMFCardHeader>
                     <div className="flex items-center justify-between">
