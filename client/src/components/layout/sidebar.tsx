@@ -1,6 +1,8 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { glassmorphismStyles } from "@/lib/glassmorphism";
+import { useAuth } from "@/hooks/use-auth";
+import { LogOut, User } from "lucide-react";
 
 // Define navigation item structure
 interface NavigationItem {
@@ -12,6 +14,7 @@ interface NavigationItem {
 
 export function Sidebar() {
   const [location] = useLocation();
+  const { user, logoutMutation } = useAuth();
   
   // Navigation items definition
   const navigationItems: NavigationItem[] = [
@@ -120,16 +123,25 @@ export function Sidebar() {
       
       {/* User area */}
       <div className="p-4 border-t border-white/5">
-        <div className="flex items-center p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors cursor-pointer">
+        <div className="flex items-center p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
           <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
-            <i className="bx bx-user text-lg text-primary"></i>
+            <User className="h-5 w-5 text-primary" />
           </div>
           <div className="ml-3 flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">Alice Johnson</p>
-            <p className="text-xs text-text-muted truncate">Test Manager</p>
+            <p className="text-sm font-medium truncate">
+              {user ? user.fullName || user.username : 'Not logged in'}
+            </p>
+            <p className="text-xs text-text-muted truncate">
+              {user?.role || 'Guest'}
+            </p>
           </div>
-          <button className="w-8 h-8 flex items-center justify-center text-text-muted hover:text-text-light rounded-full hover:bg-white/5">
-            <i className="bx bx-log-out text-lg"></i>
+          <button 
+            onClick={() => logoutMutation.mutate()}
+            disabled={logoutMutation.isPending || !user}
+            className="w-8 h-8 flex items-center justify-center text-text-muted hover:text-text-light rounded-full hover:bg-white/5"
+            aria-label="Logout"
+          >
+            <LogOut className="h-4 w-4" />
           </button>
         </div>
       </div>

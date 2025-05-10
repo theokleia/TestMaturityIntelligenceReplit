@@ -189,7 +189,11 @@ export default function AuthPage() {
                                 <Input 
                                   placeholder="Your full name" 
                                   className="pl-9" 
-                                  {...field} 
+                                  value={field.value || ''}
+                                  onChange={field.onChange}
+                                  onBlur={field.onBlur}
+                                  name={field.name}
+                                  ref={field.ref}
                                 />
                               </div>
                             </FormControl>
