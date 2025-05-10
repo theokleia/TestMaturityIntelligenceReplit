@@ -8,9 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/design-system/status-badge";
 import { TabView } from "@/components/design-system/tab-view";
-import { Plus, Edit, Trash2, Clock, Check, ArrowUpDown, Search, Database } from "lucide-react";
+import { Plus, Edit, Trash2, Clock, Check, ArrowUpDown, Search, Database, Archive } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { IconWrapper } from "@/components/design-system/icon-wrapper";
+import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
 
 export default function Projects() {
@@ -406,7 +408,7 @@ export default function Projects() {
                   <ATMFCardHeader>
                     <div className="flex items-center justify-between">
                       <h3 className="text-lg font-medium">{project.name}</h3>
-                      <StatusBadge variant="secondary">Archived</StatusBadge>
+                      <StatusBadge variant="muted">Archived</StatusBadge>
                     </div>
                   </ATMFCardHeader>
                   <ATMFCardBody>
@@ -472,19 +474,15 @@ export default function Projects() {
         
         {/* New Project Dialog */}
         <Dialog open={isNewProjectOpen} onOpenChange={setIsNewProjectOpen}>
-          <DialogContent className="bg-atmf-card border-white/10 text-white max-w-md">
+          <DialogContent className="bg-atmf-main border-white/10 sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Create New Project</DialogTitle>
-              <DialogDescription className="text-atmf-muted">
-                Add a new testing project to your ATMosFera workspace.
-              </DialogDescription>
+              <DialogDescription>Add a new testing project to your ATMosFera workspace.</DialogDescription>
             </DialogHeader>
             
             <div className="space-y-4 py-2">
               <div className="space-y-2">
-                <label htmlFor="name" className="text-sm font-medium">
-                  Project Name
-                </label>
+                <Label htmlFor="name">Project Name</Label>
                 <Input
                   id="name"
                   name="name"
@@ -562,6 +560,135 @@ export default function Projects() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        
+        {/* Edit Project Dialog */}
+        <Dialog open={isEditProjectOpen} onOpenChange={setIsEditProjectOpen}>
+          <DialogContent className="bg-atmf-main border-white/10 sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Edit Project</DialogTitle>
+              <DialogDescription>Update your project details.</DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Project Name</Label>
+                <Input 
+                  id="edit-name" 
+                  name="name"
+                  placeholder="Enter project name" 
+                  className="bg-atmf-main border-white/10 focus:border-white/20"
+                  value={projectForm.name}
+                  onChange={handleInputChange}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="edit-description">Description (Optional)</Label>
+                <Textarea 
+                  id="edit-description" 
+                  name="description"
+                  placeholder="Describe your project" 
+                  className="bg-atmf-main border-white/10 min-h-24 focus:border-white/20"
+                  value={projectForm.description}
+                  onChange={handleInputChange}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="edit-jiraProjectId">Jira Project ID (Optional)</Label>
+                <Input 
+                  id="edit-jiraProjectId" 
+                  name="jiraProjectId"
+                  placeholder="e.g. PROJ" 
+                  className="bg-atmf-main border-white/10 focus:border-white/20"
+                  value={projectForm.jiraProjectId}
+                  onChange={handleInputChange}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="edit-jiraJql">Jira JQL Query (Optional)</Label>
+                <Input 
+                  id="edit-jiraJql" 
+                  name="jiraJql"
+                  placeholder="project = PROJ AND type = Bug" 
+                  className="bg-atmf-main border-white/10 focus:border-white/20"
+                  value={projectForm.jiraJql}
+                  onChange={handleInputChange}
+                />
+              </div>
+
+              {activeTab === "active" && (
+                <Button 
+                  variant="outline" 
+                  className="w-full border-white/10 hover:bg-red-900/20 hover:text-red-400 hover:border-red-400/50"
+                  onClick={() => {
+                    if (currentProjectId) {
+                      handleArchiveProject(currentProjectId);
+                      setIsEditProjectOpen(false);
+                      setCurrentProjectId(null);
+                    }
+                  }}
+                >
+                  <Archive className="h-4 w-4 mr-2" />
+                  Archive Project
+                </Button>
+              )}
+            </div>
+            
+            <DialogFooter>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setIsEditProjectOpen(false);
+                  setCurrentProjectId(null);
+                  resetForm();
+                }}
+                className="border-white/10 hover:bg-atmf-main hover:border-white/20"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleEditProject}
+                disabled={!projectForm.name.trim()}
+                className="btn-atmf-accent"
+              >
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+          <AlertDialogContent className="bg-atmf-main border-white/10">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Project</AlertDialogTitle>
+              <AlertDialogDescription className="text-atmf-muted">
+                Are you sure you want to delete this project? This action cannot be undone.
+                <br />
+                All data, test cases, and assessments associated with this project will be permanently removed.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel 
+                onClick={() => {
+                  setIsDeleteConfirmOpen(false);
+                  setCurrentProjectId(null);
+                }}
+                className="border-white/10 hover:bg-atmf-main hover:border-white/20"
+              >
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDeleteProject}
+                className="bg-red-500 hover:bg-red-600"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </PageContainer>
     </>
   );
