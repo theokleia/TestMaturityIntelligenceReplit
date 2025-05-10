@@ -17,6 +17,7 @@ export const projects = pgTable("projects", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
+  status: varchar("status", { length: 20 }).default("active"), // Added status field for archiving
   jiraProjectId: varchar("jira_project_id", { length: 10 }),
   jiraUrl: text("jira_url"), // Added jiraUrl field to store the Jira base URL
   jiraJql: text("jira_jql"),

@@ -1038,7 +1038,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Projects API endpoints
   app.get("/api/projects", async (req, res) => {
     try {
-      const projects = await storage.getProjects();
+      const status = req.query.status as string | undefined;
+      const projects = await storage.getProjects(status);
       res.json(projects);
     } catch (error) {
       console.error("Error fetching projects:", error);
@@ -1094,6 +1095,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error updating project:", error);
       res.status(500).json({ message: "Failed to update project" });
+    }
+  });
+
+  // Archive a project
+  app.patch("/api/projects/:id/archive", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const archivedProject = await storage.archiveProject(id);
+      
+      if (!archivedProject) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      res.json(archivedProject);
+    } catch (error) {
+      console.error("Error archiving project:", error);
+      res.status(500).json({ message: "Failed to archive project" });
+    }
+  });
+
+  // Unarchive a project
+  app.patch("/api/projects/:id/unarchive", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const unarchivedProject = await storage.unarchiveProject(id);
+      
+      if (!unarchivedProject) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      res.json(unarchivedProject);
+    } catch (error) {
+      console.error("Error unarchiving project:", error);
+      res.status(500).json({ message: "Failed to unarchive project" });
+    }
+  });
+
+  // Delete a project
+  app.delete("/api/projects/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteProject(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Project not found or could not be deleted" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      console.error("Error deleting project:", error);
+      res.status(500).json({ message: "Failed to delete project" });
     }
   });
 

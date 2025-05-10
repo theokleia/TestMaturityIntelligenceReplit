@@ -23,10 +23,13 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
 
   // Projects
-  getProjects(): Promise<Project[]>;
+  getProjects(status?: string): Promise<Project[]>;
   getProject(id: number): Promise<Project | undefined>;
   createProject(project: InsertProject): Promise<Project>;
   updateProject(id: number, project: Partial<InsertProject>): Promise<Project | undefined>;
+  deleteProject(id: number): Promise<boolean>;
+  archiveProject(id: number): Promise<Project | undefined>;
+  unarchiveProject(id: number): Promise<Project | undefined>;
 
   // Maturity Dimensions
   getMaturityDimensions(projectId?: number): Promise<MaturityDimension[]>;
@@ -138,7 +141,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Projects
-  async getProjects(): Promise<Project[]> {
+  async getProjects(status?: string): Promise<Project[]> {
+    // If status is provided, filter projects by status
+    if (status) {
+      return db.select()
+        .from(projects)
+        .where(eq(projects.status, status))
+        .orderBy(desc(projects.createdAt));
+    }
+    // Otherwise return all projects
     return db.select().from(projects).orderBy(desc(projects.createdAt));
   }
 
@@ -148,7 +159,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createProject(project: InsertProject): Promise<Project> {
-    const [newProject] = await db.insert(projects).values(project).returning();
+    // Ensure new projects are active by default
+    const projectWithDefaults = {
+      ...project,
+      status: project.status || 'active'
+    };
+    const [newProject] = await db.insert(projects).values(projectWithDefaults).returning();
     return newProject;
   }
 
@@ -162,6 +178,26 @@ export class DatabaseStorage implements IStorage {
       .where(eq(projects.id, id))
       .returning();
     return updatedProject || undefined;
+  }
+  
+  async deleteProject(id: number): Promise<boolean> {
+    try {
+      await db
+        .delete(projects)
+        .where(eq(projects.id, id));
+      return true;
+    } catch (error) {
+      console.error("Error deleting project:", error);
+      return false;
+    }
+  }
+  
+  async archiveProject(id: number): Promise<Project | undefined> {
+    return this.updateProject(id, { status: 'archived' });
+  }
+  
+  async unarchiveProject(id: number): Promise<Project | undefined> {
+    return this.updateProject(id, { status: 'active' });
   }
 
   // Maturity Dimensions

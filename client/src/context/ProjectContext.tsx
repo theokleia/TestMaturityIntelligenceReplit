@@ -24,6 +24,10 @@ interface ProjectContextType {
   setSelectedProject: (project: Project | null) => void;
   projects: Project[];
   addProject: (name: string, description?: string, jiraProjectId?: string, jiraJql?: string) => Promise<Project>;
+  updateProject: (id: number, project: Partial<Project>) => Promise<Project | undefined>;
+  deleteProject: (id: number) => Promise<boolean>;
+  archiveProject: (id: number) => Promise<Project | undefined>;
+  unarchiveProject: (id: number) => Promise<Project | undefined>;
   isLoading: boolean;
 }
 
