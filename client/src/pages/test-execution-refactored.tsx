@@ -355,8 +355,12 @@ export default function TestExecutionPage() {
     }
   };
   
-  const handleCreateTestRun = (data: any) => {
+  const handleCreateTestRun = async (data: any) => {
     if (!selectedCycleItem || !selectedTestCaseId) return;
+    
+    // Extract Jira ticket creation flag if present
+    const { createJiraTicket, ...testRunData } = data;
+    const testCase = testCasesMap[selectedTestCaseId];
     
     createRunMutation.mutate(
       {
@@ -367,11 +371,56 @@ export default function TestExecutionPage() {
         steps: null,
       },
       {
-        onSuccess: () => {
+        onSuccess: async (createdRun) => {
+          // First show success message for the test run
           toast({
             title: "Success",
             description: "Test run recorded successfully",
           });
+          
+          // If the test failed and user wants to create a Jira ticket
+          if (data.status === "failed" && createJiraTicket && selectedProject) {
+            try {
+              // Create a Jira ticket with AI-generated content
+              const response = await fetch('/api/jira/create-ticket', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  projectId: selectedProject.id,
+                  summary: `Test Failure: ${testCase?.title || 'Untitled Test'}`,
+                  description: data.notes,
+                  issueType: selectedProject.jiraIssueType || 'Bug',
+                  testCaseId: selectedTestCaseId,
+                  testRunId: createdRun.id,
+                }),
+              });
+              
+              if (response.ok) {
+                const result = await response.json();
+                toast({
+                  title: "Jira Ticket Created",
+                  description: `Created ${selectedProject.jiraIssueType || 'Bug'} ${result.issueKey}`,
+                  variant: "default",
+                });
+              } else {
+                console.error("Failed to create Jira ticket:", await response.text());
+                toast({
+                  title: "Warning",
+                  description: "Test run saved but Jira ticket creation failed",
+                  variant: "warning",
+                });
+              }
+            } catch (error) {
+              console.error("Error creating Jira ticket:", error);
+              toast({
+                title: "Warning",
+                description: "Test run saved but Jira ticket creation failed",
+                variant: "warning",
+              });
+            }
+          }
           
           // Update the cycle item status to match the test run
           updateCycleItemMutation.mutate(

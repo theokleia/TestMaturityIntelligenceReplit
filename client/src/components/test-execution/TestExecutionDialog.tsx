@@ -47,6 +47,18 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { useProject } from "@/context/ProjectContext";
 
+// Define interfaces for structured test steps and test data
+interface TestStep {
+  step: string;
+  expected?: string;
+}
+
+// Extend TestCase to support different formats
+interface ExtendedTestCase extends TestCase {
+  steps: TestStep[] | string[] | null;
+  testData?: Record<string, any> | string | null;
+}
+
 // Define a dynamic validation schema that can be updated based on selected status
 const getFormSchema = (status: string) => {
   const baseSchema = {
@@ -76,6 +88,7 @@ interface TestExecutionDialogProps {
   testCase?: TestCase;
   previousRuns?: TestRun[];
   isPending?: boolean;
+  showHistory?: boolean;
 }
 
 export function TestExecutionDialog({
@@ -287,18 +300,60 @@ export function TestExecutionDialog({
                   name="notes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Notes</FormLabel>
+                      <FormLabel>
+                        Notes
+                        {currentStatus === "failed" && (
+                          <span className="text-red-500 ml-1">*</span>
+                        )}
+                      </FormLabel>
                       <FormControl>
                         <Textarea 
                           {...field} 
-                          placeholder="Enter test execution notes, observations, or defect details..."
+                          placeholder={currentStatus === "failed" 
+                            ? "Required: Describe the failure details, actual behavior, and any relevant context..."
+                            : "Enter test execution notes, observations, or defect details..."}
                           rows={4}
+                          className={currentStatus === "failed" ? "border-red-400 focus:border-red-500" : ""}
                         />
                       </FormControl>
+                      {currentStatus === "failed" && (
+                        <FormDescription className="text-amber-500">
+                          Notes are required for failed tests
+                        </FormDescription>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+                
+                {/* Jira ticket creation option - only visible for failed tests and if Jira integration exists */}
+                {currentStatus === "failed" && hasJiraIntegration && (
+                  <FormField
+                    control={form.control}
+                    name="createJiraTicket"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4 shadow">
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel className="text-base">
+                            <div className="flex items-center">
+                              <TicketIcon className="h-4 w-4 mr-2 text-blue-400" />
+                              Create Jira ticket for this failure
+                            </div>
+                          </FormLabel>
+                          <FormDescription>
+                            AI will analyze your notes and generate a detailed {selectedProject?.jiraIssueType || "Bug"} ticket
+                          </FormDescription>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                )}
               </div>
 
               <div className="flex flex-wrap justify-center gap-4 mt-6">
@@ -313,7 +368,12 @@ export function TestExecutionDialog({
                 </Button>
                 <Button 
                   type="submit"
-                  onClick={() => form.setValue("status", "failed")}
+                  onClick={() => {
+                    form.setValue("status", "failed");
+                    if (hasJiraIntegration) {
+                      form.setValue("createJiraTicket", true);
+                    }
+                  }}
                   className="bg-red-600 hover:bg-red-700 min-w-[90px]"
                   isPending={isPending}
                 >

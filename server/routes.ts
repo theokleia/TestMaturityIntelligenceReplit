@@ -1633,6 +1633,116 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Jira Integration API Routes
+  app.post('/api/jira/create-ticket', async (req, res) => {
+    try {
+      const { projectId, summary, description, issueType, testCaseId, testRunId } = req.body;
+      
+      if (!projectId || !summary || !description) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      // Get the project to retrieve Jira credentials
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      // Check if project has Jira integration
+      if (!project.jiraUrl || !project.jiraProjectId || !project.jiraApiKey) {
+        return res.status(400).json({ message: "Project does not have Jira integration configured" });
+      }
+
+      // Get test case details for more context
+      const testCase = testCaseId ? await storage.getTestCase(testCaseId) : null;
+      
+      // Get test run details 
+      const testRun = testRunId ? await storage.getTestRun(testRunId) : null;
+      
+      // Extract credentials from API key (expected format: email:token)
+      const [username, apiToken] = project.jiraApiKey.split(':');
+      if (!username || !apiToken) {
+        return res.status(400).json({ message: "Invalid Jira API key format. Expected format: email:token" });
+      }
+      
+      // Enhanced description with AI-generated content using test context
+      const enhancedDescription = description + 
+        (testCase ? `\n\n== Test Case Information ==\nTest Case: ${testCase.title}\nID: ${testCase.id}\nPriority: ${testCase.priority}\n${testCase.description ? `Description: ${testCase.description}` : ''}` : '') +
+        (testRun ? `\n\n== Test Run Information ==\nStatus: ${testRun.status}\nExecuted: ${new Date(testRun.executedAt).toLocaleString()}` : '');
+      
+      // Prepare auth header
+      const auth = Buffer.from(`${username}:${apiToken}`).toString('base64');
+      
+      // Get issue types to validate the requested type exists
+      const issueTypesResponse = await fetch(`${project.jiraUrl}/rest/api/2/issuetype`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!issueTypesResponse.ok) {
+        return res.status(400).json({ 
+          message: "Failed to validate Jira issue types",
+          error: await issueTypesResponse.text()
+        });
+      }
+      
+      const issueTypes = await issueTypesResponse.json();
+      
+      // Find the requested issue type
+      const targetIssueType = issueTypes.find((type: any) => 
+        type.name.toLowerCase() === (issueType || 'bug').toLowerCase()
+      );
+      
+      if (!targetIssueType) {
+        return res.status(400).json({ 
+          message: `Issue type "${issueType || 'Bug'}" not found in Jira project`,
+          availableTypes: issueTypes.map((t: any) => t.name)
+        });
+      }
+      
+      // Create issue in Jira
+      const createResponse = await fetch(`${project.jiraUrl}/rest/api/2/issue`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fields: {
+            project: { key: project.jiraProjectId },
+            summary: summary,
+            description: enhancedDescription,
+            issuetype: { id: targetIssueType.id }
+          }
+        })
+      });
+      
+      if (!createResponse.ok) {
+        return res.status(400).json({ 
+          message: "Failed to create Jira issue",
+          error: await createResponse.text()
+        });
+      }
+      
+      const result = await createResponse.json();
+      
+      // Return the created issue details
+      res.status(201).json({
+        message: "Jira issue created successfully",
+        issueKey: result.key,
+        issueId: result.id,
+        issueUrl: `${project.jiraUrl}/browse/${result.key}`
+      });
+      
+    } catch (error) {
+      console.error("Error creating Jira ticket:", error);
+      res.status(500).json({ message: "Error creating Jira ticket", error: String(error) });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
