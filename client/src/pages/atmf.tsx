@@ -90,14 +90,14 @@ export default function ATMF() {
         title="ATMF"
         subtitle="Access comprehensive documentation about the Adaptive Testing Maturity Framework (ATMF)"
       >
-        <Tabs defaultValue="framework" value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <div className="border-b border-white/10 mb-6">
-            <TabsList className="bg-transparent border-b-0">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <div className="mb-6">
+            <TabsList className="space-x-2 bg-transparent border-0">
               {documentSections.map((section) => (
                 <TabsTrigger 
                   key={section.id} 
                   value={section.id}
-                  className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-primary data-[state=active]:border-b-2 rounded-none border-b-2 border-transparent px-4 py-2"
+                  className="bg-transparent data-[state=active]:bg-primary data-[state=active]:text-white h-10 px-4 border-0"
                 >
                   {section.title}
                 </TabsTrigger>
