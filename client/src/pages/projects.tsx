@@ -34,7 +34,8 @@ export default function Projects() {
   const [activeTab, setActiveTab] = useState<string>("active");
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
-  const [localProjects, setLocalProjects] = useState<Project[]>([]);
+  const [activeProjects, setActiveProjects] = useState<Project[]>([]);
+  const [archivedProjects, setArchivedProjects] = useState<Project[]>([]);
   const [localIsLoading, setLocalIsLoading] = useState(true);
   const [projectForm, setProjectForm] = useState({
     name: "",
@@ -43,57 +44,75 @@ export default function Projects() {
     jiraJql: ""
   });
 
-  // Load projects directly from API if not available in context
+  // Load projects directly from API
   useEffect(() => {
-    const fetchProjectsDirectly = async () => {
+    const fetchProjects = async () => {
       try {
         setLocalIsLoading(true);
-        // Filter projects by status based on the active tab
-        const status = activeTab === "active" ? "active" : "archived";
-        console.log(`Fetching projects with status: ${status} for tab: ${activeTab}`);
-        const response = await fetch(`/api/projects?status=${status}`);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch projects directly: ${response.status}`);
+        
+        // Fetch active projects
+        console.log(`Fetching active projects...`);
+        const activeResponse = await fetch(`/api/projects?status=active`);
+        if (!activeResponse.ok) {
+          throw new Error(`Failed to fetch active projects: ${activeResponse.status}`);
         }
-        const data = await response.json();
-        console.log(`Projects (${status}) fetched directly:`, data);
-        setLocalProjects(data);
+        const activeData = await activeResponse.json();
+        console.log(`Active projects fetched:`, activeData);
+        setActiveProjects(activeData);
+        
+        // Fetch archived projects
+        console.log(`Fetching archived projects...`);
+        const archivedResponse = await fetch(`/api/projects?status=archived`);
+        if (!archivedResponse.ok) {
+          throw new Error(`Failed to fetch archived projects: ${archivedResponse.status}`);
+        }
+        const archivedData = await archivedResponse.json();
+        console.log(`Archived projects fetched:`, archivedData);
+        setArchivedProjects(archivedData);
       } catch (error) {
-        console.error("Error fetching projects directly:", error);
+        console.error("Error fetching projects:", error);
       } finally {
         setLocalIsLoading(false);
       }
     };
 
     // Always fetch projects directly to ensure we have the latest data
-    // This is a workaround for any potential context issues
-    console.log("Projects page - Fetching projects directly");
-    fetchProjectsDirectly();
-  }, [activeTab]);
+    console.log("Projects page - Fetching all projects");
+    fetchProjects();
+  }, []);
 
-  // Update filtered projects when local projects or search term changes
+  // Update filtered projects based on active tab and search term
   useEffect(() => {
-    if (localIsLoading || localProjects.length === 0) {
-      console.log("No projects to filter or still loading");
+    if (localIsLoading) {
+      console.log("Still loading projects");
       return;
     }
     
-    console.log("Filtering projects with search term:", searchTerm);
+    // Get the correct project list based on active tab
+    const projectsToFilter = activeTab === "active" ? activeProjects : archivedProjects;
+    
+    if (projectsToFilter.length === 0) {
+      console.log(`No ${activeTab} projects to filter`);
+      setFilteredProjects([]);
+      return;
+    }
+    
+    console.log(`Filtering ${activeTab} projects with search term:`, searchTerm);
     
     if (!searchTerm.trim()) {
-      setFilteredProjects(localProjects);
+      setFilteredProjects(projectsToFilter);
       return;
     }
     
-    const filtered = localProjects.filter(
-      project => 
+    const filtered = projectsToFilter.filter(
+      (project: Project) => 
         project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (project.description && project.description.toLowerCase().includes(searchTerm.toLowerCase()))
     );
     
-    console.log("Projects page - Filtered projects:", filtered);
+    console.log(`Filtered ${activeTab} projects:`, filtered);
     setFilteredProjects(filtered);
-  }, [searchTerm, localProjects, localIsLoading]);
+  }, [searchTerm, activeProjects, archivedProjects, activeTab, localIsLoading]);
 
   const handleCreateProject = async () => {
     if (projectForm.name.trim()) {
@@ -151,6 +170,25 @@ export default function Projects() {
       
       if (success) {
         console.log("Project deleted successfully:", currentProjectId);
+        
+        // Refresh project lists
+        console.log("Refreshing project lists after deletion");
+        
+        // Fetch active projects
+        const activeResponse = await fetch(`/api/projects?status=active`);
+        if (activeResponse.ok) {
+          const activeData = await activeResponse.json();
+          console.log(`Updated active projects after deletion:`, activeData);
+          setActiveProjects(activeData);
+        }
+        
+        // Fetch archived projects
+        const archivedResponse = await fetch(`/api/projects?status=archived`);
+        if (archivedResponse.ok) {
+          const archivedData = await archivedResponse.json();
+          console.log(`Updated archived projects after deletion:`, archivedData);
+          setArchivedProjects(archivedData);
+        }
       } else {
         console.error("Failed to delete project:", currentProjectId);
       }
@@ -168,14 +206,23 @@ export default function Projects() {
       const archivedProject = await archiveProject(id);
       console.log("Project archived successfully:", archivedProject);
       
-      // Refresh the projects list after archiving with the current tab's status
-      const status = activeTab === "active" ? "active" : "archived";
-      console.log(`Refreshing projects with status: ${status} after archiving`);
-      const response = await fetch(`/api/projects?status=${status}`);
-      if (response.ok) {
-        const data = await response.json();
-        console.log(`Updated projects after archive:`, data);
-        setLocalProjects(data);
+      // Refresh both active and archived project lists
+      console.log("Refreshing project lists after archiving");
+      
+      // Fetch active projects
+      const activeResponse = await fetch(`/api/projects?status=active`);
+      if (activeResponse.ok) {
+        const activeData = await activeResponse.json();
+        console.log(`Updated active projects after archive:`, activeData);
+        setActiveProjects(activeData);
+      }
+      
+      // Fetch archived projects
+      const archivedResponse = await fetch(`/api/projects?status=archived`);
+      if (archivedResponse.ok) {
+        const archivedData = await archivedResponse.json();
+        console.log(`Updated archived projects after archive:`, archivedData);
+        setArchivedProjects(archivedData);
       }
     } catch (error) {
       console.error("Error archiving project:", error);
@@ -187,14 +234,23 @@ export default function Projects() {
       const unarchivedProject = await unarchiveProject(id);
       console.log("Project unarchived successfully:", unarchivedProject);
       
-      // Refresh the projects list after unarchiving with the current tab's status
-      const status = activeTab === "active" ? "active" : "archived";
-      console.log(`Refreshing projects with status: ${status} after unarchiving`);
-      const response = await fetch(`/api/projects?status=${status}`);
-      if (response.ok) {
-        const data = await response.json();
-        console.log(`Updated projects after unarchive:`, data);
-        setLocalProjects(data);
+      // Refresh both active and archived project lists
+      console.log("Refreshing project lists after unarchiving");
+      
+      // Fetch active projects
+      const activeResponse = await fetch(`/api/projects?status=active`);
+      if (activeResponse.ok) {
+        const activeData = await activeResponse.json();
+        console.log(`Updated active projects after unarchive:`, activeData);
+        setActiveProjects(activeData);
+      }
+      
+      // Fetch archived projects
+      const archivedResponse = await fetch(`/api/projects?status=archived`);
+      if (archivedResponse.ok) {
+        const archivedData = await archivedResponse.json();
+        console.log(`Updated archived projects after unarchive:`, archivedData);
+        setArchivedProjects(archivedData);
       }
     } catch (error) {
       console.error("Error unarchiving project:", error);
