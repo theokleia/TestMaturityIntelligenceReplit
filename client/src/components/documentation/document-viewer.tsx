@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { X, ArrowLeft, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { IconWrapper } from "@/components/design-system/icon-wrapper";
@@ -347,6 +347,9 @@ These templates provide structured guidance for evaluating your organization's t
     // Track list state
     let inOrderedList = false;
     let inUnorderedList = false;
+    let inTable = false;
+    let tableHeaders: string[] = [];
+    let tableRows: string[][] = [];
     let listItems: JSX.Element[] = [];
     let result: JSX.Element[] = [];
     
@@ -476,8 +479,62 @@ These templates provide structured guidance for evaluating your organization's t
         return;
       }
       
+      // Table row detection
+      if (line.trim().startsWith('|') && line.trim().endsWith('|')) {
+        const cells = line.trim().split('|').slice(1, -1).map(cell => cell.trim());
+        
+        // Check if this is a header separator row like |---|---|---|
+        const isSeparatorRow = cells.every(cell => /^-+$/.test(cell.replace(/:/g, '').trim()));
+        
+        if (isSeparatorRow) {
+          // This is a separator row, just mark that we're in a table
+          inTable = true;
+        } else if (!inTable) {
+          // This is the first row of a new table - it's the header
+          inTable = true;
+          tableHeaders = cells;
+        } else {
+          // This is a content row
+          tableRows.push(cells);
+        }
+        return;
+      } else if (inTable) {
+        // We've exited the table
+        const tableElement = (
+          <div key={`table-${index}`} className="my-6 w-full overflow-x-auto rounded-lg border border-white/20">
+            <table className="w-full border-collapse">
+              <thead className="bg-card/80">
+                <tr>
+                  {tableHeaders.map((header, i) => (
+                    <th key={`th-${i}`} className="border-b border-white/20 p-3 text-left font-semibold text-white">
+                      {processInlineFormatting(header)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {tableRows.map((row, rowIndex) => (
+                  <tr key={`tr-${rowIndex}`} className={rowIndex % 2 === 0 ? "bg-card/60" : "bg-card/30"}>
+                    {row.map((cell, cellIndex) => (
+                      <td key={`td-${rowIndex}-${cellIndex}`} className="border-t border-white/10 p-3 text-text-muted">
+                        {processInlineFormatting(cell)}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+        
+        result.push(tableElement);
+        inTable = false;
+        tableHeaders = [];
+        tableRows = [];
+      }
+      
       // Regular paragraph
-      if (!inOrderedList && !inUnorderedList) {
+      if (!inOrderedList && !inUnorderedList && !inTable) {
         const processedContent = processInlineFormatting(line);
         result.push(<p key={index} className="my-2 text-gray-300">{processedContent}</p>);
       }
@@ -492,11 +549,45 @@ These templates provide structured guidance for evaluating your organization's t
       );
     }
     
+    // Close any open table at the end
+    if (inTable && tableHeaders.length > 0) {
+      const tableElement = (
+        <div key="final-table" className="my-6 w-full overflow-x-auto rounded-lg border border-white/20">
+          <table className="w-full border-collapse">
+            <thead className="bg-card/80">
+              <tr>
+                {tableHeaders.map((header, i) => (
+                  <th key={`th-${i}`} className="border-b border-white/20 p-3 text-left font-semibold text-white">
+                    {processInlineFormatting(header)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {tableRows.map((row, rowIndex) => (
+                <tr key={`tr-${rowIndex}`} className={rowIndex % 2 === 0 ? "bg-card/60" : "bg-card/30"}>
+                  {row.map((cell, cellIndex) => (
+                    <td key={`td-${rowIndex}-${cellIndex}`} className="border-t border-white/10 p-3 text-text-muted">
+                      {processInlineFormatting(cell)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+      
+      result.push(tableElement);
+    }
+    
     return result;
   };
   
   // Function to process inline formatting (bold, italic, links)
   const processInlineFormatting = (text: string) => {
+    if (!text) return null;
+    
     // Process bold and italic
     let segments = [];
     let remainingText = text;
@@ -505,15 +596,24 @@ These templates provide structured guidance for evaluating your organization's t
     // Bold
     const boldRegex = /\*\*(.*?)\*\*/g;
     let boldMatch;
+    let segmentIndex = 0;
     
     while ((boldMatch = boldRegex.exec(text)) !== null) {
       if (boldMatch.index > lastIndex) {
         // Add text before the bold part
-        segments.push(remainingText.substring(0, boldMatch.index - lastIndex));
+        segments.push(
+          <span key={`text-${segmentIndex++}`}>
+            {remainingText.substring(0, boldMatch.index - lastIndex)}
+          </span>
+        );
       }
       
       // Add the bold part
-      segments.push(<strong key={`bold-${boldMatch.index}`} className="font-bold">{boldMatch[1]}</strong>);
+      segments.push(
+        <strong key={`bold-${segmentIndex++}`} className="font-bold">
+          {boldMatch[1]}
+        </strong>
+      );
       
       // Update remaining text
       remainingText = remainingText.substring(boldMatch.index - lastIndex + boldMatch[0].length);
@@ -522,35 +622,49 @@ These templates provide structured guidance for evaluating your organization's t
     
     // Add any remaining text
     if (remainingText) {
-      segments.push(remainingText);
+      segments.push(<span key={`text-${segmentIndex++}`}>{remainingText}</span>);
     }
     
     // If no bold matches were found, process italic
     if (segments.length === 0) {
-      segments = [text];
+      segments = [<span key="original-text">{text}</span>];
     }
     
-    // Process italic in each segment
+    // Process italic in each segment that is a span (not already bold)
     const processedSegments = segments.map((segment, index) => {
-      if (typeof segment !== 'string') {
+      if (segment.type !== 'span') {
+        return segment;
+      }
+      
+      const segmentText = segment.props.children;
+      if (typeof segmentText !== 'string') {
         return segment;
       }
       
       const italicParts = [];
-      let italicRemaining = segment;
+      let italicRemaining = segmentText;
       let italicLastIndex = 0;
+      let italicSegmentIndex = 0;
       
       const italicRegex = /\*(.*?)\*/g;
       let italicMatch;
       
-      while ((italicMatch = italicRegex.exec(segment)) !== null) {
+      while ((italicMatch = italicRegex.exec(segmentText)) !== null) {
         if (italicMatch.index > italicLastIndex) {
           // Add text before the italic part
-          italicParts.push(italicRemaining.substring(0, italicMatch.index - italicLastIndex));
+          italicParts.push(
+            <span key={`text-${index}-${italicSegmentIndex++}`}>
+              {italicRemaining.substring(0, italicMatch.index - italicLastIndex)}
+            </span>
+          );
         }
         
         // Add the italic part
-        italicParts.push(<em key={`italic-${index}-${italicMatch.index}`} className="italic">{italicMatch[1]}</em>);
+        italicParts.push(
+          <em key={`italic-${index}-${italicSegmentIndex++}`} className="italic">
+            {italicMatch[1]}
+          </em>
+        );
         
         // Update remaining text
         italicRemaining = italicRemaining.substring(italicMatch.index - italicLastIndex + italicMatch[0].length);
@@ -559,10 +673,14 @@ These templates provide structured guidance for evaluating your organization's t
       
       // Add any remaining text
       if (italicRemaining) {
-        italicParts.push(italicRemaining);
+        italicParts.push(
+          <span key={`text-${index}-${italicSegmentIndex++}`}>
+            {italicRemaining}
+          </span>
+        );
       }
       
-      return italicParts.length > 0 ? <>{italicParts}</> : segment;
+      return italicParts.length > 0 ? <React.Fragment key={`italic-wrapper-${index}`}>{italicParts}</React.Fragment> : segment;
     });
     
     return <>{processedSegments}</>;
