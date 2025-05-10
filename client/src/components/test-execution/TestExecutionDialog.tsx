@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { cn } from "@/lib/utils";
 import { 
   Dialog,
   DialogContent,
@@ -149,6 +150,8 @@ export function TestExecutionDialog({
   }, [open, form]);
 
   const handleSubmit = (values: FormValues) => {
+    // Only submit and close if the form is valid
+    // The form has already been validated at this point
     onSubmit(values);
     onOpenChange(false);
   };
@@ -365,9 +368,14 @@ export function TestExecutionDialog({
               </div>
 
               <div className="flex flex-wrap justify-center gap-4 mt-6">
+                {/* Make all buttons type="button" so we can handle validation ourselves */}
                 <Button 
-                  type="submit"
-                  onClick={() => form.setValue("status", "passed")}
+                  type="button"
+                  onClick={() => {
+                    form.setValue("status", "passed");
+                    // For passed tests, just submit the form
+                    form.handleSubmit(handleSubmit)();
+                  }}
                   className="bg-green-600 hover:bg-green-700 min-w-[90px]"
                   isPending={isPending}
                 >
@@ -375,16 +383,19 @@ export function TestExecutionDialog({
                   Pass
                 </Button>
                 <Button 
-                  type="button" // Change to button type to handle validation ourselves
+                  type="button"
                   onClick={async () => {
                     form.setValue("status", "failed");
                     if (hasJiraIntegration) {
                       form.setValue("createJiraTicket", true);
                     }
                     
-                    // Trigger validation and only submit if valid
-                    const isValid = await form.trigger("notes");
-                    if (isValid) {
+                    // Trigger notes validation first, but don't close the dialog
+                    await form.trigger("notes");
+                    
+                    // If the notes field is already valid, submit the form
+                    const notes = form.getValues("notes");
+                    if (notes && notes.length >= 5) {
                       form.handleSubmit(handleSubmit)();
                     }
                   }}
@@ -395,8 +406,12 @@ export function TestExecutionDialog({
                   Fail
                 </Button>
                 <Button 
-                  type="submit"
-                  onClick={() => form.setValue("status", "blocked")}
+                  type="button"
+                  onClick={() => {
+                    form.setValue("status", "blocked");
+                    // For blocked tests, just submit the form
+                    form.handleSubmit(handleSubmit)();
+                  }}
                   className="bg-amber-600 hover:bg-amber-700 min-w-[90px]"
                   isPending={isPending}
                 >
@@ -404,14 +419,34 @@ export function TestExecutionDialog({
                   Block
                 </Button>
                 <Button 
-                  type="submit"
-                  onClick={() => form.setValue("status", "skipped")}
+                  type="button"
+                  onClick={() => {
+                    form.setValue("status", "skipped");
+                    // For skipped tests, just submit the form
+                    form.handleSubmit(handleSubmit)();
+                  }}
                   className="bg-blue-600 hover:bg-blue-700 min-w-[90px]"
                   isPending={isPending}
                 >
                   <span className="mr-2">⏭</span>
                   Skip
                 </Button>
+                {/* Add a button to submit the form with the current status when the status is "failed" */}
+                {currentStatus === "failed" && (
+                  <Button 
+                    type="button"
+                    className="bg-primary hover:bg-primary/90 w-full mt-2"
+                    onClick={async () => {
+                      // Validate the form and submit if valid
+                      const isValid = await form.trigger();
+                      if (isValid) {
+                        form.handleSubmit(handleSubmit)();
+                      }
+                    }}
+                  >
+                    Submit Failed Test
+                  </Button>
+                )}
               </div>
             </form>
           </Form>
