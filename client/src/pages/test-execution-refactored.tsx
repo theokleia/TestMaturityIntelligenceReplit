@@ -358,6 +358,17 @@ export default function TestExecutionPage() {
   const handleCreateTestRun = async (data: any) => {
     if (!selectedCycleItem || !selectedTestCaseId) return;
     
+    // Server-side validation for failed tests - ensure notes are provided
+    if (data.status === "failed" && (!data.notes || data.notes.trim().length < 5)) {
+      toast({
+        title: "Validation Error",
+        description: "Notes are required for failed tests (minimum 5 characters)",
+        variant: "destructive",
+      });
+      // Return false to indicate validation failure - will prevent dialog from closing
+      return false;
+    }
+    
     // Extract Jira ticket creation flag if present
     const { createJiraTicket, ...testRunData } = data;
     const testCase = testCasesMap[selectedTestCaseId];

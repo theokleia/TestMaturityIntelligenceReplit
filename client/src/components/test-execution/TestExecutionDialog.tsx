@@ -82,7 +82,7 @@ type FormValues = z.infer<typeof formSchema>;
 interface TestExecutionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: FormValues) => void;
+  onSubmit: (data: FormValues) => Promise<boolean | void> | void;
   testCase?: TestCase;
   previousRuns?: TestRun[];
   isPending?: boolean;
@@ -149,11 +149,22 @@ export function TestExecutionDialog({
     }
   }, [open, form]);
 
-  const handleSubmit = (values: FormValues) => {
+  const handleSubmit = async (values: FormValues) => {
     // Only submit and close if the form is valid
     // The form has already been validated at this point
-    onSubmit(values);
-    onOpenChange(false);
+    
+    // Call onSubmit and wait for the result
+    // If onSubmit returns false, it means validation failed
+    const result = await onSubmit(values);
+    
+    // Only close the dialog if submission was successful (not explicitly false)
+    if (result === false) {
+      // Keep dialog open because validation failed
+      console.log("Validation failed, keeping dialog open");
+    } else {
+      // Close the dialog
+      onOpenChange(false);
+    }
   };
 
   if (!testCase) {
@@ -391,12 +402,22 @@ export function TestExecutionDialog({
                     }
                     
                     // Trigger notes validation first, but don't close the dialog
-                    await form.trigger("notes");
+                    const isValid = await form.trigger("notes");
                     
                     // If the notes field is already valid, submit the form
-                    const notes = form.getValues("notes");
-                    if (notes && notes.length >= 5) {
-                      form.handleSubmit(handleSubmit)();
+                    if (isValid) {
+                      const notes = form.getValues("notes");
+                      if (notes && notes.length >= 5) {
+                        form.handleSubmit(handleSubmit)();
+                      }
+                    } else {
+                      // Focus on the notes field to draw user's attention
+                      setTimeout(() => {
+                        const notesElement = document.querySelector('textarea[name="notes"]');
+                        if (notesElement) {
+                          (notesElement as HTMLTextAreaElement).focus();
+                        }
+                      }, 100);
                     }
                   }}
                   className="bg-red-600 hover:bg-red-700 min-w-[90px]"
