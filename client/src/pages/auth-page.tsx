@@ -58,13 +58,16 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex bg-background bg-gradient-radial from-blue-900/20 via-background to-purple-900/20">
       {/* Left column - forms */}
       <div className="w-full lg:w-1/2 p-8 flex flex-col justify-center space-y-6">
         <div className="max-w-md mx-auto w-full">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2 text-white">
-              Welcome to ATMosFera
+          <div className="mb-8 text-center">
+            <div className="h-16 w-16 mx-auto mb-4 bg-primary/20 rounded-xl flex items-center justify-center">
+              <Sparkles className="h-8 w-8 text-primary" />
+            </div>
+            <h1 className="text-4xl font-bold mb-3 text-white">
+              ATMosFera
             </h1>
             <p className="text-gray-400">
               The advanced test management platform powered by AI

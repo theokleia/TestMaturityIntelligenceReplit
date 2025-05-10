@@ -17,9 +17,10 @@ import TestFetch from "@/pages/test-fetch";
 import AuthPage from "@/pages/auth-page";
 import Layout from "@/components/layout/layout";
 import { ProjectProvider } from "@/context/ProjectContext";
-import { AuthProvider } from "@/hooks/use-auth";
+import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 
+// Router component for application routes
 function Router() {
   return (
     <Switch>
@@ -27,9 +28,7 @@ function Router() {
       <ProtectedRoute path="/assessments" component={Assessments} />
       <ProtectedRoute path="/ai-insights" component={AiInsights} />
       <ProtectedRoute path="/test-management" component={TestManagement} />
-      {/* Using the refactored component for the main test execution route */}
       <ProtectedRoute path="/test-execution" component={TestExecutionRefactored} />
-      {/* Keeping the old route for reference until we're sure the refactored version works properly */}
       <ProtectedRoute path="/test-execution-old" component={TestExecution} />
       <ProtectedRoute path="/projects" component={Projects} />
       <ProtectedRoute path="/project-health" component={ProjectHealth} />
@@ -39,21 +38,46 @@ function Router() {
       <ProtectedRoute path="/test-fetch" component={TestFetch} />
       {/* Auth route is public */}
       <Route path="/auth" component={AuthPage} />
-      {/* Additional routes go here */}
+      {/* Catch-all route */}
       <Route component={NotFound} />
     </Switch>
   );
 }
 
+// App content with conditional layout
+function AppContent() {
+  const { user, isLoading } = useAuth();
+
+  // If loading, show minimal loader
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+      </div>
+    );
+  }
+
+  // If not authenticated, render the router directly (no layout)
+  if (!user) {
+    return <Router />;
+  }
+
+  // If authenticated, wrap content in layout
+  return (
+    <ProjectProvider>
+      <Layout>
+        <Router />
+      </Layout>
+    </ProjectProvider>
+  );
+}
+
+// Main App component
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <ProjectProvider>
-          <Layout>
-            <Router />
-          </Layout>
-        </ProjectProvider>
+        <AppContent />
       </AuthProvider>
     </QueryClientProvider>
   );
