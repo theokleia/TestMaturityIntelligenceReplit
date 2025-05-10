@@ -7,6 +7,9 @@ import fetch from 'node-fetch';
 import { Project } from '@shared/schema';
 
 // Define types for GitHub API responses
+interface LanguageData {
+  [key: string]: number;
+}
 interface GitHubRepository {
   name: string;
   full_name: string;
@@ -278,4 +281,40 @@ export function getGitHubContextForAI(
   }
 
   return context;
+}
+
+/**
+ * Fetch language data from a GitHub repository
+ */
+export async function fetchLanguages(project: Project): Promise<LanguageData | null> {
+  // Verify that the project has the necessary GitHub configuration
+  if (!project.githubRepo || !project.githubToken) {
+    console.warn("GitHub integration is not fully configured for project:", project.id);
+    return null;
+  }
+
+  try {
+    // Construct the URL for the GitHub API endpoint
+    const apiUrl = `https://api.github.com/repos/${project.githubRepo}/languages`;
+
+    // Make the API call with appropriate authorization
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${project.githubToken}`,
+        'Accept': 'application/vnd.github.v3+json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error(`GitHub API error (${response.status}):`, errorData);
+      return null;
+    }
+
+    return await response.json() as LanguageData;
+  } catch (error) {
+    console.error("Error fetching GitHub language data:", error);
+    return null;
+  }
 }

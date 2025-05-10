@@ -1108,7 +1108,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Import GitHub services
-      const { fetchRepoInfo, fetchRecentCommits } = await import('./services/github-service');
+      const { fetchRepoInfo, fetchRecentCommits, fetchLanguages } = await import('./services/github-service');
       
       // Check if GitHub is properly configured
       if (!project.githubRepo || !project.githubToken) {
@@ -1124,8 +1124,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let commitActivity: Array<{day: string, count: number}> = [];
         
         if (repoInfo) {
-          // Fetch commit data
-          const commits = await fetchRecentCommits(project);
+          // Fetch commit data and language data in parallel
+          const [commits, languages] = await Promise.all([
+            fetchRecentCommits(project),
+            fetchLanguages(project)
+          ]);
           
           // Process commits into daily activity
           if (commits && commits.length > 0) {
@@ -1165,6 +1168,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               openIssues: repoInfo.open_issues_count || 0,
               defaultBranch: repoInfo.default_branch || 'main'
             },
+            languages: languages || {},
             commitActivity,
             // For demo purposes, generate some random metrics
             // In a real app, these would come from GitHub API calls 

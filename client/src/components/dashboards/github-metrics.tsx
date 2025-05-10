@@ -1,640 +1,467 @@
-import { useState, useEffect } from "react";
-import { GitBranch, GitCommit, GitPullRequest, GitMerge, Clock, ShieldCheck, Code, Users, AlertTriangle, Link2, X, Check } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useProject } from "@/context/ProjectContext";
-import { ATMFCard, ATMFCardBody, ATMFCardHeader } from "@/components/design-system/atmf-card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { useQuery } from "@tanstack/react-query";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
+import { Loader2, AlertTriangle, GitBranch, GitPullRequestIcon, Users, Code } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { HealthStatus } from "@/components/design-system/health-indicator";
-import { Tooltip as TooltipUI, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useState, useEffect } from "react";
 
-// Types for GitHub metrics
-interface GitHubMetrics {
-  repoInfo: {
-    name: string;
-    fullName: string;
-    description: string;
-    url: string;
-    stars: number;
-    forks: number;
-    watchers: number;
-    openIssues: number;
-    defaultBranch: string;
-  } | null;
-  commitActivity: {
-    day: string;
-    count: number;
-  }[];
-  pullRequests: {
-    open: number;
-    closed: number;
-    merged: number;
-  };
+interface LanguageData {
+  [key: string]: number;
+}
+
+interface GitHubRepoInfo {
+  name: string;
+  fullName: string;
+  description: string;
+  url: string;
+  stars: number;
+  forks: number;
+  watchers: number;
+  openIssues: number;
+  defaultBranch: string;
+}
+
+interface CommitActivity {
+  day: string;
+  count: number;
+}
+
+interface PullRequestsData {
+  open: number;
+  closed: number;
+  merged: number;
+}
+
+interface CodeQualityData {
+  score: number;
+  issues: number;
+  status: "healthy" | "warning" | "critical";
+}
+
+interface CIStatusData {
+  success: number;
+  failed: number;
+  pending: number;
+  status: "healthy" | "warning" | "critical";
+}
+
+interface GitHubMetricsData {
+  repoInfo: GitHubRepoInfo;
+  languages: LanguageData;
+  commitActivity: CommitActivity[];
+  pullRequests: PullRequestsData;
   branches: number;
   contributors: number;
   testCoverage: number;
-  codeQuality: {
-    score: number;
-    issues: number;
-    status: HealthStatus;
-  };
-  ciStatus: {
-    success: number;
-    failed: number;
-    pending: number;
-    status: HealthStatus;
-  };
+  codeQuality: CodeQualityData;
+  ciStatus: CIStatusData;
 }
 
-const DEFAULT_METRICS: GitHubMetrics = {
-  repoInfo: null,
-  commitActivity: [],
-  pullRequests: {
-    open: 0,
-    closed: 0,
-    merged: 0
-  },
-  branches: 0,
-  contributors: 0,
-  testCoverage: 0,
-  codeQuality: {
-    score: 0,
-    issues: 0,
-    status: "unknown"
-  },
-  ciStatus: {
-    success: 0,
-    failed: 0,
-    pending: 0,
-    status: "unknown"
-  }
+// Map of language names to colors
+const LANGUAGE_COLORS: Record<string, string> = {
+  TypeScript: "#3178c6",
+  JavaScript: "#f7df1e",
+  HTML: "#e34c26",
+  CSS: "#563d7c",
+  Python: "#3572A5",
+  Java: "#b07219",
+  CSharp: "#178600",
+  Ruby: "#701516",
+  Go: "#00ADD8",
+  PHP: "#4F5D95",
+  Rust: "#dea584",
+  Swift: "#ffac45",
+  Kotlin: "#F18E33",
+  Dart: "#00B4AB",
+  // Add more languages and colors as needed
+  // Default colors for other languages
+  Other: "#cccccc"
 };
 
-// KPI Card component
-interface KPICardProps {
-  title: string;
-  value: string | number;
-  icon: React.ReactNode;
-  status?: HealthStatus;
-  trend?: "up" | "down" | "neutral";
-  trendValue?: string;
-  className?: string;
-  isLoading?: boolean;
+// Helper function to get a color for a language
+function getLanguageColor(language: string): string {
+  return LANGUAGE_COLORS[language] || LANGUAGE_COLORS.Other;
 }
 
-const KPICard = ({ title, value, icon, status, trend, trendValue, className, isLoading }: KPICardProps) => {
-  if (isLoading) {
-    return (
-      <div className="bg-atmf-card-alt p-4 rounded-lg border border-white/5 hover:border-white/10 transition-colors">
-        <div className="flex items-center justify-between mb-3">
-          <Skeleton className="h-5 w-28 bg-atmf-main" />
-          <Skeleton className="h-5 w-5 rounded-full bg-atmf-main" />
-        </div>
-        <Skeleton className="h-10 w-24 bg-atmf-main" />
-        <Skeleton className="h-4 w-16 bg-atmf-main mt-2" />
-      </div>
-    );
-  }
+// Helper function to process language data for visualization
+function processLanguageData(languages: LanguageData) {
+  // Calculate total bytes
+  const totalBytes = Object.values(languages).reduce((sum, bytes) => sum + bytes, 0);
+  
+  // Convert to percentage and format for charts
+  return Object.entries(languages).map(([name, bytes]) => ({
+    name,
+    value: bytes,
+    percentage: parseFloat(((bytes / totalBytes) * 100).toFixed(1))
+  }));
+}
 
-  return (
-    <div className={`bg-atmf-card-alt p-4 rounded-lg border border-white/5 hover:border-white/10 transition-colors ${className}`}>
-      <div className="flex items-center justify-between mb-3">
-        <h4 className="text-sm text-atmf-muted font-medium">{title}</h4>
-        <div className={`
-          h-6 w-6 rounded-full flex items-center justify-center 
-          ${status === "healthy" ? "bg-green-900/20 text-green-400" : 
-            status === "warning" ? "bg-amber-900/20 text-amber-400" : 
-            status === "critical" ? "bg-red-900/20 text-red-400" : 
-            "bg-blue-900/20 text-blue-400"}
-        `}>
-          {icon}
-        </div>
-      </div>
-      <div className="text-2xl font-bold">{value}</div>
-      {trend && trendValue && (
-        <div className={`flex items-center text-xs mt-2 ${
-          trend === "up" ? "text-green-400" : 
-          trend === "down" ? "text-red-400" : 
-          "text-gray-400"
-        }`}>
-          {trend === "up" && <Check className="h-3 w-3 mr-1" />}
-          {trend === "down" && <X className="h-3 w-3 mr-1" />}
-          {trendValue}
-        </div>
-      )}
-    </div>
-  );
-};
+// Status badge component
+function StatusBadge({ status }: { status: string }) {
+  switch (status) {
+    case "healthy":
+      return <Badge variant="default" className="bg-green-600">Healthy</Badge>;
+    case "warning":
+      return <Badge variant="secondary" className="bg-yellow-500 text-black">Warning</Badge>;
+    case "critical":
+      return <Badge variant="destructive">Critical</Badge>;
+    default:
+      return <Badge variant="outline">Unknown</Badge>;
+  }
+}
 
 export function GitHubMetrics() {
   const { selectedProject } = useProject();
-  const [loading, setLoading] = useState(true);
-  const [metrics, setMetrics] = useState<GitHubMetrics>(DEFAULT_METRICS);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [chartData, setChartData] = useState<any[]>([]);
   
-  // Fetch GitHub metrics when project changes
+  const { data: metrics, isLoading, error } = useQuery<GitHubMetricsData>({
+    queryKey: ["/api/projects", selectedProject?.id, "github-metrics"],
+    queryFn: async ({ queryKey }) => {
+      if (!selectedProject) throw new Error("No project selected");
+      const response = await fetch(`/api/projects/${selectedProject.id}/github-metrics`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch GitHub metrics");
+      }
+      return response.json();
+    },
+    enabled: !!selectedProject,
+    refetchOnWindowFocus: false,
+    retry: 1
+  });
+  
   useEffect(() => {
-    if (selectedProject) {
-      setLoading(true);
-      
-      // Check if GitHub is configured
-      if (selectedProject.githubRepo && selectedProject.githubToken) {
-        // Make API call to fetch GitHub metrics
-        fetch(`/api/projects/${selectedProject.id}/github-metrics`)
-          .then(response => {
-            if (!response.ok) {
-              throw new Error(`Failed to fetch GitHub metrics: ${response.status}`);
-            }
-            return response.json();
-          })
-          .then(data => {
-            // Update metrics with real data
-            setMetrics(data);
-            setLoading(false);
-          })
-          .catch(error => {
-            console.error("Error fetching GitHub metrics:", error);
-            // If error, generate demo metrics after a delay to simulate loading
-            setTimeout(() => {
-              setMetrics(generateDemoMetrics(selectedProject.id));
-              setLoading(false);
-            }, 1000);
-          });
-      } else {
-        // If GitHub is not configured, generate demo metrics
-        setTimeout(() => {
-          setMetrics(generateDemoMetrics(selectedProject.id));
-          setLoading(false);
-        }, 1000);
-      }
-    } else {
-      // Reset to default if no project selected
-      setMetrics(DEFAULT_METRICS);
-      setLoading(false);
+    if (metrics && metrics.languages) {
+      setChartData(processLanguageData(metrics.languages));
     }
-  }, [selectedProject]);
+  }, [metrics]);
   
-  // Function to generate demo metrics based on project ID
-  const generateDemoMetrics = (projectId: number): GitHubMetrics => {
-    // Use project ID as a seed for pseudo-randomness
-    const seed = projectId;
-    
-    // Simple pseudo-random function based on the seed
-    const getPseudoRandom = (offset: number) => {
-      const value = (seed * 9301 + offset * 49297) % 233280;
-      return value / 233280;
-    };
-    
-    // Calculate the health factor (0-1)
-    let healthFactor = 0.5 + getPseudoRandom(0) * 0.5;
-    
-    // Generate commit activity
-    const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-    const commitActivity = days.map((day, index) => ({
-      day,
-      count: Math.floor(5 + getPseudoRandom(index + 1) * 25 * healthFactor)
-    }));
-    
-    // Generate demo metrics
-    return {
-      repoInfo: {
-        name: selectedProject?.githubRepo?.split('/').pop() || "demo-repo",
-        fullName: selectedProject?.githubRepo || "org/demo-repo",
-        description: "Demo repository for the project",
-        url: `https://github.com/${selectedProject?.githubRepo || "org/demo-repo"}`,
-        stars: Math.floor(10 + getPseudoRandom(2) * 990),
-        forks: Math.floor(5 + getPseudoRandom(3) * 95),
-        watchers: Math.floor(2 + getPseudoRandom(4) * 48),
-        openIssues: Math.floor(1 + getPseudoRandom(5) * 49),
-        defaultBranch: "main"
-      },
-      commitActivity,
-      pullRequests: {
-        open: Math.floor(1 + getPseudoRandom(6) * 19),
-        closed: Math.floor(10 + getPseudoRandom(7) * 90),
-        merged: Math.floor(20 + getPseudoRandom(8) * 180)
-      },
-      branches: Math.floor(2 + getPseudoRandom(9) * 18),
-      contributors: Math.floor(1 + getPseudoRandom(10) * 24),
-      testCoverage: Math.floor(30 + getPseudoRandom(11) * 65),
-      codeQuality: {
-        score: Math.floor(2 + getPseudoRandom(12) * 3 * healthFactor),
-        issues: Math.floor(1 + getPseudoRandom(13) * 29 * (1 - healthFactor)),
-        status: healthFactor > 0.7 ? "healthy" : healthFactor > 0.4 ? "warning" : "critical"
-      },
-      ciStatus: {
-        success: Math.floor(10 + getPseudoRandom(14) * 90 * healthFactor),
-        failed: Math.floor(1 + getPseudoRandom(15) * 19 * (1 - healthFactor)),
-        pending: Math.floor(1 + getPseudoRandom(16) * 9),
-        status: healthFactor > 0.8 ? "healthy" : healthFactor > 0.5 ? "warning" : "critical"
-      }
-    };
-  };
-  
-  // Helper function to get a color for a status
-  const getStatusColor = (status: HealthStatus): string => {
-    switch (status) {
-      case "healthy": return "#22c55e"; // green
-      case "warning": return "#f59e0b"; // amber
-      case "critical": return "#ef4444"; // red
-      default: return "#3b82f6"; // blue
-    }
-  };
-  
-  // If no project is selected, show a placeholder
-  if (!selectedProject) {
+  if (isLoading) {
     return (
-      <ATMFCard>
-        <ATMFCardBody className="py-12 flex flex-col items-center justify-center">
-          <GitBranch className="h-12 w-12 text-atmf-muted mb-4" />
-          <h3 className="text-lg font-medium text-center">No Project Selected</h3>
-          <p className="text-atmf-muted text-center max-w-md mt-2">
-            Please select a project from the dropdown to view GitHub metrics.
-          </p>
-        </ATMFCardBody>
-      </ATMFCard>
+      <Card className="bg-transparent">
+        <CardHeader>
+          <CardTitle>GitHub Repository Metrics</CardTitle>
+          <CardDescription>Loading GitHub repository data...</CardDescription>
+        </CardHeader>
+        <CardContent className="flex justify-center items-center min-h-[200px]">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        </CardContent>
+      </Card>
     );
   }
   
-  // If loading, show skeletons
-  if (loading) {
+  if (error || !metrics) {
     return (
-      <ATMFCard>
-        <ATMFCardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <GitBranch className="h-5 w-5 text-blue-400 mr-2" />
-              <Skeleton className="h-6 w-44 bg-atmf-main" />
-            </div>
-            <Skeleton className="h-8 w-32 bg-atmf-main" />
-          </div>
-        </ATMFCardHeader>
-        <ATMFCardBody>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            {[1, 2, 3, 4].map((i) => (
-              <KPICard
-                key={i}
-                title=""
-                value={0}
-                icon={<span />}
-                isLoading={true}
-              />
-            ))}
-          </div>
-          <div className="h-64 bg-atmf-card-alt rounded-lg border border-white/5 flex items-center justify-center">
-            <Skeleton className="h-48 w-full max-w-md bg-atmf-main" />
-          </div>
-        </ATMFCardBody>
-      </ATMFCard>
+      <Card className="bg-transparent">
+        <CardHeader>
+          <CardTitle>GitHub Repository Metrics</CardTitle>
+          <CardDescription>Repository information and activity metrics from GitHub</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Alert variant="destructive" className="bg-opacity-20">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Error loading GitHub metrics</AlertTitle>
+            <AlertDescription>
+              {error ? (error as Error).message : "GitHub integration is not configured or data is unavailable."}
+              {selectedProject && !selectedProject.githubRepo && "Please configure GitHub integration in Settings."}
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
     );
   }
   
-  // Prepare data for the commit activity chart
-  const commitData = metrics.commitActivity;
-  
-  // Prepare data for pull request pie chart
-  const prData = [
-    { name: "Open", value: metrics.pullRequests.open, color: "#3b82f6" },
-    { name: "Closed", value: metrics.pullRequests.closed, color: "#ef4444" },
-    { name: "Merged", value: metrics.pullRequests.merged, color: "#22c55e" }
-  ];
-  
-  // Prepare data for CI status chart
-  const ciData = [
-    { name: "Success", value: metrics.ciStatus.success, color: "#22c55e" },
-    { name: "Failed", value: metrics.ciStatus.failed, color: "#ef4444" },
-    { name: "Pending", value: metrics.ciStatus.pending, color: "#f59e0b" }
-  ];
-  
-  // GitHub integration status message
-  const getGitHubStatusMessage = () => {
-    if (!selectedProject.githubRepo) {
-      return (
-        <Badge variant="outline" className="ml-2 bg-red-900/20 text-red-400 border-red-500/20">
-          <X className="h-3 w-3 mr-1" />
-          Not Configured
-        </Badge>
-      );
-    }
-    
-    if (!selectedProject.githubToken) {
-      return (
-        <Badge variant="outline" className="ml-2 bg-amber-900/20 text-amber-400 border-amber-500/20">
-          <AlertTriangle className="h-3 w-3 mr-1" />
-          Missing Token
-        </Badge>
-      );
-    }
-    
-    return (
-      <Badge variant="outline" className="ml-2 bg-green-900/20 text-green-400 border-green-500/20">
-        <Check className="h-3 w-3 mr-1" />
-        Connected
-      </Badge>
-    );
-  };
+  const { repoInfo, languages, commitActivity, pullRequests, branches, codeQuality, ciStatus, testCoverage } = metrics;
   
   return (
-    <ATMFCard className="mt-6">
-      <ATMFCardHeader>
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-          <div className="flex items-center">
-            <GitBranch className="h-5 w-5 text-blue-400 mr-2" />
-            <h3 className="text-lg font-semibold">GitHub Repository Metrics</h3>
-            {getGitHubStatusMessage()}
+    <Card className="relative overflow-hidden shadow-md bg-[#151934] border-blue-900/40">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-white">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" className="h-5 w-5 fill-current">
+            <path fillRule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+          </svg>
+          GitHub Repository Metrics
+        </CardTitle>
+        <CardDescription className="text-blue-200">
+          {repoInfo.fullName} - {repoInfo.description}
+        </CardDescription>
+      </CardHeader>
+      
+      <CardContent className="space-y-6">
+        {/* Repository Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="flex flex-col p-3 bg-[#1e2445] rounded-md border border-blue-900/30">
+            <span className="text-blue-300 text-sm">Stars</span>
+            <div className="flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" className="h-4 w-4 fill-yellow-400">
+                <path fillRule="evenodd" d="M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.791L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.72-4.194L.818 6.374a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25z"></path>
+              </svg>
+              <span className="text-xl font-semibold text-white">{repoInfo.stars}</span>
+            </div>
           </div>
           
-          {metrics.repoInfo && (
-            <TooltipProvider>
-              <TooltipUI>
-                <TooltipTrigger asChild>
-                  <a 
-                    href={metrics.repoInfo.url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="flex items-center px-3 py-1.5 rounded-full bg-atmf-main hover:bg-atmf-card-alt transition-colors"
-                  >
-                    <span className="text-sm mr-2">{metrics.repoInfo.fullName}</span>
-                    <Link2 className="h-4 w-4 opacity-70" />
-                  </a>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Open repository on GitHub</p>
-                </TooltipContent>
-              </TooltipUI>
-            </TooltipProvider>
+          <div className="flex flex-col p-3 bg-[#1e2445] rounded-md border border-blue-900/30">
+            <span className="text-blue-300 text-sm">Forks</span>
+            <div className="flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" className="h-4 w-4 fill-blue-400">
+                <path fillRule="evenodd" d="M5 3.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm0 2.122a2.25 2.25 0 10-1.5 0v.878A2.25 2.25 0 005.75 8.5h1.5v2.128a2.251 2.251 0 101.5 0V8.5h1.5a2.25 2.25 0 002.25-2.25v-.878a2.25 2.25 0 10-1.5 0v.878a.75.75 0 01-.75.75h-4.5A.75.75 0 015 6.25v-.878zm3.75 7.378a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm3-8.75a.75.75 0 100-1.5.75.75 0 000 1.5z"></path>
+              </svg>
+              <span className="text-xl font-semibold text-white">{repoInfo.forks}</span>
+            </div>
+          </div>
+          
+          <div className="flex flex-col p-3 bg-[#1e2445] rounded-md border border-blue-900/30">
+            <span className="text-blue-300 text-sm">Open Issues</span>
+            <div className="flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" className="h-4 w-4 fill-green-400">
+                <path d="M8 9.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"></path>
+                <path fillRule="evenodd" d="M8 0a8 8 0 100 16A8 8 0 008 0zM1.5 8a6.5 6.5 0 1113 0 6.5 6.5 0 01-13 0z"></path>
+              </svg>
+              <span className="text-xl font-semibold text-white">{repoInfo.openIssues}</span>
+            </div>
+          </div>
+          
+          <div className="flex flex-col p-3 bg-[#1e2445] rounded-md border border-blue-900/30">
+            <span className="text-blue-300 text-sm">Branches</span>
+            <div className="flex items-center gap-2">
+              <GitBranch className="h-4 w-4 text-purple-400" />
+              <span className="text-xl font-semibold text-white">{branches}</span>
+            </div>
+          </div>
+        </div>
+        
+        {/* Language Distribution */}
+        <div className="p-4 bg-[#1e2445] rounded-md border border-blue-900/30">
+          <h3 className="text-white font-medium mb-3">Languages</h3>
+          
+          {chartData.length > 0 ? (
+            <>
+              {/* Language Bar */}
+              <div className="relative h-8 w-full rounded-md overflow-hidden mb-4">
+                {chartData.map((lang, index) => {
+                  // Calculate the width based on percentage
+                  const prevWidths = chartData
+                    .slice(0, index)
+                    .reduce((acc, curr) => acc + curr.percentage, 0);
+                  
+                  return (
+                    <div
+                      key={lang.name}
+                      className="absolute top-0 h-full"
+                      style={{
+                        backgroundColor: getLanguageColor(lang.name),
+                        width: `${lang.percentage}%`,
+                        left: `${prevWidths}%`
+                      }}
+                      title={`${lang.name}: ${lang.percentage}%`}
+                    />
+                  );
+                })}
+              </div>
+              
+              {/* Language Legend */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {chartData.map(lang => (
+                  <div key={lang.name} className="flex items-center gap-2">
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: getLanguageColor(lang.name) }}
+                    />
+                    <span className="text-white text-sm">{lang.name} {lang.percentage}%</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-4 text-blue-300">
+              No language data available
+            </div>
           )}
         </div>
-      </ATMFCardHeader>
-      <ATMFCardBody>
-        <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="mb-4 bg-atmf-main">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="commits">Commits</TabsTrigger>
-            <TabsTrigger value="pullRequests">Pull Requests</TabsTrigger>
-            <TabsTrigger value="quality">Quality & CI</TabsTrigger>
-          </TabsList>
-          
-          {/* Overview Tab */}
-          <TabsContent value="overview" className="mt-0">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              <KPICard
-                title="Repository Activity"
-                value={commitData.reduce((sum, day) => sum + day.count, 0)}
-                icon={<GitCommit className="h-3.5 w-3.5" />}
-                trend="up"
-                trendValue="Active"
-              />
-              <KPICard
-                title="Open Pull Requests"
-                value={metrics.pullRequests.open}
-                icon={<GitPullRequest className="h-3.5 w-3.5" />}
-                status={metrics.pullRequests.open > 10 ? "warning" : "healthy"}
-              />
-              <KPICard
-                title="Contributors"
-                value={metrics.contributors}
-                icon={<Users className="h-3.5 w-3.5" />}
-              />
-              <KPICard
-                title="Code Quality"
-                value={`${metrics.codeQuality.score}/5`}
-                icon={<Code className="h-3.5 w-3.5" />}
-                status={metrics.codeQuality.status}
-              />
-            </div>
+        
+        {/* Two-column layout for charts */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Commit Activity */}
+          <div className="bg-[#1e2445] p-4 rounded-md border border-blue-900/30">
+            <h3 className="text-white font-medium mb-3">Commit Activity</h3>
             
-            <div className="h-64 bg-atmf-card-alt rounded-lg border border-white/5 p-4">
-              <h4 className="text-sm font-medium mb-3">Commit Activity (Last Week)</h4>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={commitData} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255, 255, 255, 0.05)" />
-                  <XAxis dataKey="day" axisLine={false} tickLine={false} />
-                  <YAxis axisLine={false} tickLine={false} />
+            {commitActivity && commitActivity.length > 0 ? (
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={commitActivity}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#2c2f48" />
+                  <XAxis dataKey="day" stroke="#8a94a6" />
+                  <YAxis stroke="#8a94a6" />
                   <Tooltip 
-                    contentStyle={{ backgroundColor: '#0c1524', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '8px' }}
-                    labelStyle={{ color: 'rgba(255, 255, 255, 0.7)' }}
-                    itemStyle={{ color: '#3b82f6' }}
+                    contentStyle={{ 
+                      backgroundColor: '#151934', 
+                      borderColor: '#1e2445',
+                      color: 'white' 
+                    }} 
                   />
-                  <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="count" fill="#3182ce" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
-            </div>
-          </TabsContent>
-          
-          {/* Commits Tab */}
-          <TabsContent value="commits" className="mt-0">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              <KPICard
-                title="Total Commits"
-                value={commitData.reduce((sum, day) => sum + day.count, 0)}
-                icon={<GitCommit className="h-3.5 w-3.5" />}
-              />
-              <KPICard
-                title="Branches"
-                value={metrics.branches}
-                icon={<GitBranch className="h-3.5 w-3.5" />}
-              />
-              <KPICard
-                title="Most Active Day"
-                value={commitData.reduce((max, day) => max.count > day.count ? max : day, { day: '', count: 0 }).day}
-                icon={<Clock className="h-3.5 w-3.5" />}
-              />
-              <KPICard
-                title="Daily Average"
-                value={Math.round(commitData.reduce((sum, day) => sum + day.count, 0) / 7)}
-                icon={<GitCommit className="h-3.5 w-3.5" />}
-              />
-            </div>
-            
-            <div className="h-64 bg-atmf-card-alt rounded-lg border border-white/5 p-4">
-              <h4 className="text-sm font-medium mb-3">Commit Activity (Last Week)</h4>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={commitData} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255, 255, 255, 0.05)" />
-                  <XAxis dataKey="day" axisLine={false} tickLine={false} />
-                  <YAxis axisLine={false} tickLine={false} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#0c1524', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '8px' }}
-                    labelStyle={{ color: 'rgba(255, 255, 255, 0.7)' }}
-                    itemStyle={{ color: '#3b82f6' }}
-                  />
-                  <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </TabsContent>
-          
-          {/* Pull Requests Tab */}
-          <TabsContent value="pullRequests" className="mt-0">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <KPICard
-                title="Open PRs"
-                value={metrics.pullRequests.open}
-                icon={<GitPullRequest className="h-3.5 w-3.5" />}
-                status={metrics.pullRequests.open > 10 ? "warning" : "healthy"}
-              />
-              <KPICard
-                title="Closed PRs"
-                value={metrics.pullRequests.closed}
-                icon={<X className="h-3.5 w-3.5" />}
-              />
-              <KPICard
-                title="Merged PRs"
-                value={metrics.pullRequests.merged}
-                icon={<GitMerge className="h-3.5 w-3.5" />}
-              />
-            </div>
-            
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1 h-64 bg-atmf-card-alt rounded-lg border border-white/5 p-4">
-                <h4 className="text-sm font-medium mb-3">Pull Request Distribution</h4>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={prData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
-                      paddingAngle={5}
-                      dataKey="value"
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                    >
-                      {prData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: '#0c1524', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '8px' }}
-                      itemStyle={{ color: '#fff' }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+            ) : (
+              <div className="flex justify-center items-center h-[200px] text-blue-300">
+                No commit data available
               </div>
-              
-              <div className="flex-1 h-64 bg-atmf-card-alt rounded-lg border border-white/5 p-4">
-                <h4 className="text-sm font-medium mb-3">PR Efficiency Metrics</h4>
-                <div className="flex flex-col gap-3 mt-6">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Merge Rate</span>
-                    <span className="text-sm font-bold">{
-                      metrics.pullRequests.merged > 0 
-                        ? `${Math.round((metrics.pullRequests.merged / (metrics.pullRequests.merged + metrics.pullRequests.closed)) * 100)}%`
-                        : "N/A"
-                    }</span>
-                  </div>
-                  <div className="h-1.5 bg-atmf-main rounded-full overflow-hidden">
-                    <div className="h-full bg-green-500" style={{ 
-                      width: metrics.pullRequests.merged > 0 
-                        ? `${Math.round((metrics.pullRequests.merged / (metrics.pullRequests.merged + metrics.pullRequests.closed)) * 100)}%`
-                        : "0%" 
-                    }}></div>
-                  </div>
-                  
-                  <div className="flex justify-between items-center mt-3">
-                    <span className="text-sm">PR Throughput</span>
-                    <span className="text-sm font-bold">{Math.round((metrics.pullRequests.merged + metrics.pullRequests.closed) / 7)} per day</span>
-                  </div>
-                  <div className="h-1.5 bg-atmf-main rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-500" style={{ 
-                      width: `${Math.min(100, Math.round(((metrics.pullRequests.merged + metrics.pullRequests.closed) / 7) / 0.2))}%`
-                    }}></div>
-                  </div>
+            )}
+          </div>
+          
+          {/* Pull Requests */}
+          <div className="bg-[#1e2445] p-4 rounded-md border border-blue-900/30">
+            <h3 className="text-white font-medium mb-3">Pull Requests</h3>
+            
+            <div className="grid grid-cols-3 gap-4 mb-4">
+              <div className="bg-blue-900/20 p-3 rounded-md">
+                <div className="text-sm text-blue-300">Open</div>
+                <div className="text-xl font-semibold text-white">{pullRequests.open}</div>
+              </div>
+              <div className="bg-blue-900/20 p-3 rounded-md">
+                <div className="text-sm text-blue-300">Closed</div>
+                <div className="text-xl font-semibold text-white">{pullRequests.closed}</div>
+              </div>
+              <div className="bg-blue-900/20 p-3 rounded-md">
+                <div className="text-sm text-blue-300">Merged</div>
+                <div className="text-xl font-semibold text-white">{pullRequests.merged}</div>
+              </div>
+            </div>
+            
+            <ResponsiveContainer width="100%" height={150}>
+              <PieChart>
+                <Pie
+                  data={[
+                    { name: 'Open', value: pullRequests.open, color: '#3182ce' },
+                    { name: 'Closed', value: pullRequests.closed, color: '#e53e3e' },
+                    { name: 'Merged', value: pullRequests.merged, color: '#805ad5' }
+                  ]}
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={60}
+                  dataKey="value"
+                  labelLine={false}
+                >
+                  {[
+                    { name: 'Open', color: '#3182ce' },
+                    { name: 'Closed', color: '#e53e3e' },
+                    { name: 'Merged', color: '#805ad5' }
+                  ].map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Legend />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: '#151934', 
+                    borderColor: '#1e2445',
+                    color: 'white' 
+                  }} 
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+        
+        {/* Quality Metrics */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Test Coverage */}
+          <div className="bg-[#1e2445] p-4 rounded-md border border-blue-900/30">
+            <h3 className="text-white font-medium mb-2">Test Coverage</h3>
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-3xl font-bold text-white">{testCoverage}%</div>
+              <Code className="text-blue-400" />
+            </div>
+            <div className="w-full h-2 bg-blue-900/30 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-blue-500" 
+                style={{ width: `${testCoverage}%` }}
+              />
+            </div>
+          </div>
+          
+          {/* Code Quality */}
+          <div className="bg-[#1e2445] p-4 rounded-md border border-blue-900/30">
+            <div className="flex justify-between items-start mb-2">
+              <h3 className="text-white font-medium">Code Quality</h3>
+              <StatusBadge status={codeQuality.status} />
+            </div>
+            <div className="flex items-end justify-between">
+              <div>
+                <div className="text-3xl font-bold text-white">{codeQuality.score}/5</div>
+                <div className="text-blue-300 text-sm">{codeQuality.issues} issues found</div>
+              </div>
+              <div className="flex items-center">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <svg 
+                    key={star}
+                    className={`w-5 h-5 ${star <= codeQuality.score ? 'text-yellow-400' : 'text-gray-600'}`}
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                ))}
+              </div>
+            </div>
+          </div>
+          
+          {/* CI Status */}
+          <div className="bg-[#1e2445] p-4 rounded-md border border-blue-900/30">
+            <div className="flex justify-between items-start mb-2">
+              <h3 className="text-white font-medium">CI Status</h3>
+              <StatusBadge status={ciStatus.status} />
+            </div>
+            <div className="mb-3">
+              <div className="flex gap-4">
+                <div>
+                  <div className="text-sm text-blue-300">Success</div>
+                  <div className="text-lg font-semibold text-green-500">{ciStatus.success}%</div>
+                </div>
+                <div>
+                  <div className="text-sm text-blue-300">Failed</div>
+                  <div className="text-lg font-semibold text-red-500">{ciStatus.failed}%</div>
+                </div>
+                <div>
+                  <div className="text-sm text-blue-300">Pending</div>
+                  <div className="text-lg font-semibold text-yellow-500">{ciStatus.pending}%</div>
                 </div>
               </div>
             </div>
-          </TabsContent>
-          
-          {/* Quality & CI Tab */}
-          <TabsContent value="quality" className="mt-0">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              <KPICard
-                title="Code Quality"
-                value={`${metrics.codeQuality.score}/5`}
-                icon={<Code className="h-3.5 w-3.5" />}
-                status={metrics.codeQuality.status}
+            <div className="w-full h-2 bg-blue-900/30 rounded-full overflow-hidden flex">
+              <div 
+                className="h-full bg-green-500" 
+                style={{ width: `${ciStatus.success}%` }}
               />
-              <KPICard
-                title="Code Issues"
-                value={metrics.codeQuality.issues}
-                icon={<AlertTriangle className="h-3.5 w-3.5" />}
-                status={metrics.codeQuality.issues > 10 ? "critical" : metrics.codeQuality.issues > 5 ? "warning" : "healthy"}
+              <div 
+                className="h-full bg-red-500" 
+                style={{ width: `${ciStatus.failed}%` }}
               />
-              <KPICard
-                title="Test Coverage"
-                value={`${metrics.testCoverage}%`}
-                icon={<ShieldCheck className="h-3.5 w-3.5" />}
-                status={metrics.testCoverage > 75 ? "healthy" : metrics.testCoverage > 50 ? "warning" : "critical"}
-              />
-              <KPICard
-                title="CI Success Rate"
-                value={`${Math.round((metrics.ciStatus.success / (metrics.ciStatus.success + metrics.ciStatus.failed + metrics.ciStatus.pending)) * 100)}%`}
-                icon={<Check className="h-3.5 w-3.5" />}
-                status={metrics.ciStatus.status}
+              <div 
+                className="h-full bg-yellow-500" 
+                style={{ width: `${ciStatus.pending}%` }}
               />
             </div>
-            
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1 h-64 bg-atmf-card-alt rounded-lg border border-white/5 p-4">
-                <h4 className="text-sm font-medium mb-3">CI Build Results</h4>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={ciData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
-                      paddingAngle={5}
-                      dataKey="value"
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                    >
-                      {ciData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: '#0c1524', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '8px' }}
-                      itemStyle={{ color: '#fff' }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              
-              <div className="flex-1 h-64 bg-atmf-card-alt rounded-lg border border-white/5 p-4">
-                <h4 className="text-sm font-medium mb-3">Test Coverage Breakdown</h4>
-                <div className="flex flex-col gap-3 mt-6">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Unit Tests</span>
-                    <span className="text-sm font-bold">{Math.round(metrics.testCoverage * 1.1)}%</span>
-                  </div>
-                  <div className="h-1.5 bg-atmf-main rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-500" style={{ width: `${Math.round(metrics.testCoverage * 1.1)}%` }}></div>
-                  </div>
-                  
-                  <div className="flex justify-between items-center mt-3">
-                    <span className="text-sm">Integration Tests</span>
-                    <span className="text-sm font-bold">{Math.round(metrics.testCoverage * 0.9)}%</span>
-                  </div>
-                  <div className="h-1.5 bg-atmf-main rounded-full overflow-hidden">
-                    <div className="h-full bg-purple-500" style={{ width: `${Math.round(metrics.testCoverage * 0.9)}%` }}></div>
-                  </div>
-                  
-                  <div className="flex justify-between items-center mt-3">
-                    <span className="text-sm">UI/E2E Tests</span>
-                    <span className="text-sm font-bold">{Math.round(metrics.testCoverage * 0.7)}%</span>
-                  </div>
-                  <div className="h-1.5 bg-atmf-main rounded-full overflow-hidden">
-                    <div className="h-full bg-green-500" style={{ width: `${Math.round(metrics.testCoverage * 0.7)}%` }}></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </TabsContent>
-        </Tabs>
-      </ATMFCardBody>
-    </ATMFCard>
+          </div>
+        </div>
+        
+        {/* Repository Link */}
+        <div className="pt-2">
+          <a
+            href={repoInfo.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1 transition-colors"
+          >
+            <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+              <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+            </svg>
+            View repository on GitHub
+          </a>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
