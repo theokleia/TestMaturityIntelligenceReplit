@@ -408,7 +408,9 @@ export default function Projects() {
                   <ATMFCardHeader>
                     <div className="flex items-center justify-between">
                       <h3 className="text-lg font-medium">{project.name}</h3>
-                      <StatusBadge variant="muted">Archived</StatusBadge>
+                      <div className="px-2 py-0.5 text-xs font-medium rounded-full bg-white/10 text-text-muted">
+                        Archived
+                      </div>
                     </div>
                   </ATMFCardHeader>
                   <ATMFCardBody>
