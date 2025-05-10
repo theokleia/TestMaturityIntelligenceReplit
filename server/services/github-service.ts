@@ -13,6 +13,10 @@ interface GitHubRepository {
   description: string;
   default_branch: string;
   html_url: string;
+  stargazers_count?: number;
+  forks_count?: number;
+  watchers_count?: number;
+  open_issues_count?: number;
 }
 
 interface GitHubFile {

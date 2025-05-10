@@ -1121,7 +1121,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Fetch GitHub data
       try {
         const repoInfo = await fetchRepoInfo(project);
-        let commitActivity = [];
+        let commitActivity: Array<{day: string, count: number}> = [];
         
         if (repoInfo) {
           // Fetch commit data
@@ -1131,7 +1131,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (commits && commits.length > 0) {
             // Group commits by day
             const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-            const commitsByDay = {};
+            const commitsByDay: Record<string, number> = {};
             
             // Initialize all days with 0 commits
             days.forEach(day => {

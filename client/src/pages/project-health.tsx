@@ -74,7 +74,12 @@ export default function ProjectHealthPage() {
           
           {/* Project Insights Section */}
           {selectedProject && (
-            <ProjectInsights />
+            <>
+              <ProjectInsights />
+              
+              {/* GitHub Metrics Section */}
+              <GitHubMetrics />
+            </>
           )}
         </div>
       </PageContainer>
