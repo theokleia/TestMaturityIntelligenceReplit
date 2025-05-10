@@ -126,6 +126,11 @@ export default function ProjectSettings() {
           updatePayload.githubRepo = settings.githubRepo;
         }
         
+        // Add GitHub token if provided
+        if (settings.githubToken) {
+          updatePayload.githubToken = settings.githubToken;
+        }
+        
         // Make the update request
         try {
           const response = await fetch(`/api/projects/${selectedProject.id}`, {
