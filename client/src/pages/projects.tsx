@@ -166,6 +166,14 @@ export default function Projects() {
     try {
       const archivedProject = await archiveProject(id);
       console.log("Project archived successfully:", archivedProject);
+      
+      // Refresh the projects list after archiving
+      const status = activeTab === "active" ? "active" : "archived";
+      const response = await fetch(`/api/projects?status=${status}`);
+      if (response.ok) {
+        const data = await response.json();
+        setLocalProjects(data);
+      }
     } catch (error) {
       console.error("Error archiving project:", error);
     }
@@ -175,6 +183,14 @@ export default function Projects() {
     try {
       const unarchivedProject = await unarchiveProject(id);
       console.log("Project unarchived successfully:", unarchivedProject);
+      
+      // Refresh the projects list after unarchiving
+      const status = activeTab === "active" ? "active" : "archived";
+      const response = await fetch(`/api/projects?status=${status}`);
+      if (response.ok) {
+        const data = await response.json();
+        setLocalProjects(data);
+      }
     } catch (error) {
       console.error("Error unarchiving project:", error);
     }
