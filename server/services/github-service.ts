@@ -66,10 +66,11 @@ export async function fetchRepoInfo(project: Project): Promise<GitHubRepository 
     const apiUrl = `https://api.github.com/repos/${project.githubRepo}`;
 
     // Make the API call with appropriate authorization
+    // GitHub now requires Bearer token format
     const response = await fetch(apiUrl, {
       method: 'GET',
       headers: {
-        'Authorization': `token ${project.githubToken}`,
+        'Authorization': `Bearer ${project.githubToken}`,
         'Accept': 'application/vnd.github.v3+json'
       }
     });
@@ -113,10 +114,11 @@ export async function fetchRepoFiles(
     const apiUrl = `https://api.github.com/repos/${project.githubRepo}/contents/${path}?ref=${branchToUse}`;
 
     // Make the API call with appropriate authorization
+    // GitHub now requires Bearer token format
     const response = await fetch(apiUrl, {
       method: 'GET',
       headers: {
-        'Authorization': `token ${project.githubToken}`,
+        'Authorization': `Bearer ${project.githubToken}`,
         'Accept': 'application/vnd.github.v3+json'
       }
     });
@@ -160,10 +162,11 @@ export async function fetchFileContent(
     const apiUrl = `https://api.github.com/repos/${project.githubRepo}/contents/${filePath}?ref=${branchToUse}`;
 
     // Make the API call with appropriate authorization
+    // GitHub now requires Bearer token format
     const response = await fetch(apiUrl, {
       method: 'GET',
       headers: {
-        'Authorization': `token ${project.githubToken}`,
+        'Authorization': `Bearer ${project.githubToken}`,
         'Accept': 'application/vnd.github.v3+json'
       }
     });
@@ -206,10 +209,11 @@ export async function fetchRecentCommits(
     const apiUrl = `https://api.github.com/repos/${project.githubRepo}/commits?per_page=${limit}`;
 
     // Make the API call with appropriate authorization
+    // GitHub now requires Bearer token format
     const response = await fetch(apiUrl, {
       method: 'GET',
       headers: {
-        'Authorization': `token ${project.githubToken}`,
+        'Authorization': `Bearer ${project.githubToken}`,
         'Accept': 'application/vnd.github.v3+json'
       }
     });
