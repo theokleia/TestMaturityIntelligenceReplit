@@ -50,6 +50,7 @@ export default function Projects() {
         setLocalIsLoading(true);
         // Filter projects by status based on the active tab
         const status = activeTab === "active" ? "active" : "archived";
+        console.log(`Fetching projects with status: ${status} for tab: ${activeTab}`);
         const response = await fetch(`/api/projects?status=${status}`);
         if (!response.ok) {
           throw new Error(`Failed to fetch projects directly: ${response.status}`);
@@ -167,11 +168,13 @@ export default function Projects() {
       const archivedProject = await archiveProject(id);
       console.log("Project archived successfully:", archivedProject);
       
-      // Refresh the projects list after archiving
+      // Refresh the projects list after archiving with the current tab's status
       const status = activeTab === "active" ? "active" : "archived";
+      console.log(`Refreshing projects with status: ${status} after archiving`);
       const response = await fetch(`/api/projects?status=${status}`);
       if (response.ok) {
         const data = await response.json();
+        console.log(`Updated projects after archive:`, data);
         setLocalProjects(data);
       }
     } catch (error) {
@@ -184,11 +187,13 @@ export default function Projects() {
       const unarchivedProject = await unarchiveProject(id);
       console.log("Project unarchived successfully:", unarchivedProject);
       
-      // Refresh the projects list after unarchiving
+      // Refresh the projects list after unarchiving with the current tab's status
       const status = activeTab === "active" ? "active" : "archived";
+      console.log(`Refreshing projects with status: ${status} after unarchiving`);
       const response = await fetch(`/api/projects?status=${status}`);
       if (response.ok) {
         const data = await response.json();
+        console.log(`Updated projects after unarchive:`, data);
         setLocalProjects(data);
       }
     } catch (error) {
@@ -367,9 +372,14 @@ export default function Projects() {
                   <IconWrapper variant="blue" size="lg" className="mx-auto mb-4">
                     <Search className="h-6 w-6" />
                   </IconWrapper>
-                  <h3 className="text-lg font-medium mb-2">No active projects found</h3>
+                  <h3 className="text-lg font-medium mb-2">
+                    {activeTab === "active" ? "No active projects found" : "No archived projects found"}
+                  </h3>
                   <p className="text-atmf-muted max-w-md">
-                    We couldn't find any active projects matching your search criteria. Try adjusting your search or create a new project.
+                    {activeTab === "active" 
+                      ? "We couldn't find any active projects matching your search criteria. Try adjusting your search or create a new project."
+                      : "We couldn't find any archived projects matching your search criteria. Try adjusting your search or check if you have any archived projects."
+                    }
                   </p>
                 </div>
               </div>
@@ -420,7 +430,7 @@ export default function Projects() {
             ) : filteredProjects.length > 0 ? (
               // Archived project cards when loaded
               filteredProjects.map(project => (
-                <ATMFCard key={project.id} className="opacity-80">
+                <ATMFCard key={project.id} className="opacity-80 border border-white/5 hover:border-white/10">
                   <ATMFCardHeader>
                     <div className="flex items-center justify-between">
                       <h3 className="text-lg font-medium">{project.name}</h3>
