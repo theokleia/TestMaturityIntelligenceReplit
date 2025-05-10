@@ -14,8 +14,22 @@ import { IconWrapper } from "@/components/design-system/icon-wrapper";
 import { format } from "date-fns";
 
 export default function Projects() {
-  const { projects, selectedProject, setSelectedProject, addProject, isLoading } = useProject();
+  const { 
+    projects, 
+    selectedProject, 
+    setSelectedProject, 
+    addProject, 
+    updateProject,
+    deleteProject,
+    archiveProject,
+    unarchiveProject,
+    isLoading 
+  } = useProject();
   const [isNewProjectOpen, setIsNewProjectOpen] = useState(false);
+  const [isEditProjectOpen, setIsEditProjectOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [currentProjectId, setCurrentProjectId] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<string>("active");
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
   const [localProjects, setLocalProjects] = useState<Project[]>([]);
@@ -32,12 +46,14 @@ export default function Projects() {
     const fetchProjectsDirectly = async () => {
       try {
         setLocalIsLoading(true);
-        const response = await fetch('/api/projects');
+        // Filter projects by status based on the active tab
+        const status = activeTab === "active" ? "active" : "archived";
+        const response = await fetch(`/api/projects?status=${status}`);
         if (!response.ok) {
           throw new Error(`Failed to fetch projects directly: ${response.status}`);
         }
         const data = await response.json();
-        console.log("Projects fetched directly:", data);
+        console.log(`Projects (${status}) fetched directly:`, data);
         setLocalProjects(data);
       } catch (error) {
         console.error("Error fetching projects directly:", error);
@@ -50,7 +66,7 @@ export default function Projects() {
     // This is a workaround for any potential context issues
     console.log("Projects page - Fetching projects directly");
     fetchProjectsDirectly();
-  }, []);
+  }, [activeTab]);
 
   // Update filtered projects when local projects or search term changes
   useEffect(() => {
@@ -93,16 +109,89 @@ export default function Projects() {
         
         // Close the dialog and reset form
         setIsNewProjectOpen(false);
-        setProjectForm({
-          name: "",
-          description: "",
-          jiraProjectId: "",
-          jiraJql: ""
-        });
+        resetForm();
       } catch (error) {
         console.error("Error adding project:", error);
       }
     }
+  };
+
+  const handleEditProject = async () => {
+    if (!currentProjectId || !projectForm.name.trim()) return;
+    
+    console.log("Updating project with form data:", projectForm);
+    
+    try {
+      const updatedProject = await updateProject(currentProjectId, {
+        name: projectForm.name.trim(),
+        description: projectForm.description ? projectForm.description.trim() : "",
+        jiraProjectId: projectForm.jiraProjectId ? projectForm.jiraProjectId.trim() : "",
+        jiraJql: projectForm.jiraJql ? projectForm.jiraJql.trim() : ""
+      });
+      
+      console.log("Project updated successfully:", updatedProject);
+      
+      // Close the dialog and reset form
+      setIsEditProjectOpen(false);
+      setCurrentProjectId(null);
+      resetForm();
+    } catch (error) {
+      console.error("Error updating project:", error);
+    }
+  };
+
+  const handleDeleteProject = async () => {
+    if (!currentProjectId) return;
+    
+    try {
+      const success = await deleteProject(currentProjectId);
+      
+      if (success) {
+        console.log("Project deleted successfully:", currentProjectId);
+      } else {
+        console.error("Failed to delete project:", currentProjectId);
+      }
+      
+      // Close the dialog
+      setIsDeleteConfirmOpen(false);
+      setCurrentProjectId(null);
+    } catch (error) {
+      console.error("Error deleting project:", error);
+    }
+  };
+
+  const handleArchiveProject = async (id: number) => {
+    try {
+      const archivedProject = await archiveProject(id);
+      console.log("Project archived successfully:", archivedProject);
+    } catch (error) {
+      console.error("Error archiving project:", error);
+    }
+  };
+
+  const handleUnarchiveProject = async (id: number) => {
+    try {
+      const unarchivedProject = await unarchiveProject(id);
+      console.log("Project unarchived successfully:", unarchivedProject);
+    } catch (error) {
+      console.error("Error unarchiving project:", error);
+    }
+  };
+
+  const openEditDialog = (project: Project) => {
+    setCurrentProjectId(project.id);
+    setProjectForm({
+      name: project.name,
+      description: project.description || "",
+      jiraProjectId: project.jiraProjectId || "",
+      jiraJql: project.jiraJql || ""
+    });
+    setIsEditProjectOpen(true);
+  };
+
+  const openDeleteDialog = (id: number) => {
+    setCurrentProjectId(id);
+    setIsDeleteConfirmOpen(true);
   };
 
   const resetForm = () => {
@@ -120,6 +209,10 @@ export default function Projects() {
       ...prev,
       [name]: value
     }));
+  };
+
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId);
   };
 
   // Create tabs for Active and Archived projects
@@ -222,10 +315,26 @@ export default function Projects() {
                         {project.createdAt ? `Created ${format(new Date(project.createdAt), 'MMM d, yyyy')}` : "Recently added"}
                       </div>
                       <div className="flex gap-2">
-                        <Button variant="ghost" size="icon" className="rounded-full hover:bg-atmf-card">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="rounded-full hover:bg-atmf-card"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditDialog(project);
+                          }}
+                        >
                           <Edit className="h-4 w-4 text-muted-foreground" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="rounded-full hover:bg-atmf-card hover:text-red-400">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="rounded-full hover:bg-atmf-card hover:text-red-400"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openDeleteDialog(project.id);
+                          }}
+                        >
                           <Trash2 className="h-4 w-4 text-muted-foreground" />
                         </Button>
                       </div>
@@ -240,9 +349,9 @@ export default function Projects() {
                   <IconWrapper variant="blue" size="lg" className="mx-auto mb-4">
                     <Search className="h-6 w-6" />
                   </IconWrapper>
-                  <h3 className="text-lg font-medium mb-2">No projects found</h3>
+                  <h3 className="text-lg font-medium mb-2">No active projects found</h3>
                   <p className="text-atmf-muted max-w-md">
-                    We couldn't find any projects matching your search criteria. Try adjusting your search or create a new project.
+                    We couldn't find any active projects matching your search criteria. Try adjusting your search or create a new project.
                   </p>
                 </div>
               </div>
@@ -260,15 +369,80 @@ export default function Projects() {
         </div>
       ),
       content: (
-        <div className="flex justify-center items-center py-12">
-          <div className="text-center">
-            <IconWrapper variant="muted" size="lg" className="mx-auto mb-4">
-              <Clock className="h-6 w-6" />
-            </IconWrapper>
-            <h3 className="text-lg font-medium mb-2">No archived projects</h3>
-            <p className="text-atmf-muted max-w-md">
-              Archived projects will appear here. Archive a project when it's no longer active but you still want to keep its data.
-            </p>
+        <div className="space-y-4">
+          <div className="relative w-full max-w-sm">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input 
+              placeholder="Search archived projects..." 
+              className="pl-10 bg-atmf-card border-white/10 focus:border-white/20"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {localIsLoading ? (
+              // Loading state for archived projects
+              [...Array(3)].map((_, index) => (
+                <ATMFCard key={`loading-archived-${index}`} className="opacity-70">
+                  <ATMFCardHeader>
+                    <div className="flex items-center justify-between">
+                      <div className="h-6 w-40 bg-atmf-card animate-pulse rounded"></div>
+                    </div>
+                  </ATMFCardHeader>
+                  <ATMFCardBody>
+                    <div className="h-4 w-full bg-atmf-card animate-pulse rounded mb-2"></div>
+                    <div className="h-4 w-3/4 bg-atmf-card animate-pulse rounded"></div>
+                  </ATMFCardBody>
+                  <ATMFCardFooter>
+                    <div className="h-4 w-24 bg-atmf-card animate-pulse rounded"></div>
+                  </ATMFCardFooter>
+                </ATMFCard>
+              ))
+            ) : filteredProjects.length > 0 ? (
+              // Archived project cards when loaded
+              filteredProjects.map(project => (
+                <ATMFCard key={project.id} className="opacity-80">
+                  <ATMFCardHeader>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-medium">{project.name}</h3>
+                      <StatusBadge variant="secondary">Archived</StatusBadge>
+                    </div>
+                  </ATMFCardHeader>
+                  <ATMFCardBody>
+                    <p className="text-atmf-muted">{project.description || "No description provided"}</p>
+                  </ATMFCardBody>
+                  <ATMFCardFooter>
+                    <div className="flex justify-between items-center">
+                      <div className="text-sm text-atmf-muted">
+                        {project.createdAt ? `Created ${format(new Date(project.createdAt), 'MMM d, yyyy')}` : "Recently added"}
+                      </div>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="text-xs border-white/10 hover:bg-atmf-main hover:border-white/20"
+                        onClick={() => handleUnarchiveProject(project.id)}
+                      >
+                        Restore
+                      </Button>
+                    </div>
+                  </ATMFCardFooter>
+                </ATMFCard>
+              ))
+            ) : (
+              // No archived projects found
+              <div className="col-span-full flex justify-center items-center py-12">
+                <div className="text-center">
+                  <IconWrapper variant="muted" size="lg" className="mx-auto mb-4">
+                    <Clock className="h-6 w-6" />
+                  </IconWrapper>
+                  <h3 className="text-lg font-medium mb-2">No archived projects</h3>
+                  <p className="text-atmf-muted max-w-md">
+                    Archived projects will appear here. Archive a project when it's no longer active but you still want to keep its data.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )

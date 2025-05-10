@@ -37,6 +37,10 @@ const defaultContextValue: ProjectContextType = {
   setSelectedProject: () => {},
   projects: [],
   addProject: async () => ({ id: 0, name: "" }),
+  updateProject: async () => undefined,
+  deleteProject: async () => false,
+  archiveProject: async () => undefined,
+  unarchiveProject: async () => undefined,
   isLoading: true
 };
 
@@ -233,6 +237,181 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Update project
+  const updateProject = useCallback(async (id: number, project: Partial<Project>): Promise<Project | undefined> => {
+    try {
+      const response = await fetch(`/api/projects/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(project)
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to update project: ${response.status}`);
+      }
+      
+      const updatedProject: Project = await response.json();
+      console.log("Updated project:", updatedProject);
+      
+      // Update projects state
+      setProjectsState(current => {
+        const updatedProjects = current.projects.map(p => 
+          p.id === updatedProject.id ? updatedProject : p
+        );
+        
+        // If this is the selected project, update it too
+        const newSelectedProject = current.selectedProject?.id === updatedProject.id 
+          ? updatedProject 
+          : current.selectedProject;
+        
+        return {
+          projects: updatedProjects,
+          selectedProject: newSelectedProject,
+          isLoading: false
+        };
+      });
+      
+      // Invalidate projects query cache
+      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+      
+      return updatedProject;
+    } catch (error) {
+      console.error("Error updating project:", error);
+      throw error;
+    }
+  }, []);
+  
+  // Delete project
+  const deleteProject = useCallback(async (id: number): Promise<boolean> => {
+    try {
+      const response = await fetch(`/api/projects/${id}`, {
+        method: 'DELETE'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to delete project: ${response.status}`);
+      }
+      
+      console.log("Deleted project with ID:", id);
+      
+      // Update projects state
+      setProjectsState(current => {
+        const updatedProjects = current.projects.filter(p => p.id !== id);
+        
+        // If this was the selected project, select another one
+        let newSelectedProject = current.selectedProject;
+        if (current.selectedProject?.id === id) {
+          localStorage.removeItem('selectedProjectId');
+          newSelectedProject = updatedProjects.length > 0 ? updatedProjects[0] : null;
+          
+          if (newSelectedProject) {
+            localStorage.setItem('selectedProjectId', newSelectedProject.id.toString());
+          }
+        }
+        
+        return {
+          projects: updatedProjects,
+          selectedProject: newSelectedProject,
+          isLoading: false
+        };
+      });
+      
+      // Invalidate projects query cache
+      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+      
+      return true;
+    } catch (error) {
+      console.error("Error deleting project:", error);
+      return false;
+    }
+  }, []);
+  
+  // Archive project
+  const archiveProject = useCallback(async (id: number): Promise<Project | undefined> => {
+    try {
+      const response = await fetch(`/api/projects/${id}/archive`, {
+        method: 'PATCH'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to archive project: ${response.status}`);
+      }
+      
+      const archivedProject: Project = await response.json();
+      console.log("Archived project:", archivedProject);
+      
+      // Update projects state
+      setProjectsState(current => {
+        const updatedProjects = current.projects.map(p => 
+          p.id === archivedProject.id ? archivedProject : p
+        );
+        
+        // If this is the selected project, update it too
+        const newSelectedProject = current.selectedProject?.id === archivedProject.id 
+          ? archivedProject 
+          : current.selectedProject;
+        
+        return {
+          projects: updatedProjects,
+          selectedProject: newSelectedProject,
+          isLoading: false
+        };
+      });
+      
+      // Invalidate projects query cache
+      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+      
+      return archivedProject;
+    } catch (error) {
+      console.error("Error archiving project:", error);
+      throw error;
+    }
+  }, []);
+  
+  // Unarchive project
+  const unarchiveProject = useCallback(async (id: number): Promise<Project | undefined> => {
+    try {
+      const response = await fetch(`/api/projects/${id}/unarchive`, {
+        method: 'PATCH'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to unarchive project: ${response.status}`);
+      }
+      
+      const unarchivedProject: Project = await response.json();
+      console.log("Unarchived project:", unarchivedProject);
+      
+      // Update projects state
+      setProjectsState(current => {
+        const updatedProjects = current.projects.map(p => 
+          p.id === unarchivedProject.id ? unarchivedProject : p
+        );
+        
+        // If this is the selected project, update it too
+        const newSelectedProject = current.selectedProject?.id === unarchivedProject.id 
+          ? unarchivedProject 
+          : current.selectedProject;
+        
+        return {
+          projects: updatedProjects,
+          selectedProject: newSelectedProject,
+          isLoading: false
+        };
+      });
+      
+      // Invalidate projects query cache
+      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+      
+      return unarchivedProject;
+    } catch (error) {
+      console.error("Error unarchiving project:", error);
+      throw error;
+    }
+  }, []);
+
   // Provide context
   return (
     <ProjectContext.Provider value={{
@@ -240,6 +419,10 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       setSelectedProject,
       projects: projectsState.projects,
       addProject,
+      updateProject,
+      deleteProject,
+      archiveProject,
+      unarchiveProject,
       isLoading: projectsState.isLoading
     }}>
       {children}
