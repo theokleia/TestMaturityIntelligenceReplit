@@ -58,7 +58,7 @@ export function Sidebar() {
     },
     {
       title: "ATMF",
-      path: "/documentation",
+      path: "/atmf",
       icon: "bx-book-alt",
     },
     {

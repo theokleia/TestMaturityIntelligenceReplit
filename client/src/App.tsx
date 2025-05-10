@@ -9,7 +9,7 @@ import TestManagement from "@/pages/test-management";
 import TestExecution from "@/pages/test-execution";
 import TestExecutionRefactored from "@/pages/test-execution-refactored";
 import DesignSystem from "@/pages/design-system";
-import Documentation from "@/pages/documentation";
+import ATMF from "@/pages/atmf";
 import Projects from "@/pages/projects";
 import Settings from "@/pages/settings";
 import ProjectHealth from "@/pages/project-health";
@@ -34,7 +34,11 @@ function Router() {
       <ProtectedRoute path="/project-health" component={ProjectHealth} />
       <ProtectedRoute path="/settings" component={Settings} />
       <ProtectedRoute path="/design-system" component={DesignSystem} />
-      <ProtectedRoute path="/documentation" component={Documentation} />
+      <ProtectedRoute path="/atmf" component={ATMF} />
+      {/* Redirect old documentation path to new ATMF path */}
+      <Route path="/documentation">
+        <Redirect to="/atmf" />
+      </Route>
       <ProtectedRoute path="/test-fetch" component={TestFetch} />
       {/* Auth route is public */}
       <Route path="/auth" component={AuthPage} />

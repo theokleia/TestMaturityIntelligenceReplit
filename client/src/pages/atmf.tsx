@@ -23,7 +23,7 @@ interface DocumentSection {
   documents: DocumentCard[];
 }
 
-export default function Documentation() {
+export default function ATMF() {
   const [activeTab, setActiveTab] = useState("framework");
   const [selectedDocument, setSelectedDocument] = useState<{id: string; title: string} | null>(null);
   
