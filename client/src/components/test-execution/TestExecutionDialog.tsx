@@ -18,6 +18,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import {
   Select,
@@ -29,7 +30,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { Check, X, AlertTriangle } from "lucide-react";
+import { Check, X, AlertTriangle, Bug, TicketIcon } from "lucide-react";
 import { StatusBadge } from "@/components/design-system/status-badge";
 import { TestCase } from "@/hooks/test-management";
 import { TestRun } from "@/hooks/test-execution";
@@ -43,10 +44,27 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Switch } from "@/components/ui/switch";
+import { useProject } from "@/context/ProjectContext";
 
+// Define a dynamic validation schema that can be updated based on selected status
+const getFormSchema = (status: string) => {
+  const baseSchema = {
+    status: z.string(),
+    notes: status === "failed" 
+      ? z.string().min(5, { message: "Notes are required for failed tests (min 5 characters)" }) 
+      : z.string().optional(),
+    createJiraTicket: z.boolean().optional(),
+  };
+  
+  return z.object(baseSchema);
+};
+
+// Base schema for initialization
 const formSchema = z.object({
   status: z.string(),
   notes: z.string().optional(),
+  createJiraTicket: z.boolean().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -69,22 +87,46 @@ export function TestExecutionDialog({
   isPending = false
 }: TestExecutionDialogProps) {
   const [activeTab, setActiveTab] = useState("details");
+  const [currentStatus, setCurrentStatus] = useState("passed");
+  const { selectedProject } = useProject();
+  
+  // Determine if project has Jira integration
+  const hasJiraIntegration = Boolean(
+    selectedProject?.jiraUrl && 
+    selectedProject?.jiraProjectId && 
+    selectedProject?.jiraApiKey
+  );
   
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+    // Use our dynamic resolver which updates validation based on status
+    resolver: zodResolver(getFormSchema(currentStatus)),
     defaultValues: {
       status: "passed",
       notes: "",
+      createJiraTicket: false,
     },
   });
 
+  // Watch for status changes to update validation
+  const watchedStatus = form.watch("status");
+  
+  // Update validation schema when status changes
+  useEffect(() => {
+    if (watchedStatus && watchedStatus !== currentStatus) {
+      setCurrentStatus(watchedStatus);
+      form.clearErrors();
+    }
+  }, [watchedStatus, currentStatus, form]);
+  
   // Reset form when dialog opens
   useEffect(() => {
     if (open) {
       form.reset({
         status: "passed",
         notes: "",
+        createJiraTicket: false,
       });
+      setCurrentStatus("passed");
       // Set the active tab to details when opening
       setActiveTab("details");
     }
