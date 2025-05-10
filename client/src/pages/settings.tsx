@@ -25,6 +25,7 @@ interface ProjectSettings {
   jiraProjectId: string;  // Added Jira Project ID field
   jiraApiKey: string;
   jiraJql: string;
+  jiraIssueType: string;  // Added Jira Issue Type field for test failures
   githubToken: string;
   githubRepo: string;
   testCaseFormat: "structured" | "plain";
@@ -37,6 +38,7 @@ const defaultSettings: ProjectSettings = {
   jiraProjectId: "",  // Added Jira Project ID field
   jiraApiKey: "",
   jiraJql: "",
+  jiraIssueType: "Bug",  // Default issue type for test failures
   githubToken: "",
   githubRepo: "",
   testCaseFormat: "structured",
@@ -67,6 +69,8 @@ export default function ProjectSettings() {
         jiraApiKey: selectedProject.jiraApiKey ? '••••••••••••••••' : '',
         // Load saved JQL query if available
         jiraJql: selectedProject.jiraJql || '',
+        // Load saved Jira issue type for test failures
+        jiraIssueType: selectedProject.jiraIssueType || 'Bug',
         // Load saved test case format preference
         testCaseFormat: selectedProject.testCaseFormat || 'structured',
         // Load saved output format preference
