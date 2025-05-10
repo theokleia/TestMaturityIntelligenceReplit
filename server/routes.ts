@@ -1171,14 +1171,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return 40;
   }
   
-  function calculateCodeQuality(repoInfo: any, commits: any[]): {
+  function calculateCodeQuality(repoInfo: any, commits: any[] | null): {
     score: number;
     issues: number;
     status: "healthy" | "warning" | "critical";
   } {
     // Rate code quality based on commit frequency and repo stats
     const hasOpenIssues = repoInfo.open_issues_count > 0;
-    const hasRegularCommits = commits && commits.length >= 5;
+    const hasRegularCommits = commits && Array.isArray(commits) && commits.length >= 5;
     const isActiveRepo = repoInfo.updated_at && 
       (new Date(repoInfo.updated_at).getTime() > Date.now() - 30 * 24 * 60 * 60 * 1000);
     
@@ -1307,7 +1307,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // For metrics that GitHub API doesn't provide directly,
             // we'll use a combination of real data with some calculated metrics
             testCoverage: calculateTestCoverage(languages, repoInfo.full_name),
-            codeQuality: calculateCodeQuality(repoInfo, commits),
+            codeQuality: calculateCodeQuality(repoInfo, commits || []),
             ciStatus: {
               success: 90, // Default to high success rate
               failed: 8,
@@ -1668,7 +1668,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Enhanced description with AI-generated content using test context
       const enhancedDescription = description + 
         (testCase ? `\n\n== Test Case Information ==\nTest Case: ${testCase.title}\nID: ${testCase.id}\nPriority: ${testCase.priority}\n${testCase.description ? `Description: ${testCase.description}` : ''}` : '') +
-        (testRun ? `\n\n== Test Run Information ==\nStatus: ${testRun.status}\nExecuted: ${new Date(testRun.executedAt).toLocaleString()}` : '');
+        (testRun ? `\n\n== Test Run Information ==\nStatus: ${testRun.status}\nExecuted: ${testRun.executedAt ? new Date(testRun.executedAt).toLocaleString() : 'Not recorded'}` : '');
       
       // Prepare auth header
       const auth = Buffer.from(`${username}:${apiToken}`).toString('base64');

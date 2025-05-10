@@ -47,16 +47,9 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { useProject } from "@/context/ProjectContext";
 
-// Define interfaces for structured test steps and test data
-interface TestStep {
-  step: string;
-  expected?: string;
-}
-
-// Extend TestCase to support different formats
-interface ExtendedTestCase extends TestCase {
-  steps: TestStep[] | string[] | null;
-  testData?: Record<string, any> | string | null;
+// Interface for test data formats
+interface TestData {
+  [key: string]: any;
 }
 
 // Define a dynamic validation schema that can be updated based on selected status
@@ -213,18 +206,22 @@ export function TestExecutionDialog({
             
             <div>
               <h4 className="font-semibold text-primary">Test Steps</h4>
-              {hasStructuredSteps ? (
+              {testCase.steps && testCase.steps.length > 0 ? (
                 <div className="space-y-3 mt-3">
-                  {testCase.steps.map((step: any, index: number) => (
+                  {testCase.steps.map((step, index) => (
                     <div key={index} className="flex gap-3 p-3 bg-card rounded-md border">
                       <div className="font-mono text-sm bg-primary/20 w-6 h-6 shrink-0 flex items-center justify-center rounded-full text-primary">
                         {index + 1}
                       </div>
                       <div className="space-y-1">
-                        <p className="font-medium">{step.step}</p>
-                        {step.expected && (
+                        <p className="font-medium">{
+                          typeof step === 'string' 
+                            ? step 
+                            : (step as any).step
+                        }</p>
+                        {typeof step !== 'string' && (step as any).expected && (
                           <p className="text-sm text-muted-foreground">
-                            <span className="font-semibold">Expected:</span> {step.expected}
+                            <span className="font-semibold">Expected:</span> {(step as any).expected}
                           </p>
                         )}
                       </div>
@@ -233,19 +230,20 @@ export function TestExecutionDialog({
                 </div>
               ) : (
                 <div>
-                  {testCase.testData ? (
+                  {/* Fallback for when step data is stored in another format */}
+                  {(testCase as any).testData ? (
                     <div>
-                      {typeof testCase.testData === 'string' && testCase.testData.trim() ? (
+                      {typeof (testCase as any).testData === 'string' && (testCase as any).testData.trim() ? (
                         <ol className="list-decimal list-inside mt-1 space-y-2 pl-4">
-                          {testCase.testData.split('\n').map((step, index) => (
+                          {(testCase as any).testData.split('\n').map((step: string, index: number) => (
                             <li key={index} className="pl-2">{step}</li>
                           ))}
                         </ol>
-                      ) : typeof testCase.testData === 'object' && Object.keys(testCase.testData).length > 0 ? (
+                      ) : typeof (testCase as any).testData === 'object' && Object.keys((testCase as any).testData).length > 0 ? (
                         <div className="space-y-3 mt-3">
-                          {Object.entries(testCase.testData).map(([key, value], index) => (
+                          {Object.entries((testCase as any).testData).map(([key, value], index) => (
                             <div key={index} className="p-3 bg-card rounded-md border">
-                              <p className="font-medium">{key}: {value}</p>
+                              <p className="font-medium">{key}: {String(value)}</p>
                             </div>
                           ))}
                         </div>

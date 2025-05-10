@@ -402,14 +402,13 @@ export default function TestExecutionPage() {
                 toast({
                   title: "Jira Ticket Created",
                   description: `Created ${selectedProject.jiraIssueType || 'Bug'} ${result.issueKey}`,
-                  variant: "default",
                 });
               } else {
                 console.error("Failed to create Jira ticket:", await response.text());
                 toast({
                   title: "Warning",
                   description: "Test run saved but Jira ticket creation failed",
-                  variant: "warning",
+                  variant: "destructive",
                 });
               }
             } catch (error) {
@@ -417,7 +416,7 @@ export default function TestExecutionPage() {
               toast({
                 title: "Warning",
                 description: "Test run saved but Jira ticket creation failed",
-                variant: "warning",
+                variant: "destructive",
               });
             }
           }
