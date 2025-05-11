@@ -941,16 +941,23 @@ export async function generateWhisperSuggestions(
         Current project count:
         - Active projects: ${contextData?.activeProjectsCount || 1}
         - Archived projects: ${contextData?.archivedProjectsCount || 0}
+        - Inactive projects (not updated in 20+ days): ${contextData?.inactiveProjectsCount || 0}
+        - Total projects: ${contextData?.totalProjects || 1}
         
-        When a project hasn't been updated in over 20 days, it's considered inactive.
+        ${contextData?.inactiveProjectsCount > 0 ? `Inactive project names: ${JSON.stringify(contextData?.inactiveProjectNames || [])}` : ''}
         
-        Generate 2-3 specific suggestions about project organization based on these guidelines:
+        Generate 1-3 specific suggestions about project organization based on these guidelines:
         1. If there are more than 5 active projects, suggest archiving some
-        2. If there are projects that haven't been updated in 20+ days, suggest archiving them
-        3. Provide a positive message if project organization looks good
+        2. If there are projects that haven't been updated in 20+ days, suggest archiving them specifically by name
+        3. If there are 0-1 archived projects but several active ones, suggest using the archive feature for better organization
+        4. Provide a positive message if project organization looks good (e.g., few active projects, all recently updated)
         
         Keep each suggestion under 80 characters.
-        Format your response as JSON with "suggestions" array and "priority" field (low, medium, high).
+        Format your response as JSON with "suggestions" array and "priority" field.
+        Set "priority" to:
+        - "low" for positive observations or minor suggestions
+        - "medium" for useful suggestions that would improve organization
+        - "high" for situations that need immediate attention (e.g., too many inactive projects)
       `;
       
       console.log(`Generating whisper suggestions for projects page`);
