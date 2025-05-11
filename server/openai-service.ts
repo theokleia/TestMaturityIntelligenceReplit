@@ -695,6 +695,9 @@ export async function generateWhisperSuggestions(
   contextData?: any
 ): Promise<{ suggestions: string[]; priority: "low" | "medium" | "high" }> {
   try {
+    // Initialize promptContent variable that will be used throughout the function
+    let promptContent: string = "";
+    
     // Determine project type from the project name
     const projectType = getProjectTypeFromName(project.name);
     
@@ -935,7 +938,7 @@ export async function generateWhisperSuggestions(
       let priority: "low" | "medium" | "high" = "medium";
       
       // Build a context-aware prompt for projects page
-      let prompt = `
+      promptContent = `
         You are providing whisper suggestions for someone on the Projects page of a test management platform.
         
         Current project count:
@@ -968,7 +971,7 @@ export async function generateWhisperSuggestions(
             role: "system", 
             content: "You are ATMosFera WhisperMode, a non-intrusive assistant that provides short, timely contextual suggestions for project organization." 
           },
-          { role: "user", content: prompt }
+          { role: "user", content: promptContent }
         ],
         temperature: 0.7,
         max_tokens: 200,
@@ -996,7 +999,7 @@ export async function generateWhisperSuggestions(
     // For all other pages, use the standard prompt
     else {
       // Build a context-aware prompt
-      let prompt = `
+      promptContent = `
         You are providing quiet whisper suggestions for someone working on a "${project.name}" project (${context.type}) focused on ${context.focus}.
         
         Key risks in this type of project include: ${context.keyRisks.join(", ")}.
@@ -1026,7 +1029,7 @@ export async function generateWhisperSuggestions(
           role: "system", 
           content: "You are ATMosFera WhisperMode, a non-intrusive assistant that provides short, timely, contextual suggestions for software testing activities based on real project data." 
         },
-        { role: "user", content: prompt }
+        { role: "user", content: promptContent }
       ],
       temperature: 0.7,
       max_tokens: 500,
