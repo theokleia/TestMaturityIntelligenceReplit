@@ -971,7 +971,7 @@ export async function generateWhisperSuggestions(
             role: "system", 
             content: "You are ATMosFera WhisperMode, a non-intrusive assistant that provides short, timely contextual suggestions for project organization." 
           },
-          { role: "user", content: promptContent }
+          { role: "user", content: promptContent as string }
         ],
         temperature: 0.7,
         max_tokens: 200,
@@ -1029,7 +1029,7 @@ export async function generateWhisperSuggestions(
           role: "system", 
           content: "You are ATMosFera WhisperMode, a non-intrusive assistant that provides short, timely, contextual suggestions for software testing activities based on real project data." 
         },
-        { role: "user", content: promptContent }
+        { role: "user", content: promptContent as string }
       ],
       temperature: 0.7,
       max_tokens: 500,
