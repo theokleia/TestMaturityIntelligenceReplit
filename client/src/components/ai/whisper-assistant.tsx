@@ -281,30 +281,48 @@ export function WhisperAssistant() {
         )}>
           {/* Header */}
           <div 
-            className="flex items-center justify-between p-2 bg-gradient-to-r from-blue-900/90 to-indigo-900/90 cursor-pointer rounded-lg"
+            className={cn(
+              "flex items-center justify-center p-2 cursor-pointer rounded-lg",
+              expanded 
+                ? "bg-gradient-to-r from-blue-900/90 to-indigo-900/90 justify-between" 
+                : "bg-blue-950/90 hover:bg-indigo-950/90"
+            )}
             onClick={() => setExpanded(!expanded)}
           >
-            <div className="flex items-center gap-2">
-              <Lightbulb className="h-5 w-5 text-blue-300" />
-              <motion.span 
-                animate={controls}
-                className={cn(
-                  "inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-semibold",
-                  priority === "high" ? "bg-red-500 text-white" :
-                  priority === "medium" ? "bg-amber-500 text-white" : 
-                  "bg-blue-500 text-white"
-                )}
-              >
-                {suggestions.length}
-              </motion.span>
-            </div>
-            <div className="flex items-center gap-1">
-              {expanded ? (
+            {expanded ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <Lightbulb className="h-5 w-5 text-blue-300" />
+                  <motion.span 
+                    animate={controls}
+                    className={cn(
+                      "inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-semibold",
+                      priority === "high" ? "bg-red-500 text-white" :
+                      priority === "medium" ? "bg-amber-500 text-white" : 
+                      "bg-blue-500 text-white"
+                    )}
+                  >
+                    {suggestions.length}
+                  </motion.span>
+                </div>
                 <ChevronUp className="h-3 w-3 text-blue-300" />
-              ) : (
-                <ChevronDown className="h-3 w-3 text-blue-300" />
-              )}
-            </div>
+              </>
+            ) : (
+              <div className="relative">
+                <Lightbulb className="h-5 w-5 text-blue-300" />
+                <motion.span 
+                  animate={controls}
+                  className={cn(
+                    "absolute -top-2 -right-2 inline-flex items-center justify-center w-4 h-4 rounded-full text-[10px] font-semibold",
+                    priority === "high" ? "bg-red-500 text-white" :
+                    priority === "medium" ? "bg-amber-500 text-white" : 
+                    "bg-blue-500 text-white"
+                  )}
+                >
+                  {suggestions.length}
+                </motion.span>
+              </div>
+            )}
           </div>
           
           {/* Content */}
@@ -319,8 +337,17 @@ export function WhisperAssistant() {
                     transition={{ delay: i * 0.1 }}
                     className="flex items-start gap-2 text-sm"
                   >
-                    <Sparkles className="h-4 w-4 text-blue-400 mt-0.5 shrink-0" />
-                    <span>{suggestion.text}</span>
+                    <Sparkles className={cn(
+                      "h-4 w-4 mt-0.5 shrink-0",
+                      suggestion.priority === "high" ? "text-red-400" :
+                      suggestion.priority === "medium" ? "text-amber-400" : 
+                      "text-blue-400"
+                    )} />
+                    <span className={cn(
+                      suggestion.priority === "high" ? "text-red-100" :
+                      suggestion.priority === "medium" ? "text-amber-100" : 
+                      "text-blue-100"
+                    )}>{suggestion.text}</span>
                   </motion.li>
                 ))}
               </ul>
