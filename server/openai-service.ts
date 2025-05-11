@@ -731,6 +731,12 @@ export async function generateWhisperSuggestions(
     let jiraContext = "";
     let githubContext = "";
     
+    // Track integration status for settings page and specialized suggestions
+    let jiraConnectionStatus = "unknown";
+    let githubConnectionStatus = "unknown";
+    const isSettingsPage = contextPath.includes("settings");
+    const isProjectsPage = contextPath.includes("projects");
+    
     // Only attempt to fetch Jira data if project has Jira configured
     let jiraIssues = null;
     if (project.jiraUrl && project.jiraApiKey && project.jiraProjectId) {
@@ -745,6 +751,7 @@ export async function generateWhisperSuggestions(
           // For Whisper, we'll now provide much more detailed Jira data
           // We'll use the same formatting function we use for the assistant
           jiraContext = getJiraContextForAI(jiraIssues);
+          jiraConnectionStatus = "working"; // Jira connection is working with data
           
           // Add summary information at the beginning
           jiraContext = `
@@ -769,11 +776,15 @@ export async function generateWhisperSuggestions(
           }
         } else {
           jiraContext = "Jira integration configured, but no issues available.";
+          jiraConnectionStatus = "no_data"; // Jira connection works but no data available
         }
       } catch (error) {
         console.error("Error fetching Jira data for whisper suggestions:", error);
         jiraContext = "Error retrieving Jira data.";
+        jiraConnectionStatus = "error"; // Jira connection failed
       }
+    } else {
+      jiraConnectionStatus = "not_configured"; // Jira not configured
     }
     
     // Only attempt to fetch GitHub data if project has GitHub configured
@@ -789,13 +800,18 @@ export async function generateWhisperSuggestions(
           - ${recentCommits.length} recent commits
           - Latest commit: ${recentCommits[0].commit.message.substring(0, 50)}...
           - Most active files may need test coverage`;
+          githubConnectionStatus = "working"; // GitHub connection is working with data
         } else {
           githubContext = "GitHub integration configured, but no recent commits found.";
+          githubConnectionStatus = "no_data"; // GitHub connection works but no data available
         }
       } catch (error) {
         console.error("Error fetching GitHub data for whisper suggestions:", error);
         githubContext = "Error retrieving GitHub data.";
+        githubConnectionStatus = "error"; // GitHub connection failed
       }
+    } else {
+      githubConnectionStatus = "not_configured"; // GitHub not configured
     }
     
     // Determine if we're on a page where integration data should influence suggestions
@@ -866,27 +882,134 @@ export async function generateWhisperSuggestions(
       }
     }
     
-    // Build a context-aware prompt
-    let prompt = `
-      You are providing quiet whisper suggestions for someone working on a "${project.name}" project (${context.type}) focused on ${context.focus}.
+    // For Settings page, check integration status instead of using AI
+    if (isSettingsPage) {
+      // Generate specific suggestions based on integration status
+      const suggestions: string[] = [];
+      let priority: "low" | "medium" | "high" = "low";
       
-      Key risks in this type of project include: ${context.keyRisks.join(", ")}.
-      Recommended practices include: ${context.recommendedPractices.join(", ")}.
+      // Check Jira integration status
+      if (jiraConnectionStatus === "working") {
+        suggestions.push("Jira integration is working correctly.");
+      } else if (jiraConnectionStatus === "error") {
+        suggestions.push("Jira integration is failing. Check your credentials.");
+        priority = "high";
+      } else if (jiraConnectionStatus === "no_data") {
+        suggestions.push("Jira integration is configured but not returning data.");
+        priority = "medium";
+      } else if (jiraConnectionStatus === "not_configured") {
+        suggestions.push("Consider setting up Jira integration for better test tracking.");
+      }
       
-      Current page context: ${pageContext}
-      ${contextDataStr}
-      ${testExecutionContext}
+      // Check GitHub integration status
+      if (githubConnectionStatus === "working") {
+        suggestions.push("GitHub integration is working correctly.");
+      } else if (githubConnectionStatus === "error") {
+        suggestions.push("GitHub integration is failing. Check your access token.");
+        priority = "high";
+      } else if (githubConnectionStatus === "no_data") {
+        suggestions.push("GitHub integration is configured but not returning data.");
+        priority = "medium";
+      } else if (githubConnectionStatus === "not_configured") {
+        suggestions.push("Consider setting up GitHub integration for code analysis.");
+      }
       
-      ${isIntegrationRelevant && jiraContext ? `\n${jiraContext}\n` : ""}
-      ${isIntegrationRelevant && githubContext ? `\n${githubContext}\n` : ""}
+      // If both integrations are working, use a positive message with low priority
+      if (jiraConnectionStatus === "working" && githubConnectionStatus === "working") {
+        return {
+          suggestions: ["All integrations are working correctly!"],
+          priority: "low"
+        };
+      }
       
-      Based on this context ${isIntegrationRelevant ? "and integration data" : ""}, provide 1-3 brief, helpful whisper suggestions that would be valuable for someone working on this page.
-      These should be non-intrusive tips that appear in a small floating card.
-      ${isIntegrationRelevant && jiraIssues && jiraIssues.length > 0 ? "Include a suggestion related to test coverage based on Jira issues." : ""}
-      ${isTestExecutionPage ? "At least one suggestion should specifically relate to test execution priorities, progress analysis, or failed test follow-up." : ""}
-      Keep each suggestion under 80 characters.
-      Format your response as JSON with "suggestions" array and "priority" field (low, medium, high).
-    `;
+      return {
+        suggestions,
+        priority
+      };
+    }
+    
+    // For Projects page, add specialized logic about project organization
+    else if (isProjectsPage) {
+      // Generate project-specific suggestions
+      const suggestions: string[] = [];
+      let priority: "low" | "medium" | "high" = "medium";
+      
+      // Build a context-aware prompt for projects page
+      let prompt = `
+        You are providing whisper suggestions for someone on the Projects page of a test management platform.
+        
+        Current project count:
+        - Active projects: ${contextData?.activeProjectsCount || 1}
+        - Archived projects: ${contextData?.archivedProjectsCount || 0}
+        
+        When a project hasn't been updated in over 20 days, it's considered inactive.
+        
+        Generate 2-3 specific suggestions about project organization based on these guidelines:
+        1. If there are more than 5 active projects, suggest archiving some
+        2. If there are projects that haven't been updated in 20+ days, suggest archiving them
+        3. Provide a positive message if project organization looks good
+        
+        Keep each suggestion under 80 characters.
+        Format your response as JSON with "suggestions" array and "priority" field (low, medium, high).
+      `;
+      
+      console.log(`Generating whisper suggestions for projects page`);
+      const response = await openai.chat.completions.create({
+        model: MODEL,
+        messages: [
+          { 
+            role: "system", 
+            content: "You are ATMosFera WhisperMode, a non-intrusive assistant that provides short, timely contextual suggestions for project organization." 
+          },
+          { role: "user", content: prompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 200,
+        response_format: { type: "json_object" }
+      });
+      
+      // Process the response
+      const responseContent = response.choices[0].message.content || '{"suggestions": ["Consider reviewing your project organization strategy."], "priority": "medium"}';
+      
+      try {
+        const parsedResponse = JSON.parse(responseContent);
+        return {
+          suggestions: Array.isArray(parsedResponse.suggestions) ? parsedResponse.suggestions : ["Consider reviewing your project organization."],
+          priority: ["low", "medium", "high"].includes(parsedResponse.priority) ? parsedResponse.priority : "medium"
+        };
+      } catch (parseError) {
+        console.error("Error parsing projects whisper response:", parseError);
+        return {
+          suggestions: ["Consider reviewing your project organization strategy."],
+          priority: "medium"
+        };
+      }
+    }
+    
+    // For all other pages, use the standard prompt
+    else {
+      // Build a context-aware prompt
+      let prompt = `
+        You are providing quiet whisper suggestions for someone working on a "${project.name}" project (${context.type}) focused on ${context.focus}.
+        
+        Key risks in this type of project include: ${context.keyRisks.join(", ")}.
+        Recommended practices include: ${context.recommendedPractices.join(", ")}.
+        
+        Current page context: ${pageContext}
+        ${contextDataStr}
+        ${testExecutionContext}
+        
+        ${isIntegrationRelevant && jiraContext ? `\n${jiraContext}\n` : ""}
+        ${isIntegrationRelevant && githubContext ? `\n${githubContext}\n` : ""}
+        
+        Based on this context ${isIntegrationRelevant ? "and integration data" : ""}, provide 1-3 brief, helpful whisper suggestions that would be valuable for someone working on this page.
+        These should be non-intrusive tips that appear in a small floating card.
+        ${isIntegrationRelevant && jiraIssues && jiraIssues.length > 0 ? "Include a suggestion related to test coverage based on Jira issues." : ""}
+        ${isTestExecutionPage ? "At least one suggestion should specifically relate to test execution priorities, progress analysis, or failed test follow-up." : ""}
+        Keep each suggestion under 80 characters.
+        Format your response as JSON with "suggestions" array and "priority" field (low, medium, high).
+      `;
+    }
     
     console.log(`Generating whisper suggestions for project ${project.id} - ${project.name}`);
     const response = await openai.chat.completions.create({
