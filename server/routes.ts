@@ -26,6 +26,7 @@ import {
   generateAssistantResponse,
   generateWhisperSuggestions
 } from "./openai-service";
+import { handleWhisperSuggestions } from "./api/handle-whisper-suggestions";
 import { setupAuth } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -964,76 +965,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // AI Whisper Mode endpoint
-  app.post("/api/ai/whisper", async (req, res) => {
-    try {
-      const { projectId, projectName, contextPath, contextData } = req.body;
-      
-      // Check for required parameters
-      if (!projectId && !projectName) {
-        return res.status(400).json({ 
-          message: "Either projectId or projectName is required" 
-        });
-      }
-      
-      // If projectId is provided, fetch the full project details
-      if (projectId) {
-        const project = await storage.getProject(parseInt(projectId));
-        if (!project) {
-          return res.status(404).json({ message: "Project not found" });
-        }
-        
-        console.log(`Whisper API called for project ID: ${projectId} - ${project.name}, path: ${contextPath}`);
-        
-        // Use real AI-generated suggestions based on project data
-        const suggestions = await generateWhisperSuggestions(
-          project,
-          contextPath || "",
-          contextData
-        );
-        
-        return res.json(suggestions);
-      }
-      
-      // Fallback for backward compatibility if only projectName is provided
-      const projects = await storage.getProjects();
-      const project = projects.find(p => p.name === projectName);
-      
-      if (project) {
-        console.log(`Whisper API called for project name: ${projectName} (ID: ${project.id}), path: ${contextPath}`);
-        
-        // Use real AI-generated suggestions based on project data
-        const suggestions = await generateWhisperSuggestions(
-          project,
-          contextPath || "",
-          contextData
-        );
-        
-        return res.json(suggestions);
-      }
-      
-      // Fallback to static suggestions for backward compatibility
-      console.log("Whisper API called for project:", projectName, "path:", contextPath);
-      
-      const suggestions = {
-        suggestions: [
-          `Monitor battery usage in ${projectName} devices`,
-          "Implement regular OTA update tests",
-          "Add security penetration tests to pipeline"
-        ],
-        priority: "medium"
-      };
-      
-      res.json(suggestions);
-    } catch (error) {
-      console.error("Error generating whisper suggestions:", error);
-      res.status(500).json({ 
-        message: "Failed to generate whisper suggestions",
-        suggestions: [],
-        priority: "low"
-      });
-    }
-  });
+  // AI Whisper Mode endpoint - using enhanced handler for specialized context
+  app.post("/api/ai/whisper", handleWhisperSuggestions);
 
   // Projects API endpoints
   app.get("/api/projects", async (req, res) => {
