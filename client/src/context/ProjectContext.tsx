@@ -6,6 +6,7 @@ export interface Project {
   id: number;
   name: string;
   description?: string;
+  status?: "active" | "archived"; // Project status - active or archived
   createdAt?: string;
   updatedAt?: string;
   jiraProjectId?: string; // Add Jira Project ID (optional, max 10 chars)

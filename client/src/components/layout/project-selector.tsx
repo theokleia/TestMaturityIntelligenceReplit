@@ -31,11 +31,13 @@ export default function ProjectSelector() {
     console.log("ProjectSelector - Context loading:", contextLoading);
   }, [projects, selectedProject, contextLoading]);
   
-  // Sync projects from context to local state
+  // Sync projects from context to local state, filtering out archived projects
   useEffect(() => {
     if (projects && projects.length > 0) {
-      console.log("ProjectSelector - Setting local projects:", projects);
-      setLocalProjects(projects);
+      // Filter to only include active projects in the dropdown
+      const activeProjects = projects.filter((project: Project) => project.status === 'active');
+      console.log("ProjectSelector - Setting local projects (active only):", activeProjects);
+      setLocalProjects(activeProjects);
       setIsLoading(false);
     } else {
       console.log("ProjectSelector - No projects available in context or empty array");
@@ -63,13 +65,17 @@ export default function ProjectSelector() {
         .then(fetchedProjects => {
           console.log("ProjectSelector - Directly fetched projects:", fetchedProjects);
           if (fetchedProjects && fetchedProjects.length > 0) {
-            setLocalProjects(fetchedProjects);
+            // Filter to only include active projects
+            const activeProjects = fetchedProjects.filter((project: Project) => project.status === 'active');
+            console.log("ProjectSelector - Filtered to active projects only:", activeProjects);
+            
+            setLocalProjects(activeProjects);
             setIsLoading(false);
             
-            // If no project is selected, auto-select the first one
-            if (!selectedProject) {
-              console.log("ProjectSelector - Auto-selecting first project:", fetchedProjects[0]);
-              setSelectedProject(fetchedProjects[0]);
+            // If no project is selected, auto-select the first active one
+            if (!selectedProject && activeProjects.length > 0) {
+              console.log("ProjectSelector - Auto-selecting first active project:", activeProjects[0]);
+              setSelectedProject(activeProjects[0]);
             }
           }
         })
