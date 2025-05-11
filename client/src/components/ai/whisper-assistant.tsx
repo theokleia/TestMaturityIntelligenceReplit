@@ -281,27 +281,22 @@ export function WhisperAssistant() {
         )}>
           {/* Header */}
           <div 
-            className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-900/80 to-indigo-900/80 cursor-pointer"
+            className="flex items-center justify-between p-2 bg-gradient-to-r from-blue-900/90 to-indigo-900/90 cursor-pointer rounded-lg"
             onClick={() => setExpanded(!expanded)}
           >
             <div className="flex items-center gap-2">
-              <Lightbulb className="h-4 w-4 text-blue-300" />
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-white">Whisper Suggestions</span>
-                {unreadCount > 0 && (
-                  <motion.span 
-                    animate={controls}
-                    className={cn(
-                      "inline-flex items-center justify-center w-4 h-4 rounded-full text-[10px] font-semibold",
-                      priority === "high" ? "bg-red-500 text-white" :
-                      priority === "medium" ? "bg-amber-500 text-white" : 
-                      "bg-blue-500 text-white"
-                    )}
-                  >
-                    {unreadCount}
-                  </motion.span>
+              <Lightbulb className="h-5 w-5 text-blue-300" />
+              <motion.span 
+                animate={controls}
+                className={cn(
+                  "inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-semibold",
+                  priority === "high" ? "bg-red-500 text-white" :
+                  priority === "medium" ? "bg-amber-500 text-white" : 
+                  "bg-blue-500 text-white"
                 )}
-              </div>
+              >
+                {suggestions.length}
+              </motion.span>
             </div>
             <div className="flex items-center gap-1">
               {expanded ? (
