@@ -155,7 +155,11 @@ export default function ProjectSettings() {
   // Document save mutation
   const saveDocumentMutation = useMutation({
     mutationFn: async (document: Omit<ProjectDocument, "id">) => {
-      const response = await apiRequest("POST", "/api/documents", document);
+      const response = await fetch("/api/documents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(document)
+      });
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || "Failed to save document");
@@ -221,11 +225,22 @@ export default function ProjectSettings() {
       setDocumentName(fileNameWithoutExt);
       
       try {
+        // Read the file content as base64 for database storage
+        const base64Content = await readFileAsBase64(file);
+        setDocumentContent(base64Content);
+        
         // Wait for analysis to complete before showing the dialog
         await analyzeDocumentForTags(file);
         
         // Now show the dialog with the analysis results ready
         setIsDocumentDialogOpen(true);
+      } catch (error) {
+        console.error("Error processing document:", error);
+        toast({
+          title: "Error",
+          description: "Failed to process the document",
+          variant: "destructive"
+        });
       } finally {
         // Ensure we clear the loading state even if analysis fails
         setIsAnalyzingDocument(false);
@@ -306,6 +321,27 @@ export default function ProjectSettings() {
       };
       reader.onerror = () => reject(new Error("File read error"));
       reader.readAsText(file);
+    });
+  };
+  
+  // Read file as base64 string for database storage
+  const readFileAsBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          const base64Content = event.target.result.toString();
+          // Remove the data URI prefix (e.g., "data:application/pdf;base64,")
+          const contentWithoutPrefix = base64Content.includes(',') 
+            ? base64Content.split(',')[1] 
+            : base64Content;
+          resolve(contentWithoutPrefix);
+        } else {
+          reject(new Error("Failed to read file"));
+        }
+      };
+      reader.onerror = () => reject(new Error("File read error"));
+      reader.readAsDataURL(file);
     });
   };
   
@@ -425,6 +461,7 @@ export default function ProjectSettings() {
     setSelectedTags([]);
     setCustomTag("");
     setSuggestedTags([]);
+    setDocumentContent("");
   };
 
   const handleChange = (name: keyof ProjectSettings, value: string) => {
