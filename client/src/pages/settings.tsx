@@ -171,30 +171,80 @@ export default function ProjectSettings() {
     }
   };
   
-  // Simulate AI analysis of document to suggest tags
+  // AI analysis of document to suggest tags and description
   const analyzeDocumentForTags = async (file: File) => {
     setIsAnalyzingDocument(true);
     
     try {
-      // In a real implementation, we'd send the file to an API endpoint
-      // that uses OpenAI to analyze the content and suggest tags
+      // Read the file content
+      const content = await readFileAsText(file);
       
-      // For now, let's simulate this with a delay and random tag selection
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      if (!content) {
+        throw new Error("Could not read file content");
+      }
       
-      // In a real implementation, this would come from the AI service
-      // For demo, just pick some random tags from our predefined list
-      const mockSuggestedTags = PREDEFINED_TAGS
-        .filter(_ => Math.random() > 0.7) // Randomly select some tags
-        .slice(0, 5); // Limit to 5 suggestions
+      // Send the document to our analysis API
+      const response = await fetch("/api/ai/analyze-document", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          content,
+          fileName: file.name,
+          fileType: file.type,
+          projectId: selectedProject?.id
+        })
+      });
       
-      setSuggestedTags(mockSuggestedTags);
+      if (!response.ok) {
+        throw new Error("Failed to analyze document");
+      }
+      
+      const data = await response.json();
+      
+      // Update state with AI suggestions
+      if (data.suggestedTags && data.suggestedTags.length > 0) {
+        setSuggestedTags(data.suggestedTags);
+        // Automatically select the suggested tags
+        setSelectedTags(data.suggestedTags);
+      }
+      
+      // Set the description if provided
+      if (data.description) {
+        setDocumentDescription(data.description);
+      }
     } catch (error) {
       console.error("Error analyzing document:", error);
-      // Show error message to user
+      // Show error toast or message to user
+      
+      // Fallback to some default tags if AI analysis fails
+      const fallbackTags = PREDEFINED_TAGS
+        .filter((tag) => 
+          tag.name.toLowerCase().includes("reference") || 
+          tag.name.toLowerCase().includes("document")
+        ).slice(0, 2);
+      
+      setSuggestedTags(fallbackTags);
     } finally {
       setIsAnalyzingDocument(false);
     }
+  };
+  
+  // Helper function to read file contents
+  const readFileAsText = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          resolve(event.target.result as string);
+        } else {
+          reject(new Error("Failed to read file"));
+        }
+      };
+      reader.onerror = () => reject(new Error("File read error"));
+      reader.readAsText(file);
+    });
   };
   
   // Add a tag to the selected tags list
