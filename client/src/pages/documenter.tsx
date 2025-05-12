@@ -211,11 +211,11 @@ export default function DocumenterPage() {
   // Mutation for generating a document with AI
   const generateDocumentMutation = useMutation({
     mutationFn: async (data: { projectId: number, type: string, customPrompt?: string }) => {
-      const res = await apiRequest("/api/ai/generate-document", { 
+      // The apiRequest function already calls res.json() and returns the result
+      return await apiRequest("/api/ai/generate-document", { 
         method: "POST", 
         body: JSON.stringify(data) 
       });
-      return res.json();
     },
     onSuccess: (data) => {
       toast({
