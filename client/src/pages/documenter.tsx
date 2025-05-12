@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { StatusBadge } from "@/components/design-system/status-badge";
+import { StatusBadge, StatusBadgeVariant } from "@/components/design-system/status-badge";
 import { IconWrapper } from "@/components/design-system/icon-wrapper";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useProject } from "@/context/ProjectContext";
@@ -507,13 +507,13 @@ export default function DocumenterPage() {
   const getStatusDisplay = (status: string) => {
     switch (status) {
       case "draft":
-        return { label: "Draft", variant: "warning" as const };
+        return { label: "Draft", variant: "warning" as StatusBadgeVariant };
       case "published":
-        return { label: "Published", variant: "success" as const };
+        return { label: "Published", variant: "success" as StatusBadgeVariant };
       case "archived":
-        return { label: "Archived", variant: "destructive" as const };
+        return { label: "Archived", variant: "danger" as StatusBadgeVariant };
       default:
-        return { label: status, variant: "default" as const };
+        return { label: status, variant: "muted" as StatusBadgeVariant };
     }
   };
 
