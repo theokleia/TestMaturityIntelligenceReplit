@@ -15,6 +15,7 @@ import Settings from "@/pages/settings";
 import ProjectHealth from "@/pages/project-health";
 import TestFetch from "@/pages/test-fetch";
 import AuthPage from "@/pages/auth-page";
+import Documenter from "@/pages/documenter";
 import Layout from "@/components/layout/layout";
 import { ProjectProvider } from "@/context/ProjectContext";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
@@ -34,6 +35,7 @@ function Router() {
       <ProtectedRoute path="/project-health" component={ProjectHealth} />
       <ProtectedRoute path="/settings" component={Settings} />
       <ProtectedRoute path="/design-system" component={DesignSystem} />
+      <ProtectedRoute path="/documenter" component={Documenter} />
       <ProtectedRoute path="/atmf" component={ATMF} />
       {/* Redirect old documentation path to new ATMF path */}
       <Route path="/documentation">
