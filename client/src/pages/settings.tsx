@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useProject } from "@/context/ProjectContext";
 
-import { PageContainer } from "@/components/design-system/page-container";
+import { PageContainer, PageContent } from "@/components/design-system/page-container";
 import { ATMFCard, ATMFCardHeader, ATMFCardBody } from "@/components/design-system/atmf-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -642,13 +642,57 @@ export default function ProjectSettings() {
     </ATMFCard>
   );
 
+  // Configure the tabs for the TabView component
+  const tabs = [
+    {
+      id: "general",
+      label: (
+        <div className="flex items-center gap-2">
+          <Settings2 className="h-4 w-4" />
+          <span>General</span>
+        </div>
+      ),
+      content: generalContent
+    },
+    {
+      id: "project-context",
+      label: (
+        <div className="flex items-center gap-2">
+          <Info className="h-4 w-4" />
+          <span>Project Context</span>
+        </div>
+      ),
+      content: projectContextContent
+    },
+    {
+      id: "integrations",
+      label: (
+        <div className="flex items-center gap-2">
+          <Database className="h-4 w-4" />
+          <span>Integrations</span>
+        </div>
+      ),
+      content: integrationsContent
+    },
+    {
+      id: "knowledge-base",
+      label: (
+        <div className="flex items-center gap-2">
+          <Files className="h-4 w-4" />
+          <span>Knowledge Base</span>
+        </div>
+      ),
+      content: knowledgeBaseContent
+    }
+  ];
+
   return (
     <PageContainer
       title={`${selectedProject.name} Settings`}
       subtitle="Configure project-specific options and integrations"
       actions={
         <Button
-          className="btn-atmf-accent"
+          className="bg-atmf-accent hover:bg-atmf-accent/90"
           onClick={handleSaveSettings}
           disabled={isSaving}
         >
@@ -666,63 +710,24 @@ export default function ProjectSettings() {
         </Button>
       }
     >
-      {saveSuccess && (
-        <Alert className="mb-4 bg-emerald-950/30 border-emerald-600/30 text-emerald-400">
-          <CheckSquare className="h-4 w-4" />
-          <AlertTitle>Settings Saved</AlertTitle>
-          <AlertDescription>
-            Your project settings have been saved successfully.
-          </AlertDescription>
-        </Alert>
-      )}
+      <PageContent>
+        {saveSuccess && (
+          <Alert className="mb-4 bg-emerald-950/30 border-emerald-600/30 text-emerald-400">
+            <CheckSquare className="h-4 w-4" />
+            <AlertTitle>Settings Saved</AlertTitle>
+            <AlertDescription>
+              Your project settings have been saved successfully.
+            </AlertDescription>
+          </Alert>
+        )}
 
-      <TabView
-        tabs={[
-          {
-            id: "general",
-            label: (
-              <div className="flex items-center gap-2">
-                <Settings2 className="h-4 w-4" />
-                <span>General</span>
-              </div>
-            ),
-            content: generalContent
-          },
-          {
-            id: "project-context",
-            label: (
-              <div className="flex items-center gap-2">
-                <Info className="h-4 w-4" />
-                <span>Project Context</span>
-              </div>
-            ),
-            content: projectContextContent
-          },
-          {
-            id: "integrations",
-            label: (
-              <div className="flex items-center gap-2">
-                <Database className="h-4 w-4" />
-                <span>Integrations</span>
-              </div>
-            ),
-            content: integrationsContent
-          },
-          {
-            id: "knowledge-base",
-            label: (
-              <div className="flex items-center gap-2">
-                <Files className="h-4 w-4" />
-                <span>Knowledge Base</span>
-              </div>
-            ),
-            content: knowledgeBaseContent
-          }
-        ]}
-        activeTab={activeTab}
-        onChange={setActiveTab}
-        variant="underline"
-      />
+        <TabView
+          tabs={tabs}
+          activeTab={activeTab}
+          onChange={setActiveTab}
+          variant="underline"
+        />
+      </PageContent>
     </PageContainer>
   );
 }
