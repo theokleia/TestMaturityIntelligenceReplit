@@ -1567,6 +1567,357 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Document API Routes
+  // Get all documents with optional filters
+  app.get("/api/documents", async (req, res) => {
+    try {
+      const filters: any = {};
+      
+      if (req.query.type) {
+        filters.type = req.query.type as string;
+      }
+      
+      if (req.query.status) {
+        filters.status = req.query.status as string;
+      }
+      
+      if (req.query.createdBy && !isNaN(parseInt(req.query.createdBy as string))) {
+        filters.createdBy = parseInt(req.query.createdBy as string);
+      }
+      
+      if (req.query.projectId && !isNaN(parseInt(req.query.projectId as string))) {
+        filters.projectId = parseInt(req.query.projectId as string);
+      }
+      
+      const documents = await storage.getDocuments(Object.keys(filters).length > 0 ? filters : undefined);
+      res.json(documents);
+    } catch (error) {
+      console.error("Error fetching documents:", error);
+      res.status(500).json({ message: "Failed to fetch documents" });
+    }
+  });
+  
+  // Get a single document by ID
+  app.get("/api/documents/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const document = await storage.getDocument(id);
+      
+      if (!document) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+      
+      res.json(document);
+    } catch (error) {
+      console.error("Error fetching document:", error);
+      res.status(500).json({ message: "Failed to fetch document" });
+    }
+  });
+  
+  // Create a new document
+  app.post("/api/documents", async (req, res) => {
+    try {
+      const document = insertDocumentSchema.parse(req.body);
+      const createdDocument = await storage.createDocument(document);
+      res.status(201).json(createdDocument);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid document data", 
+          errors: error.errors 
+        });
+      }
+      console.error("Error creating document:", error);
+      res.status(500).json({ message: "Failed to create document" });
+    }
+  });
+  
+  // Update an existing document
+  app.patch("/api/documents/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const document = await storage.getDocument(id);
+      
+      if (!document) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+      
+      const updateData = insertDocumentSchema.partial().parse(req.body);
+      const updatedDocument = await storage.updateDocument(id, updateData);
+      res.json(updatedDocument);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid document data", 
+          errors: error.errors 
+        });
+      }
+      console.error("Error updating document:", error);
+      res.status(500).json({ message: "Failed to update document" });
+    }
+  });
+  
+  // Delete a document
+  app.delete("/api/documents/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const document = await storage.getDocument(id);
+      
+      if (!document) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+      
+      const deleted = await storage.deleteDocument(id);
+      
+      if (deleted) {
+        res.status(204).end();
+      } else {
+        res.status(500).json({ message: "Failed to delete document" });
+      }
+    } catch (error) {
+      console.error("Error deleting document:", error);
+      res.status(500).json({ message: "Failed to delete document" });
+    }
+  });
+  
+  // AI Document Generation route
+  app.post("/api/ai/generate-document", async (req, res) => {
+    try {
+      const { projectId, type, customPrompt } = req.body;
+      
+      if (!projectId) {
+        return res.status(400).json({ message: "Project ID is required" });
+      }
+      
+      if (!type) {
+        return res.status(400).json({ message: "Document type is required" });
+      }
+      
+      const project = await storage.getProject(projectId);
+      
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      // Gather project data for AI context
+      const testCases = await storage.getTestCases({ projectId });
+      const testSuites = await storage.getTestSuites({ projectId });
+      
+      // Get Jira and GitHub data if available
+      let jiraIssues = [];
+      let githubData = null;
+      
+      if (project.jiraUrl && project.jiraProjectId && project.jiraApiKey) {
+        try {
+          // Extract credentials from API key (expected format: email:token)
+          const [email, apiToken] = project.jiraApiKey.split(':');
+          
+          if (email && apiToken) {
+            const auth = Buffer.from(`${email}:${apiToken}`).toString('base64');
+            
+            const response = await fetch(`${project.jiraUrl}/rest/api/2/search?jql=${encodeURIComponent(project.jiraJql || `project=${project.jiraProjectId}`)}&maxResults=100`, {
+              method: 'GET',
+              headers: {
+                'Authorization': `Basic ${auth}`,
+                'Content-Type': 'application/json',
+              },
+            });
+            
+            if (response.ok) {
+              const data = await response.json();
+              jiraIssues = data.issues || [];
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching Jira data:", error);
+        }
+      }
+      
+      if (project.githubRepo && project.githubToken) {
+        try {
+          const [owner, repo] = project.githubRepo.split('/');
+          
+          const repoResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+            headers: {
+              'Authorization': `token ${project.githubToken}`,
+              'Accept': 'application/vnd.github.v3+json',
+            },
+          });
+          
+          if (repoResponse.ok) {
+            githubData = {
+              repo: await repoResponse.json()
+            };
+            
+            // Get files list
+            const contentResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents`, {
+              headers: {
+                'Authorization': `token ${project.githubToken}`,
+                'Accept': 'application/vnd.github.v3+json',
+              },
+            });
+            
+            if (contentResponse.ok) {
+              githubData.contents = await contentResponse.json();
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching GitHub data:", error);
+        }
+      }
+      
+      // Generate the document content based on the type
+      let title = "";
+      let description = "";
+      let content = "";
+      
+      // Generate the document with OpenAI
+      // We'll use the prompt based on the document type
+      let prompt = "";
+      
+      switch (type) {
+        case "PRD":
+          title = `Product Requirements Document - ${project.name}`;
+          description = "Product requirements document generated with AI based on project data.";
+          prompt = `Create a comprehensive Product Requirements Document (PRD) for the project "${project.name}".
+                    ${project.description ? `Project description: ${project.description}` : ''}
+                    ${jiraIssues.length > 0 ? `Include requirements based on these Jira issues: ${JSON.stringify(jiraIssues.map(i => ({ key: i.key, summary: i.fields.summary })))}` : ''}
+                    The PRD should include:
+                    1. Introduction and project overview
+                    2. Target audience/users
+                    3. User stories and use cases
+                    4. Functional requirements
+                    5. Non-functional requirements
+                    6. Technical requirements
+                    7. Dependencies
+                    8. Success metrics
+                    Format the document in markdown for readability.`;
+          break;
+          
+        case "SRS":
+          title = `Software Requirements Specification - ${project.name}`;
+          description = "Software requirements specification generated with AI based on project data.";
+          prompt = `Create a detailed Software Requirements Specification (SRS) for the project "${project.name}".
+                    ${project.description ? `Project description: ${project.description}` : ''}
+                    ${jiraIssues.length > 0 ? `Include requirements based on these Jira issues: ${JSON.stringify(jiraIssues.map(i => ({ key: i.key, summary: i.fields.summary })))}` : ''}
+                    ${testCases.length > 0 ? `Consider these test cases: ${JSON.stringify(testCases.slice(0, 10).map(tc => ({ title: tc.title, description: tc.description })))}` : ''}
+                    The SRS should include:
+                    1. Introduction
+                    2. Overall description
+                    3. System features and requirements
+                    4. External interface requirements
+                    5. Non-functional requirements
+                    6. Data requirements
+                    Format the document in markdown for readability.`;
+          break;
+          
+        case "SDDS":
+          title = `Software Design Document - ${project.name}`;
+          description = "Software design document generated with AI based on project data and GitHub code analysis.";
+          prompt = `Create a Software Design Document (SDDS) for the project "${project.name}".
+                    ${project.description ? `Project description: ${project.description}` : ''}
+                    ${githubData ? `Repository info: ${JSON.stringify(githubData.repo)}` : ''}
+                    ${githubData && githubData.contents ? `Repository structure: ${JSON.stringify(githubData.contents.map(f => ({ name: f.name, type: f.type })))}` : ''}
+                    The SDDS should include:
+                    1. Architecture overview
+                    2. Component design
+                    3. Data models
+                    4. Interface specifications
+                    5. Dependencies
+                    Format the document in markdown for readability.`;
+          break;
+          
+        case "Trace Matrix":
+          title = `Requirements Traceability Matrix - ${project.name}`;
+          description = "Traceability matrix connecting requirements with test cases.";
+          prompt = `Create a Requirements Traceability Matrix for the project "${project.name}".
+                    ${project.description ? `Project description: ${project.description}` : ''}
+                    ${jiraIssues.length > 0 ? `Jira issues to use as requirements: ${JSON.stringify(jiraIssues.map(i => ({ key: i.key, summary: i.fields.summary })))}` : ''}
+                    ${testCases.length > 0 ? `Test cases to trace: ${JSON.stringify(testCases.map(tc => ({ id: tc.id, title: tc.title })))}` : ''}
+                    The matrix should include:
+                    1. Requirements (from Jira)
+                    2. Test cases that verify each requirement
+                    3. Coverage analysis
+                    Format the document in markdown with tables for readability.`;
+          break;
+          
+        case "Test Plan":
+          title = `Test Plan - ${project.name}`;
+          description = "Comprehensive test plan based on project data and test cases.";
+          prompt = `Create a detailed Test Plan for the project "${project.name}".
+                    ${project.description ? `Project description: ${project.description}` : ''}
+                    ${testSuites.length > 0 ? `Test suites: ${JSON.stringify(testSuites.map(ts => ({ name: ts.name, description: ts.description, area: ts.projectArea })))}` : ''}
+                    ${testCases.length > 0 ? `Sample test cases: ${JSON.stringify(testCases.slice(0, 10).map(tc => ({ title: tc.title, priority: tc.priority, severity: tc.severity })))}` : ''}
+                    The test plan should include:
+                    1. Introduction and objectives
+                    2. Test strategy
+                    3. Test scope
+                    4. Test schedule
+                    5. Resource requirements
+                    6. Test deliverables
+                    7. Risk assessment
+                    Format the document in markdown for readability.`;
+          break;
+          
+        case "Test Report":
+          title = `Test Report - ${project.name}`;
+          description = "Test execution report summarizing test results.";
+          prompt = `Create a Test Report for the project "${project.name}".
+                    ${project.description ? `Project description: ${project.description}` : ''}
+                    ${testSuites.length > 0 ? `Test suites: ${JSON.stringify(testSuites.map(ts => ({ name: ts.name, description: ts.description })))}` : ''}
+                    ${testCases.length > 0 ? `Test case statistics: 
+                      - Total: ${testCases.length}
+                      - By priority: ${JSON.stringify(testCases.reduce((acc, tc) => {
+                          acc[tc.priority] = (acc[tc.priority] || 0) + 1;
+                          return acc;
+                        }, {}))}
+                      - By status: ${JSON.stringify(testCases.reduce((acc, tc) => {
+                          acc[tc.status] = (acc[tc.status] || 0) + 1;
+                          return acc;
+                        }, {}))}` : ''}
+                    The test report should include:
+                    1. Executive summary
+                    2. Test scope
+                    3. Test results summary
+                    4. Detailed test results
+                    5. Issues and defects
+                    6. Recommendations
+                    Format the document in markdown with tables for readability.`;
+          break;
+          
+        case "Custom":
+          title = `Custom Document - ${project.name}`;
+          description = "Custom document generated based on user prompt.";
+          prompt = customPrompt || `Create a document for the project "${project.name}".
+                    ${project.description ? `Project description: ${project.description}` : ''}
+                    Format the document in markdown for readability.`;
+          break;
+          
+        default:
+          title = `Document - ${project.name}`;
+          description = "AI-generated document based on project data.";
+          prompt = `Create a document for the project "${project.name}".
+                    ${project.description ? `Project description: ${project.description}` : ''}
+                    Format the document in markdown for readability.`;
+      }
+      
+      // TODO: Implement the OpenAI call here
+      // This will be a placeholder for now until we implement OpenAI
+      content = `# ${title}\n\n*Document content will be generated when integrated with OpenAI.*\n\n## Overview\n\nThis is a placeholder for the ${type} document that will be generated based on project data.`;
+      
+      res.json({
+        title,
+        type,
+        content,
+        description,
+        projectId
+      });
+    } catch (error) {
+      console.error("Error generating document:", error);
+      res.status(500).json({ message: "Failed to generate document with AI" });
+    }
+  });
+
   // Jira Integration API Routes
   app.post('/api/jira/create-ticket', async (req, res) => {
     try {

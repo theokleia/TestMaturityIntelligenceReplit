@@ -55,6 +55,11 @@ export function Sidebar() {
       icon: "bx-bulb",
     },
     {
+      title: "Documenter AI",
+      path: "/documenter",
+      icon: "bx-file",
+    },
+    {
       title: "ATMF",
       path: "/atmf",
       icon: "bx-book-alt",
