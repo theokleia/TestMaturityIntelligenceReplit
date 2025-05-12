@@ -237,14 +237,24 @@ export default function DocumenterPage() {
   // Mutation for deleting documents
   const deleteDocumentMutation = useMutation({
     mutationFn: async (id: number) => {
+      console.log(`Deleting document with ID: ${id}`);
       await apiRequest(`/api/documents/${id}`, { method: "DELETE" });
+      console.log(`Document ${id} deleted successfully`);
     },
     onSuccess: () => {
       toast({
         title: "Document deleted",
         description: "Your document has been deleted successfully.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
+      
+      // More specific cache invalidation with project ID
+      if (selectedProject?.id) {
+        console.log(`Invalidating documents cache for project ${selectedProject.id}`);
+        queryClient.invalidateQueries({ queryKey: ["/api/documents", selectedProject.id] });
+      }
+      
+      // Also force a direct refetch
+      refetchDocuments();
     },
     onError: (error: Error) => {
       toast({
