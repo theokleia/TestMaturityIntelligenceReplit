@@ -137,11 +137,11 @@ export default function DocumenterPage() {
   // Mutation for creating documents
   const createDocumentMutation = useMutation({
     mutationFn: async (document: DocumentFormValues) => {
-      const res = await apiRequest("/api/documents", { 
+      // The apiRequest function already calls res.json() and returns the result
+      return await apiRequest("/api/documents", { 
         method: "POST", 
         body: JSON.stringify(document) 
       });
-      return res.json();
     },
     onSuccess: () => {
       toast({
@@ -164,11 +164,11 @@ export default function DocumenterPage() {
   // Mutation for updating documents
   const updateDocumentMutation = useMutation({
     mutationFn: async ({ id, document }: { id: number; document: Partial<DocumentFormValues> }) => {
-      const res = await apiRequest(`/api/documents/${id}`, { 
+      // The apiRequest function already calls res.json() and returns the result
+      return await apiRequest(`/api/documents/${id}`, { 
         method: "PATCH", 
         body: JSON.stringify(document) 
       });
-      return res.json();
     },
     onSuccess: () => {
       toast({
