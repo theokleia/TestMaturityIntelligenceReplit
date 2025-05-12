@@ -1,5 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useProject } from "@/context/ProjectContext";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiRequest } from '../lib/queryClient';
+import { useDropzone } from 'react-dropzone';
+import { useToast } from "@/hooks/use-toast";
 
 import { PageContainer, PageContent } from "@/components/design-system/page-container";
 import { ATMFCard, ATMFCardHeader, ATMFCardBody } from "@/components/design-system/atmf-card";
@@ -29,7 +33,24 @@ interface DocumentTag {
   category: 'document_type' | 'content_type' | 'purpose' | 'custom';
 }
 
+// Aligned with server schema
 interface ProjectDocument {
+  id: number;
+  title: string;          // Maps to document name in UI
+  description: string;
+  type: string;           // "Knowledge Base" for uploaded documents
+  content: string;        // Base64 encoded file content
+  tags: string[];         // Only tag names (not full DocumentTag objects)
+  projectId: number;
+  createdBy?: number;     // Current user ID
+  version?: string;
+  status?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// Used for UI display
+interface DocumentDisplay {
   id: string;
   name: string;
   description: string;
