@@ -38,6 +38,13 @@ export async function handleDocumentAnalysis(req: Request, res: Response) {
     return res.json(analysisResult);
   } catch (error) {
     console.error("Error in document analysis API:", error);
+    
+    // Log detailed error for debugging
+    if (error instanceof Error) {
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
+    }
+    
     return res.status(500).json({ 
       error: "Failed to analyze document", 
       suggestedTags: [],

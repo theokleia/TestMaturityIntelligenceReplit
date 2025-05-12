@@ -1130,6 +1130,13 @@ Respond in this JSON format:
     };
   } catch (error) {
     console.error("Error analyzing document content:", error);
+    
+    // Log detailed error for debugging
+    if (error instanceof Error) {
+      console.error("OpenAI API error message:", error.message);
+      console.error("OpenAI API error stack:", error.stack);
+    }
+    
     return {
       suggestedTags: [],
       description: "Failed to analyze document content."
