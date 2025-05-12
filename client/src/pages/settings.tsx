@@ -481,6 +481,78 @@ export default function ProjectSettings() {
     }
   };
   
+  // Handle viewing document content
+  const handleViewDocument = async (doc: DocumentDisplay) => {
+    setCurrentDocument(doc);
+    setIsViewingDocument(true);
+    setIsLoadingDocument(true);
+    
+    try {
+      console.log(`Fetching document content for ID: ${doc.id}`);
+      const response = await fetch(`/api/documents/${doc.id}`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch document: ${response.status} ${response.statusText}`);
+      }
+      
+      const documentData = await response.json();
+      console.log('Document content loaded successfully');
+      
+      // Set the document content (base64 encoded)
+      setDocumentViewContent(documentData.content);
+    } catch (error) {
+      console.error('Error loading document content:', error);
+      toast({
+        title: "Error Loading Document",
+        description: "Could not load the document content",
+        variant: "destructive"
+      });
+      setDocumentViewContent(null);
+    } finally {
+      setIsLoadingDocument(false);
+    }
+  };
+  
+  // Delete document mutation
+  const deleteDocumentMutation = useMutation({
+    mutationFn: async (documentId: string) => {
+      const response = await fetch(`/api/documents/${documentId}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to delete document: ${response.status}`);
+      }
+      
+      return { success: true };
+    },
+    onSuccess: () => {
+      // Refetch documents after successful deletion
+      queryClient.invalidateQueries({ queryKey: ['/api/documents', selectedProject?.id] });
+      
+      toast({
+        title: "Document Deleted",
+        description: "The document has been removed from the Knowledge Base",
+      });
+    },
+    onError: (error) => {
+      console.error('Error deleting document:', error);
+      toast({
+        title: "Error Deleting Document",
+        description: error instanceof Error ? error.message : "Failed to delete document",
+        variant: "destructive"
+      });
+    }
+  });
+  
+  // Handle document deletion with confirmation
+  const handleDeleteDocument = (doc: DocumentDisplay) => {
+    // First ask for confirmation
+    if (window.confirm(`Are you sure you want to delete "${doc.name}"? This action cannot be undone.`)) {
+      deleteDocumentMutation.mutate(doc.id);
+    }
+  };
+  
   // Handle document saving
   const handleSaveDocument = async () => {
     // Enhanced form validation
@@ -1450,6 +1522,54 @@ export default function ProjectSettings() {
       
       {/* Document Upload Dialog */}
       <DocumentUploadDialog />
+      
+      {/* Document Viewer Dialog */}
+      <Dialog open={isViewingDocument} onOpenChange={setIsViewingDocument}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto bg-atmf-card border-white/10">
+          <DialogHeader>
+            <DialogTitle>{currentDocument?.name || "Document Viewer"}</DialogTitle>
+          </DialogHeader>
+          
+          <div className="py-4">
+            {isLoadingDocument ? (
+              <div className="flex justify-center items-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-atmf-accent" />
+                <span className="ml-2">Loading document...</span>
+              </div>
+            ) : documentViewContent ? (
+              <div className="border rounded-md p-4 bg-atmf-main/70">
+                {/* Create an iframe to view the document if its base64 PDF */}
+                {documentViewContent.startsWith('JVBERi0') ? (
+                  <iframe 
+                    src={`data:application/pdf;base64,${documentViewContent}`}
+                    className="w-full h-[60vh]"
+                    title={currentDocument?.name || "Document"}
+                  />
+                ) : (
+                  /* Text content fallback */
+                  <pre className="whitespace-pre-wrap text-sm">
+                    {documentViewContent}
+                  </pre>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-atmf-muted">
+                Could not load document content
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsViewingDocument(false)}
+              className="bg-atmf-main border-white/10"
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </ATMFCard>
   );
 
