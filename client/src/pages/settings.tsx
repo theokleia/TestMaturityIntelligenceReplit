@@ -149,6 +149,12 @@ export default function ProjectSettings() {
   const [suggestedTags, setSuggestedTags] = useState<DocumentTag[]>([]);
   const [documentContent, setDocumentContent] = useState<string>("");
   
+  // Document view/delete state
+  const [isViewingDocument, setIsViewingDocument] = useState(false);
+  const [currentDocument, setCurrentDocument] = useState<DocumentDisplay | null>(null);
+  const [documentViewContent, setDocumentViewContent] = useState<string | null>(null);
+  const [isLoadingDocument, setIsLoadingDocument] = useState(false);
+  
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
@@ -1390,10 +1396,22 @@ export default function ProjectSettings() {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-white/5">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 rounded-full hover:bg-white/5"
+                      onClick={() => handleViewDocument(doc)}
+                      title="View Document"
+                    >
                       <FileText className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-white/5">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 rounded-full hover:bg-white/5"
+                      onClick={() => handleDeleteDocument(doc)}
+                      title="Delete Document"
+                    >
                       <Trash2 className="h-4 w-4 text-red-400" />
                     </Button>
                   </div>
