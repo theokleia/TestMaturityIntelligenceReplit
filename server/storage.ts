@@ -122,6 +122,18 @@ export interface IStorage {
   getTestRunsByTestCase(testCaseId: number): Promise<TestRun[]>;
   createTestRun(testRun: InsertTestRun): Promise<TestRun>;
   updateTestRun(id: number, testRun: Partial<InsertTestRun>): Promise<TestRun | undefined>;
+  
+  // Documents
+  getDocuments(filters?: {
+    type?: string;
+    status?: string;
+    createdBy?: number;
+    projectId?: number;
+  }): Promise<Document[]>;
+  getDocument(id: number): Promise<Document | undefined>;
+  createDocument(document: InsertDocument): Promise<Document>;
+  updateDocument(id: number, document: Partial<InsertDocument>): Promise<Document | undefined>;
+  deleteDocument(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
