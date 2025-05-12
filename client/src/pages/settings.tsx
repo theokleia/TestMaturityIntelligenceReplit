@@ -334,9 +334,9 @@ export default function ProjectSettings() {
       setDocumentName(fileNameWithoutExt);
       
       try {
-        // Read the file content as base64 for database storage
-        const base64Content = await readFileAsBase64(file);
-        setDocumentContent(base64Content);
+        // For text and markdown files, read as plain text instead of base64
+        const textContent = await readFileAsText(file);
+        setDocumentContent(textContent);
         
         // Wait for analysis to complete before showing the dialog
         await analyzeDocumentForTags(file);
@@ -433,7 +433,9 @@ export default function ProjectSettings() {
     });
   };
   
-  // Read file as base64 string for database storage
+  // We're using the existing readFileAsText function already defined above
+  
+  // Keep for backward compatibility, but we'll use readFileAsText for new uploads
   const readFileAsBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
