@@ -13,7 +13,8 @@ import {
   insertProjectSchema,
   insertTestCycleSchema,
   insertTestCycleItemSchema,
-  insertTestRunSchema
+  insertTestRunSchema,
+  insertDocumentSchema
 } from "@shared/schema";
 import { 
   generateMaturityInsights, 

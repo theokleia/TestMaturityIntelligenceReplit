@@ -858,6 +858,88 @@ export class DatabaseStorage implements IStorage {
     return updatedRun || undefined;
   }
 
+  // Documents
+  async getDocuments(filters?: {
+    type?: string;
+    status?: string;
+    createdBy?: number;
+    projectId?: number;
+  }): Promise<Document[]> {
+    let conditions: any[] = [];
+    
+    if (filters) {
+      if (filters.type) {
+        conditions.push(eq(documents.type, filters.type));
+      }
+      
+      if (filters.status) {
+        conditions.push(eq(documents.status, filters.status));
+      }
+      
+      if (filters.createdBy) {
+        conditions.push(eq(documents.createdBy, filters.createdBy));
+      }
+      
+      if (filters.projectId) {
+        conditions.push(eq(documents.projectId, filters.projectId));
+      }
+    }
+    
+    // Apply conditions if any, otherwise return all records
+    if (conditions.length > 0) {
+      return db
+        .select()
+        .from(documents)
+        .where(and(...conditions))
+        .orderBy(desc(documents.updatedAt));
+    }
+    
+    return db
+      .select()
+      .from(documents)
+      .orderBy(desc(documents.updatedAt));
+  }
+
+  async getDocument(id: number): Promise<Document | undefined> {
+    const [document] = await db
+      .select()
+      .from(documents)
+      .where(eq(documents.id, id));
+    return document || undefined;
+  }
+
+  async createDocument(document: InsertDocument): Promise<Document> {
+    const [newDocument] = await db
+      .insert(documents)
+      .values(document)
+      .returning();
+    return newDocument;
+  }
+
+  async updateDocument(id: number, document: Partial<InsertDocument>): Promise<Document | undefined> {
+    const [updatedDocument] = await db
+      .update(documents)
+      .set({
+        ...document,
+        updatedAt: new Date().toISOString()
+      })
+      .where(eq(documents.id, id))
+      .returning();
+    return updatedDocument || undefined;
+  }
+
+  async deleteDocument(id: number): Promise<boolean> {
+    try {
+      await db
+        .delete(documents)
+        .where(eq(documents.id, id));
+      return true;
+    } catch (error) {
+      console.error("Error deleting document:", error);
+      return false;
+    }
+  }
+
   // Initialize database with sample data
   async initSampleData() {
     // Create Admin user
