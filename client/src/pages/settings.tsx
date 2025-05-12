@@ -1224,7 +1224,7 @@ export default function ProjectSettings() {
                     id="document-upload"
                     type="file"
                     className="absolute inset-0 opacity-0 cursor-pointer z-0"
-                    accept=".pdf,.doc,.docx,.txt,.md,.json"
+                    accept=".txt,.md"
                     onChange={handleDocumentUpload}
                   />
                 </div>
