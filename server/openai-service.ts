@@ -1063,6 +1063,80 @@ export async function generateWhisperSuggestions(
 /**
  * Helper function to determine project type from name
  */
+/**
+ * Analyze document content and suggest tags and description
+ */
+export async function analyzeDocumentContent(
+  content: string,
+  fileName: string,
+  fileType: string,
+  projectType: string
+): Promise<{
+  suggestedTags: Array<{id: string, name: string, category: string}>,
+  description: string
+}> {
+  try {
+    // Prepare system prompt
+    const systemPrompt = `
+You are an AI assistant specialized in analyzing project documentation.
+Based on the document content, extract key information and suggest relevant tags and a brief description.
+
+The document is from a ${projectType || "software"} project.
+File name: ${fileName}
+File type: ${fileType}
+
+Available tag categories and examples:
+1. document_type: Requirements, Design, Architecture, API Specification, User Guide, System Requirements Spec
+2. content_type: Workflows, Functions, System Elements, Data Model, UI Components, Algorithm
+3. purpose: Usage, Implementation, Reference, Test Input, Specification, Guidelines
+
+Your task is to:
+1. Generate 3-7 relevant tags from the provided categories that best match the document's content
+2. Write a concise description (2-3 sentences) summarizing what the document contains
+
+Respond in this JSON format:
+{
+  "tags": [
+    {"name": "tag name", "category": "document_type|content_type|purpose"},
+    ...
+  ],
+  "description": "Document description here"
+}
+`;
+
+    const response = await openai.chat.completions.create({
+      model: MODEL,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: content.substring(0, 8000) } // Limit content to prevent token overflow
+      ],
+      temperature: 0.3,
+      response_format: { type: "json_object" },
+    });
+
+    // Parse the response
+    const result = JSON.parse(response.choices[0].message.content || "{}");
+    
+    // Format the response
+    const suggestedTags = (result.tags || []).map((tag: any) => ({
+      id: tag.name.toLowerCase().replace(/\s+/g, '_'),
+      name: tag.name,
+      category: tag.category
+    }));
+    
+    return {
+      suggestedTags,
+      description: result.description || "No description generated."
+    };
+  } catch (error) {
+    console.error("Error analyzing document content:", error);
+    return {
+      suggestedTags: [],
+      description: "Failed to analyze document content."
+    };
+  }
+}
+
 function getProjectTypeFromName(projectName: string): string {
   const name = projectName.toLowerCase();
   
