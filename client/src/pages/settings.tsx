@@ -25,9 +25,7 @@ interface ProjectSettings {
   projectType: string;
   industryArea: string;
   regulations: string;
-  techStack: string;
-  targetAudience: string;
-  businessContext: string;
+  additionalContext: string;
   qualityFocus: string;
   // Integration settings
   jiraUrl: string;
@@ -47,9 +45,7 @@ const defaultSettings: ProjectSettings = {
   projectType: "",
   industryArea: "",
   regulations: "",
-  techStack: "",
-  targetAudience: "",
-  businessContext: "",
+  additionalContext: "",
   qualityFocus: "",
   // Integration settings
   jiraUrl: "",
@@ -79,9 +75,7 @@ export default function ProjectSettings() {
         projectType: selectedProject.projectType || '',
         industryArea: selectedProject.industryArea || '',
         regulations: selectedProject.regulations || '',
-        techStack: selectedProject.techStack || '',
-        targetAudience: selectedProject.targetAudience || '',
-        businessContext: selectedProject.businessContext || '',
+        additionalContext: selectedProject.additionalContext || '',
         qualityFocus: selectedProject.qualityFocus || '',
         // Integration settings
         githubRepo: selectedProject.githubRepo || '',
@@ -126,9 +120,7 @@ export default function ProjectSettings() {
         updatePayload.projectType = settings.projectType;
         updatePayload.industryArea = settings.industryArea;
         updatePayload.regulations = settings.regulations;
-        updatePayload.techStack = settings.techStack;
-        updatePayload.targetAudience = settings.targetAudience;
-        updatePayload.businessContext = settings.businessContext;
+        updatePayload.additionalContext = settings.additionalContext;
         updatePayload.qualityFocus = settings.qualityFocus;
         
         // Add Jira URL if provided
@@ -437,39 +429,15 @@ export default function ProjectSettings() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="techStack">Technology Stack</Label>
-                <Input
-                  id="techStack"
-                  placeholder="e.g., React, Node.js, PostgreSQL, etc."
-                  className="bg-atmf-main border-white/10 focus:border-white/20"
-                  value={settings.techStack}
-                  onChange={(e) => handleChange("techStack", e.target.value)}
+                <Label htmlFor="additionalContext">Additional Project Context</Label>
+                <textarea
+                  id="additionalContext"
+                  placeholder="Please provide details about intended use, target users, business context, and other relevant information that would help AI features better understand this project."
+                  className="w-full min-h-[150px] p-3 rounded-md bg-atmf-main border border-white/10 focus:border-white/20 focus:outline-none text-white"
+                  value={settings.additionalContext}
+                  onChange={(e) => handleChange("additionalContext", e.target.value)}
                 />
-                <p className="text-xs text-atmf-muted">Primary technologies, frameworks, and tools used in this project</p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="targetAudience">Target Audience</Label>
-                <Input
-                  id="targetAudience"
-                  placeholder="e.g., Healthcare professionals, General consumers, etc."
-                  className="bg-atmf-main border-white/10 focus:border-white/20"
-                  value={settings.targetAudience}
-                  onChange={(e) => handleChange("targetAudience", e.target.value)}
-                />
-                <p className="text-xs text-atmf-muted">Who are the primary users or customers of this software?</p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="businessContext">Business Context</Label>
-                <Input
-                  id="businessContext"
-                  placeholder="e.g., Increase sales, Improve customer service, etc."
-                  className="bg-atmf-main border-white/10 focus:border-white/20"
-                  value={settings.businessContext}
-                  onChange={(e) => handleChange("businessContext", e.target.value)}
-                />
-                <p className="text-xs text-atmf-muted">Key business goals and priorities for this project</p>
+                <p className="text-xs text-atmf-muted">This information helps our AI generate more relevant and accurate content for your project</p>
               </div>
 
               <div className="space-y-2">

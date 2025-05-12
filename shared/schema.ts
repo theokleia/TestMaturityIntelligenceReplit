@@ -22,9 +22,7 @@ export const projects = pgTable("projects", {
   projectType: varchar("project_type", { length: 50 }), // Greenfield, New Software, Legacy, etc.
   industryArea: varchar("industry_area", { length: 100 }), // Healthcare, Finance, E-commerce, etc.
   regulations: text("regulations"), // Applicable regulations (HIPAA, SOX, GDPR, etc.)
-  techStack: text("tech_stack"), // Primary technologies used
-  targetAudience: text("target_audience"), // Description of users/customers
-  businessContext: text("business_context"), // Business goals and priorities
+  additionalContext: text("additional_context"), // Detailed text about intended use, users, and business context
   qualityFocus: text("quality_focus"), // Areas of quality focus (security, performance, usability)
   // Integration settings
   jiraProjectId: varchar("jira_project_id", { length: 10 }),
