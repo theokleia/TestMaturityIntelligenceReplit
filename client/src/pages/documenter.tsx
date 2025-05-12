@@ -128,16 +128,21 @@ export default function DocumenterPage() {
       
       console.log(`Fetching AI-generated documents for project:`, selectedProject.id);
       
-      // Use server-side filtering to exclude Knowledge Base documents
-      // We use "NOT" filter with "type=Knowledge Base" to get everything that isn't Knowledge Base
+      // Fetch all documents for the project and filter out Knowledge Base documents on the client side for now
+      // This works around issues with server-side negative filtering
       const res = await apiRequest(
-        `/api/documents?projectId=${selectedProject.id}&type=!Knowledge Base`,
+        `/api/documents?projectId=${selectedProject.id}`,
         { method: "GET" }
       );
       
-      const documents = await res.json();
-      console.log(`AI-generated documents loaded:`, documents.length);
-      return documents;
+      const allDocuments = await res.json();
+      
+      // Filter out Knowledge Base documents
+      const filteredDocuments = allDocuments.filter((doc: Document) => doc.type !== "Knowledge Base");
+      
+      console.log(`All documents:`, allDocuments.length);
+      console.log(`AI-generated documents loaded:`, filteredDocuments.length);
+      return filteredDocuments;
     },
     enabled: !!selectedProject?.id,
     refetchOnWindowFocus: true,

@@ -161,7 +161,7 @@ export default function ProjectSettings() {
   // Query to fetch documents for the selected project - made more resilient
   // We separate the document loading from project selection to avoid issues
   const { data: projectDocuments } = useQuery({
-    queryKey: ['/api/documents', selectedProject?.id],
+    queryKey: ['/api/documents', selectedProject?.id, 'knowledge-base'],
     queryFn: async () => {
       // Added a safety check for project ID before fetching
       if (!selectedProject?.id) {
@@ -171,8 +171,8 @@ export default function ProjectSettings() {
       
       // Added more comprehensive error handling
       try {
-        console.log('Fetching documents for project:', selectedProject.id);
-        const response = await fetch(`/api/documents?projectId=${selectedProject.id}&type=Knowledge Base`);
+        console.log('Fetching all documents for project:', selectedProject.id);
+        const response = await fetch(`/api/documents?projectId=${selectedProject.id}`);
         
         if (!response.ok) {
           console.error('Document fetch error:', response.status, response.statusText);
@@ -180,8 +180,14 @@ export default function ProjectSettings() {
         }
         
         const data = await response.json();
-        console.log('Documents loaded:', data?.length || 0);
-        return data || [];
+        
+        // Filter to only include Knowledge Base documents
+        const knowledgeBaseDocuments = data.filter((doc: any) => doc.type === "Knowledge Base");
+        
+        console.log('All documents loaded:', data?.length || 0);
+        console.log('Knowledge Base documents:', knowledgeBaseDocuments?.length || 0);
+        
+        return knowledgeBaseDocuments || [];
       } catch (error) {
         console.error('Exception in document fetch:', error);
         return [];
@@ -208,10 +214,18 @@ export default function ProjectSettings() {
       return await response.json();
     },
     onSuccess: () => {
-      // Invalidate both the general documents query and the project-specific one
+      // Invalidate both the general documents query and the project-specific ones 
+      // Including both AI documents and Knowledge Base documents
       queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
       if (selectedProject?.id) {
-        queryClient.invalidateQueries({ queryKey: ['/api/documents', selectedProject.id] });
+        // Invalidate Knowledge Base documents
+        queryClient.invalidateQueries({ 
+          queryKey: ['/api/documents', selectedProject.id, 'knowledge-base'] 
+        });
+        // Also invalidate AI-generated documents
+        queryClient.invalidateQueries({ 
+          queryKey: ['/api/documents', selectedProject.id, 'ai-generated'] 
+        });
       }
       toast({
         title: "Document saved",
