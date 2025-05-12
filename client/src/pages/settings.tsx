@@ -153,15 +153,21 @@ export default function ProjectSettings() {
   const { toast } = useToast();
   
   // Query to fetch documents for the selected project
-  const { data: projectDocuments, isLoading: isLoadingDocuments } = useQuery({
+  const { data: projectDocuments } = useQuery({
     queryKey: ['/api/documents', selectedProject?.id],
     queryFn: async () => {
       if (!selectedProject?.id) return [];
-      const response = await fetch(`/api/documents?projectId=${selectedProject.id}&type=Knowledge Base`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch documents');
+      try {
+        const response = await fetch(`/api/documents?projectId=${selectedProject.id}&type=Knowledge Base`);
+        if (!response.ok) {
+          console.error('Failed to fetch documents:', await response.text());
+          return [];
+        }
+        return response.json();
+      } catch (error) {
+        console.error('Error fetching documents:', error);
+        return [];
       }
-      return response.json();
     },
     enabled: !!selectedProject?.id,
   });
@@ -231,9 +237,15 @@ export default function ProjectSettings() {
   
   // Update settings with fetched documents when they load
   useEffect(() => {
-    if (projectDocuments && projectDocuments.length > 0 && selectedProject) {
-      // Convert database documents to display format
-      const displayDocuments: DocumentDisplay[] = projectDocuments.map((doc: any) => ({
+    try {
+      // Make sure we have the selected project first
+      if (!selectedProject) return;
+      
+      // Handle the case where projectDocuments is undefined or empty
+      const docs = projectDocuments || [];
+      
+      // Convert database documents to display format (even if empty array)
+      const displayDocuments: DocumentDisplay[] = docs.map((doc: any) => ({
         id: doc.id.toString(),
         name: doc.title,
         description: doc.description || '',
@@ -247,12 +259,20 @@ export default function ProjectSettings() {
         })) : []
       }));
       
+      // Update settings with documents (could be empty array)
       setSettings(prev => ({
         ...prev,
         knowledgeBaseDocuments: displayDocuments
       }));
+    } catch (error) {
+      console.error('Error processing document data:', error);
+      // If there's an error, set empty array as fallback
+      setSettings(prev => ({
+        ...prev,
+        knowledgeBaseDocuments: []
+      }));
     }
-  }, [projectDocuments, selectedProject?.id]);
+  }, [projectDocuments, selectedProject]);
   
   // Handle document file upload
   const handleDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
