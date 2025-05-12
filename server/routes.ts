@@ -25,7 +25,9 @@ import {
   generateTestStrategy,
   generateTestCases,
   generateAssistantResponse,
-  generateWhisperSuggestions
+  generateWhisperSuggestions,
+  generateDocument,
+  analyzeDocumentContent
 } from "./openai-service";
 import { handleWhisperSuggestions } from "./api/handle-whisper-suggestions";
 import { handleDocumentAnalysis } from "./api/handle-document-analysis";

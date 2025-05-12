@@ -1179,9 +1179,9 @@ export async function generateDocument(
 }> {
   try {
     // Fetch data intelligently based on document type
-    let jiraIssues = [];
+    let jiraIssues: any[] = [];
     let githubData: any = null;
-    let testCasesData = [];
+    let testCasesData: any[] = [];
     
     // Determine which data sources to prioritize based on document type
     const needsJiraData = ['PRD', 'SRS', 'Trace Matrix', 'Test Plan'].includes(documentType);
@@ -1209,24 +1209,24 @@ export async function generateDocument(
           const commits = await fetchRecentCommits(project);
           
           githubData = {
-            files,
-            commits,
+            files: files || [],
+            commits: commits || [],
             repoName: `${owner}/${repo}`
           };
           
           // For technical design documents, try to fetch some key file contents
           if (documentType === 'SDDS') {
             console.log("Fetching key file contents for SDDS document...");
-            const fileContentPromises = [];
+            const fileContentPromises: Promise<string | null>[] = [];
             
             // Look for key technical files to include in SDDS
-            const keyFiles = files?.filter(file => (
-              file.name.includes('README') || 
-              file.name.endsWith('.md') ||
-              file.name.includes('config') ||
-              file.name.includes('schema') ||
-              file.name.includes('architecture')
-            )) || [];
+            const keyFiles = (files || []).filter((file: any) => (
+              file.name?.includes('README') || 
+              file.name?.endsWith('.md') ||
+              file.name?.includes('config') ||
+              file.name?.includes('schema') ||
+              file.name?.includes('architecture')
+            ));
             
             // Fetch content for up to 3 key files
             for (let i = 0; i < Math.min(3, keyFiles.length); i++) {
@@ -1237,8 +1237,9 @@ export async function generateDocument(
             githubData.fileContents = fileContents.filter(Boolean);
           }
         }
-      } catch (error) {
-        console.error("Error fetching GitHub data for document generation:", error);
+      } catch (err) {
+        const error = err as Error;
+        console.error("Error fetching GitHub data for document generation:", error.message);
       }
     }
     
