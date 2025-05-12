@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import { Project } from "@shared/schema";
 import { fetchJiraIssues, getJiraContextForAI } from "./services/jira-service";
-import { fetchRepoFiles, fetchRecentCommits, getGitHubContextForAI } from "./services/github-service";
+import { fetchRepoFiles, fetchRecentCommits, fetchFileContent, getGitHubContextForAI } from "./services/github-service";
 
 // Initialize the OpenAI client with the API key from environment variables
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -1160,4 +1160,285 @@ function getProjectTypeFromName(projectName: string): string {
   }
   
   return "general";
+}
+
+/**
+ * Generate document based on project data, Jira issues, and GitHub repo
+ * The function intelligently filters data sources based on document type
+ * - For PRD and SRS: Prioritizes Jira issues for high-level requirements
+ * - For SDDS and technical docs: Prioritizes GitHub code for technical details
+ */
+export async function generateDocument(
+  project: Project,
+  documentType: string,
+  customPrompt?: string
+): Promise<{
+  title: string;
+  content: string;
+  description: string;
+}> {
+  try {
+    // Fetch data intelligently based on document type
+    let jiraIssues = [];
+    let githubData: any = null;
+    let testCasesData = [];
+    
+    // Determine which data sources to prioritize based on document type
+    const needsJiraData = ['PRD', 'SRS', 'Trace Matrix', 'Test Plan'].includes(documentType);
+    const needsGitHubData = ['SDDS', 'Trace Matrix'].includes(documentType);
+    const needsTestData = ['Test Plan', 'Test Report', 'Trace Matrix'].includes(documentType);
+    
+    // Fetch Jira data for high-level requirements when needed
+    if (needsJiraData && project.jiraUrl && project.jiraProjectId && project.jiraApiKey) {
+      console.log(`Fetching Jira data for ${documentType} generation...`);
+      const issues = await fetchJiraIssues(project);
+      if (issues) {
+        jiraIssues = issues;
+        console.log(`Retrieved ${jiraIssues.length} issues from Jira for document generation`);
+      }
+    }
+    
+    // Fetch GitHub data for technical details when needed
+    if (needsGitHubData && project.githubRepo && project.githubToken) {
+      console.log(`Fetching GitHub data for ${documentType} generation...`);
+      try {
+        const [owner, repo] = project.githubRepo.split('/');
+        
+        if (owner && repo) {
+          const files = await fetchRepoFiles(project);
+          const commits = await fetchRecentCommits(project);
+          
+          githubData = {
+            files,
+            commits,
+            repoName: `${owner}/${repo}`
+          };
+          
+          // For technical design documents, try to fetch some key file contents
+          if (documentType === 'SDDS') {
+            console.log("Fetching key file contents for SDDS document...");
+            const fileContentPromises = [];
+            
+            // Look for key technical files to include in SDDS
+            const keyFiles = files?.filter(file => (
+              file.name.includes('README') || 
+              file.name.endsWith('.md') ||
+              file.name.includes('config') ||
+              file.name.includes('schema') ||
+              file.name.includes('architecture')
+            )) || [];
+            
+            // Fetch content for up to 3 key files
+            for (let i = 0; i < Math.min(3, keyFiles.length); i++) {
+              fileContentPromises.push(fetchFileContent(project, keyFiles[i].path));
+            }
+            
+            const fileContents = await Promise.all(fileContentPromises);
+            githubData.fileContents = fileContents.filter(Boolean);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching GitHub data for document generation:", error);
+      }
+    }
+    
+    // Generate title and description based on document type
+    let title = "";
+    let description = "";
+    let prompt = customPrompt || "";
+    
+    // If no custom prompt, generate appropriate prompt based on document type
+    if (!prompt) {
+      switch (documentType) {
+        case "PRD":
+          title = `Product Requirements Document - ${project.name}`;
+          description = `Comprehensive product requirements document for ${project.name}`;
+          prompt = `Create a comprehensive Product Requirements Document (PRD) for the project "${project.name}".
+          ${project.description ? `Project description: ${project.description}` : ''}
+          ${project.projectType ? `Project type: ${project.projectType}` : ''}
+          ${project.industryArea ? `Industry: ${project.industryArea}` : ''}
+          ${project.regulations ? `Applicable regulations: ${project.regulations}` : ''}
+          ${project.additionalContext ? `Additional context: ${project.additionalContext}` : ''}
+          
+          ${jiraIssues.length > 0 ? `Please analyze these Jira issues to extract requirements: 
+          ${jiraIssues.slice(0, 20).map(i => `* ${i.key}: ${i.fields.summary}`).join('\n')}` : ''}
+          
+          The PRD should include:
+          1. Introduction and project overview
+          2. Target audience/users
+          3. User stories and use cases
+          4. Functional requirements (extracted from Jira issues where available)
+          5. Non-functional requirements
+          6. Technical requirements
+          7. Dependencies
+          8. Success metrics
+          
+          Format the document in markdown for readability.`;
+          break;
+          
+        case "SRS":
+          title = `Software Requirements Specification - ${project.name}`;
+          description = `Technical software requirements specification for ${project.name}`;
+          prompt = `Create a detailed Software Requirements Specification (SRS) for the project "${project.name}".
+          ${project.description ? `Project description: ${project.description}` : ''}
+          ${project.projectType ? `Project type: ${project.projectType}` : ''}
+          ${project.industryArea ? `Industry: ${project.industryArea}` : ''}
+          ${project.qualityFocus ? `Quality focus: ${project.qualityFocus}` : ''}
+          
+          ${jiraIssues.length > 0 ? `Please analyze these Jira issues as a basis for requirements: 
+          ${jiraIssues.slice(0, 20).map(i => `* ${i.key}: ${i.fields.summary}${i.fields.description ? ' - ' + i.fields.description.substring(0, 100) + '...' : ''}`).join('\n')}` : ''}
+          
+          The SRS should include:
+          1. Introduction
+          2. Overall description
+          3. System features
+          4. External interface requirements
+          5. Detailed requirements (functional, non-functional, constraints)
+          6. Database requirements
+          7. Security requirements
+          
+          Format the document in markdown for readability.`;
+          break;
+          
+        case "SDDS":
+          title = `Software Design Document - ${project.name}`;
+          description = `Software architecture and design document for ${project.name}`;
+          prompt = `Create a comprehensive Software Design Document (SDDS) for the project "${project.name}".
+          ${project.description ? `Project description: ${project.description}` : ''}
+          ${project.projectType ? `Project type: ${project.projectType}` : ''}
+          
+          ${githubData ? `Based on the GitHub repository ${githubData.repoName}, please analyze:
+          - Repository structure: ${JSON.stringify(githubData.files?.slice(0, 15).map(f => ({ name: f.name, type: f.type, path: f.path })) || [])}
+          - Recent commits: ${JSON.stringify(githubData.commits?.slice(0, 5).map(c => ({ message: c.commit.message })) || [])}
+          ${githubData.fileContents?.length ? `
+          - Key file contents:\n${githubData.fileContents.map((content, i) => `File ${i+1}:\n${content?.substring(0, 500)}...\n`).join('\n')}` : ''}
+          ` : ''}
+          
+          The SDDS should include:
+          1. Introduction and system overview
+          2. Architecture description
+          3. Component design (based on GitHub repository structure)
+          4. Data models
+          5. Interface specifications
+          6. Dependencies and external systems
+          7. Technology stack (inferred from repository)
+          8. Security design considerations
+          
+          Format the document in markdown for readability.`;
+          break;
+          
+        case "Trace Matrix":
+          title = `Traceability Matrix - ${project.name}`;
+          description = `Requirements to test cases traceability matrix for ${project.name}`;
+          prompt = `Create a traceability matrix document for the project "${project.name}".
+          ${project.description ? `Project description: ${project.description}` : ''}
+          
+          ${jiraIssues.length > 0 ? `Requirements from Jira: 
+          ${jiraIssues.slice(0, 15).map(i => `* ${i.key}: ${i.fields.summary}`).join('\n')}` : ''}
+          
+          ${testCasesData.length > 0 ? `Test cases: 
+          ${testCasesData.slice(0, 15).map(tc => `* TC-${tc.id}: ${tc.title}`).join('\n')}` : ''}
+          
+          The traceability matrix document should include:
+          1. Introduction
+          2. Requirements overview
+          3. Test case overview
+          4. Traceability matrix (mapping requirements to test cases)
+          5. Coverage analysis
+          6. Gaps and recommendations
+          
+          Format the document in markdown with tables for readability.`;
+          break;
+          
+        case "Test Plan":
+          title = `Test Plan - ${project.name}`;
+          description = `Comprehensive test plan for ${project.name}`;
+          prompt = `Create a detailed Test Plan for the project "${project.name}".
+          ${project.description ? `Project description: ${project.description}` : ''}
+          ${project.projectType ? `Project type: ${project.projectType}` : ''}
+          ${project.qualityFocus ? `Quality focus: ${project.qualityFocus}` : ''}
+          
+          ${jiraIssues.length > 0 ? `Key features to test (from Jira): 
+          ${jiraIssues.slice(0, 10).map(i => `* ${i.key}: ${i.fields.summary}`).join('\n')}` : ''}
+          
+          The test plan should include:
+          1. Introduction
+          2. Test strategy
+          3. Test scope
+          4. Test environment
+          5. Test schedule
+          6. Test deliverables
+          7. Testing tools
+          8. Risks and mitigation
+          
+          Format the document in markdown for readability.`;
+          break;
+          
+        case "Test Report":
+          title = `Test Execution Report - ${project.name}`;
+          description = `Test execution results and metrics for ${project.name}`;
+          prompt = `Create a detailed Test Execution Report for the project "${project.name}".
+          ${project.description ? `Project description: ${project.description}` : ''}
+          
+          ${testCasesData.length > 0 ? `Test execution summary:
+          - Total test cases: ${testCasesData.length}
+          - Status breakdown: ${JSON.stringify(
+            testCasesData.reduce((acc, tc) => {
+              acc[tc.status] = (acc[tc.status] || 0) + 1;
+              return acc;
+            }, {})
+          )}` : ''}
+          
+          The test report should include:
+          1. Executive summary
+          2. Test scope
+          3. Test execution summary
+          4. Test results
+          5. Defect analysis
+          6. Recommendations
+          7. Conclusions
+          
+          Format the document in markdown with tables for readability.`;
+          break;
+          
+        default:
+          title = `${documentType} - ${project.name}`;
+          description = `${documentType} for ${project.name}`;
+          prompt = `Create a detailed ${documentType} for the project "${project.name}".
+          ${project.description ? `Project description: ${project.description}` : ''}`;
+      }
+    }
+    
+    // Call OpenAI to generate document content
+    console.log(`Generating ${documentType} document using OpenAI...`);
+    
+    const response = await openai.chat.completions.create({
+      model: MODEL,
+      messages: [
+        {
+          role: "system",
+          content: `You are an expert documentation generator specializing in software development documentation. 
+          Generate content in markdown format that is detailed, professional, and ready for use in a software project.
+          Focus on producing high-quality, actionable content that provides real value.`
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      max_tokens: 4000,
+      temperature: 0.7
+    });
+    
+    const content = response.choices[0].message.content || "Error generating document content.";
+    
+    return {
+      title,
+      content,
+      description
+    };
+  } catch (error) {
+    console.error("Error generating document:", error);
+    throw new Error(`Failed to generate document: ${error.message}`);
+  }
 }

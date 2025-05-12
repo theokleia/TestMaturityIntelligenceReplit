@@ -2064,139 +2064,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Project not found" });
       }
 
-      // Generate document content based on type and project data
-      let title = "";
-      let description = "";
-      let content = "";
-      let prompt = "";
-
-      // Determine document details based on type
-      switch (type) {
-        case "PRD":
-          title = `Product Requirements Document - ${project.name}`;
-          description = `Comprehensive product requirements document for ${project.name}`;
-          prompt = customPrompt || `Generate a detailed Product Requirements Document (PRD) for the project "${project.name}". ${project.description || ''}
-          Include the following sections:
-          1. Introduction and Purpose
-          2. Target Users and Market
-          3. Product Overview
-          4. Feature Requirements
-          5. User Stories
-          6. Non-functional Requirements
-          7. Constraints and Limitations
-          8. Success Metrics`;
-          break;
-          
-        case "SRS":
-          title = `Software Requirements Specification - ${project.name}`;
-          description = `Technical software requirements specification for ${project.name}`;
-          prompt = customPrompt || `Generate a detailed Software Requirements Specification (SRS) for the project "${project.name}". ${project.description || ''}
-          Include the following sections:
-          1. Introduction
-          2. Overall Description
-          3. System Features
-          4. External Interface Requirements
-          5. System Features
-          6. Other Non-functional Requirements
-          7. Database Requirements`;
-          break;
-          
-        case "SDDS":
-          title = `Software Design Document - ${project.name}`;
-          description = `Software architecture and design document for ${project.name}`;
-          prompt = customPrompt || `Generate a detailed Software Design Document (SDDS) for the project "${project.name}". ${project.description || ''}
-          Include the following sections:
-          1. Introduction
-          2. System Architecture
-          3. Database Design
-          4. UI Design
-          5. API Design
-          6. Security Design
-          7. Performance Considerations`;
-          break;
-          
-        case "Trace Matrix":
-          title = `Traceability Matrix - ${project.name}`;
-          description = `Requirements to test cases traceability matrix for ${project.name}`;
-          prompt = customPrompt || `Generate a traceability matrix for the project "${project.name}". ${project.description || ''}
-          This should map requirements to test cases and show coverage.
-          Include the following sections:
-          1. Introduction
-          2. Requirements Overview
-          3. Test Case Overview
-          4. Traceability Matrix
-          5. Coverage Analysis
-          6. Gaps and Recommendations`;
-          break;
-          
-        case "Test Plan":
-          title = `Test Plan - ${project.name}`;
-          description = `Comprehensive test plan for ${project.name}`;
-          prompt = customPrompt || `Generate a detailed Test Plan for the project "${project.name}". ${project.description || ''}
-          Include the following sections:
-          1. Introduction
-          2. Test Strategy
-          3. Test Scope
-          4. Test Environment
-          5. Test Schedule
-          6. Test Deliverables
-          7. Testing Tools
-          8. Risks and Mitigation`;
-          break;
-          
-        case "Test Report":
-          title = `Test Execution Report - ${project.name}`;
-          description = `Test execution results and metrics for ${project.name}`;
-          prompt = customPrompt || `Generate a detailed Test Execution Report for the project "${project.name}". ${project.description || ''}
-          Include the following sections:
-          1. Executive Summary
-          2. Test Scope
-          3. Test Execution Summary
-          4. Test Results
-          5. Defect Analysis
-          6. Recommendations
-          7. Conclusions`;
-          break;
-          
-        default:
-          title = `${type} - ${project.name}`;
-          description = `${type} for ${project.name}`;
-          prompt = customPrompt || `Generate a detailed ${type} for the project "${project.name}". ${project.description || ''}`;
-      }
-
-      // Generate content based on prompt, project context, and document type
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-          messages: [
-            {
-              role: "system",
-              content: `You are an expert documentation generator specializing in software development documentation. 
-              Generate content in markdown format that is detailed, professional, and ready for use in a software project.
-              Focus on producing high-quality, actionable content that provides real value.`
-            },
-            {
-              role: "user",
-              content: prompt
-            }
-          ],
-          max_tokens: 4000,
-          temperature: 0.7
-        })
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`);
-      }
-
-      const aiResponse = await response.json();
-      content = aiResponse.choices[0].message.content;
+      // Use the new enhanced OpenAI service function to generate the document
+      // This function intelligently selects data sources based on document type
+      console.log(`Generating ${type} document for project ${project.name} (ID: ${projectId})`);
+      
+      const { title, content, description } = await generateDocument(project, type, customPrompt);
+      
+      console.log(`Document generation complete: ${title}`);
 
       // Return the generated document information
       res.json({
@@ -2207,7 +2081,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         projectId,
         status: "draft",
         version: "1.0",
-        prompt
+        prompt: customPrompt || ""
       });
     } catch (error) {
       console.error("Error generating document:", error);
