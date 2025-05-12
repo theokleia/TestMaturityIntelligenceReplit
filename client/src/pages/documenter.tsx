@@ -218,11 +218,6 @@ export default function DocumenterPage() {
       });
     },
     onSuccess: (data) => {
-      toast({
-        title: "Document generated",
-        description: "Your document has been generated successfully.",
-      });
-      
       // Set the form values for creating a new document
       createDocumentForm.reset({
         title: data.title,
@@ -237,6 +232,8 @@ export default function DocumenterPage() {
       
       // Open the create document dialog
       setCreateDocumentOpen(true);
+      
+      // Don't show a toast here - we'll show it only after actual document creation
     },
     onError: (error: Error) => {
       toast({
