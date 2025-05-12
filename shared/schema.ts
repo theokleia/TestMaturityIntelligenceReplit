@@ -418,3 +418,41 @@ export const testRunsRelations = relations(testRuns, ({ one }) => ({
     references: [users.id],
   }),
 }));
+
+// Document schema for the Documenter AI feature
+export const documents = pgTable("documents", {
+  id: serial("id").primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  type: varchar("type", { length: 50 }).notNull(), // PRD, SRS, SDDS, Trace Matrix, Test Plan, Test Report, Custom
+  content: text("content").notNull(),
+  description: text("description"),
+  createdBy: integer("created_by").references(() => users.id),
+  projectId: integer("project_id").references(() => projects.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: 'string', withTimezone: true }).defaultNow(),
+  tags: text("tags").array(),
+  version: varchar("version", { length: 50 }).default("1.0"),
+  status: varchar("status", { length: 20 }).default("draft"), // draft, published, archived
+  aiPrompt: text("ai_prompt"), // Store the original prompt used to generate the document
+});
+
+export const documentsRelations = relations(documents, ({ one }) => ({
+  project: one(projects, {
+    fields: [documents.projectId],
+    references: [projects.id],
+  }),
+  author: one(users, {
+    fields: [documents.createdBy],
+    references: [users.id],
+  }),
+}));
+
+// Schemas and types for documents
+export const insertDocumentSchema = createInsertSchema(documents)
+  .omit({ id: true, createdAt: true, updatedAt: true })
+  .extend({
+    tags: z.array(z.string()).optional().default([]),
+  });
+
+export type InsertDocument = z.infer<typeof insertDocumentSchema>;
+export type Document = typeof documents.$inferSelect;
