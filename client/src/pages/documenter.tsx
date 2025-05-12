@@ -120,20 +120,23 @@ export default function DocumenterPage() {
     }
   }, [selectedDocument, editDocumentForm]);
 
-  // Query for fetching ALL documents
-  const { data: allDocuments, isLoading: isLoadingAllDocuments, refetch: refetchDocuments } = useQuery<Document[]>({
-    queryKey: ["/api/documents", selectedProject?.id],
+  // Query for fetching AI-generated documents (all except Knowledge Base type)
+  const { data: documents, isLoading: isLoadingDocuments, refetch: refetchDocuments } = useQuery<Document[]>({
+    queryKey: ["/api/documents", selectedProject?.id, "ai-generated"],
     queryFn: async () => {
       if (!selectedProject?.id) return [];
       
-      console.log(`Fetching documents for project:`, selectedProject.id);
+      console.log(`Fetching AI-generated documents for project:`, selectedProject.id);
+      
+      // Use server-side filtering to exclude Knowledge Base documents
+      // We use "NOT" filter with "type=Knowledge Base" to get everything that isn't Knowledge Base
       const res = await apiRequest(
-        `/api/documents?projectId=${selectedProject.id}`,
+        `/api/documents?projectId=${selectedProject.id}&type=!Knowledge Base`,
         { method: "GET" }
       );
       
       const documents = await res.json();
-      console.log(`Documents loaded:`, documents.length);
+      console.log(`AI-generated documents loaded:`, documents.length);
       return documents;
     },
     enabled: !!selectedProject?.id,
@@ -141,21 +144,6 @@ export default function DocumenterPage() {
     refetchOnMount: true,
     staleTime: 0 // Always refetch when component mounts
   });
-  
-  // Filter documents for display - only show AI-generated (non-Knowledge Base) documents
-  const documents = useMemo(() => {
-    if (!allDocuments) return [];
-    
-    console.log("Processing documents for UI display");
-    console.log(`Processing ${allDocuments.length} documents`);
-    
-    // Filter to show only non-Knowledge Base documents
-    const filtered = allDocuments.filter(doc => doc.type !== "Knowledge Base");
-    console.log(`Setting ${filtered.length} documents in UI state`);
-    return filtered;
-  }, [allDocuments]);
-  
-  const isLoadingDocuments = isLoadingAllDocuments;
 
   // Mutation for creating documents
   const createDocumentMutation = useMutation({
@@ -180,10 +168,12 @@ export default function DocumenterPage() {
       setCreateDocumentOpen(false);
       createDocumentForm.reset();
       
-      // Force invalidation with specific project ID
+      // Force invalidation with specific project ID and document type filter
       if (selectedProject?.id) {
-        console.log("Fetching documents for project:", selectedProject.id);
-        queryClient.invalidateQueries({ queryKey: ["/api/documents", selectedProject.id] });
+        console.log("Fetching AI-generated documents for project:", selectedProject.id);
+        queryClient.invalidateQueries({ 
+          queryKey: ["/api/documents", selectedProject.id, "ai-generated"] 
+        });
       }
       
       // Also refresh the document list with a direct refetch
@@ -217,9 +207,12 @@ export default function DocumenterPage() {
       });
       setEditDocumentOpen(false);
       
-      // More specific cache invalidation with project ID
+      // More specific cache invalidation with project ID and document type filter
       if (selectedProject?.id) {
-        queryClient.invalidateQueries({ queryKey: ["/api/documents", selectedProject.id] });
+        console.log("Invalidating AI-generated documents cache for project:", selectedProject.id);
+        queryClient.invalidateQueries({ 
+          queryKey: ["/api/documents", selectedProject.id, "ai-generated"] 
+        });
       }
       
       // Also force a direct refetch
@@ -247,10 +240,12 @@ export default function DocumenterPage() {
         description: "Your document has been deleted successfully.",
       });
       
-      // More specific cache invalidation with project ID
+      // More specific cache invalidation with project ID and document type filter
       if (selectedProject?.id) {
-        console.log(`Invalidating documents cache for project ${selectedProject.id}`);
-        queryClient.invalidateQueries({ queryKey: ["/api/documents", selectedProject.id] });
+        console.log(`Invalidating AI-generated documents cache for project ${selectedProject.id}`);
+        queryClient.invalidateQueries({ 
+          queryKey: ["/api/documents", selectedProject.id, "ai-generated"] 
+        });
       }
       
       // Also force a direct refetch

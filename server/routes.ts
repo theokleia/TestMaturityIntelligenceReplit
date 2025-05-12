@@ -1951,9 +1951,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.query.projectId) {
         filters.projectId = parseInt(req.query.projectId as string);
       }
+      
+      // Special handling for type filter
       if (req.query.type) {
-        filters.type = req.query.type as string;
+        const typeFilter = req.query.type as string;
+        
+        // Handle negative filter (type starting with !)
+        if (typeFilter.startsWith('!')) {
+          // Get all documents and manually filter out documents with the excluded type
+          const allDocs = await storage.getDocuments({
+            ...filters, // Keep all other filters
+            // Don't include type filter here
+          });
+          
+          // Filter out the specific type (remove the ! prefix)
+          const excludeType = typeFilter.substring(1);
+          console.log(`Excluding documents with type: ${excludeType}`);
+          
+          // Return documents that don't match the excluded type
+          const filteredDocs = allDocs.filter(doc => doc.type !== excludeType);
+          return res.json(filteredDocs);
+        } else {
+          // Normal filter
+          filters.type = typeFilter;
+        }
       }
+      
       if (req.query.status) {
         filters.status = req.query.status as string;
       }
