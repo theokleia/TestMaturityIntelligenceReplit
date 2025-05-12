@@ -132,7 +132,10 @@ export default function DocumenterPage() {
       
       // Filter out "Knowledge Base" documents - we only want to show generated documents
       const allDocuments = await res.json();
-      return allDocuments.filter((doc: any) => doc.type !== "Knowledge Base");
+      console.log("All documents from API:", allDocuments);
+      const filteredDocuments = allDocuments.filter((doc: any) => doc.type !== "Knowledge Base");
+      console.log("Filtered documents (excluding Knowledge Base):", filteredDocuments);
+      return filteredDocuments;
     },
     enabled: !!selectedProject?.id
   });
