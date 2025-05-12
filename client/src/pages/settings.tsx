@@ -15,10 +15,19 @@ import {
 import { IconWrapper } from "@/components/design-system/icon-wrapper";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { CheckSquare, Database, Github, Save, Settings2, AlertTriangle, Info, FileText, Upload, Plus, Files, Trash2 } from "lucide-react";
+import { CheckSquare, Database, Github, Save, Settings2, AlertTriangle, Info, FileText, Upload, Plus, Files, Trash2, X, Tag, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { TabView } from "@/components/design-system/tab-view";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+
+interface DocumentTag {
+  id: string;
+  name: string;
+  category: 'document_type' | 'content_type' | 'purpose' | 'custom';
+}
 
 interface ProjectDocument {
   id: string;
@@ -27,6 +36,7 @@ interface ProjectDocument {
   uploadDate: string;
   fileType: string;
   fileSize: string;
+  tags: DocumentTag[];
 }
 
 interface ProjectSettings {
@@ -50,6 +60,33 @@ interface ProjectSettings {
   // Knowledge base documents
   knowledgeBaseDocuments: ProjectDocument[];
 }
+
+// Predefined document tags organized by category
+const PREDEFINED_TAGS: DocumentTag[] = [
+  // Document type tags
+  { id: 'requirements', name: 'Requirements', category: 'document_type' },
+  { id: 'design', name: 'Design', category: 'document_type' },
+  { id: 'architecture', name: 'Architecture', category: 'document_type' },
+  { id: 'api_spec', name: 'API Specification', category: 'document_type' },
+  { id: 'user_guide', name: 'User Guide', category: 'document_type' },
+  { id: 'srs', name: 'System Requirements Spec', category: 'document_type' },
+  
+  // Content type tags
+  { id: 'workflows', name: 'Workflows', category: 'content_type' },
+  { id: 'functions', name: 'Functions', category: 'content_type' },
+  { id: 'system_elements', name: 'System Elements', category: 'content_type' },
+  { id: 'data_model', name: 'Data Model', category: 'content_type' },
+  { id: 'ui_components', name: 'UI Components', category: 'content_type' },
+  { id: 'algorithm', name: 'Algorithm', category: 'content_type' },
+  
+  // Purpose tags
+  { id: 'usage', name: 'Usage', category: 'purpose' },
+  { id: 'implementation', name: 'Implementation', category: 'purpose' },
+  { id: 'reference', name: 'Reference', category: 'purpose' },
+  { id: 'test_input', name: 'Test Input', category: 'purpose' },
+  { id: 'specification', name: 'Specification', category: 'purpose' },
+  { id: 'guidelines', name: 'Guidelines', category: 'purpose' },
+];
 
 const defaultSettings: ProjectSettings = {
   language: "English",
@@ -79,6 +116,16 @@ export default function ProjectSettings() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState("general");
+  
+  // Document upload state
+  const [isDocumentDialogOpen, setIsDocumentDialogOpen] = useState(false);
+  const [uploadedDocument, setUploadedDocument] = useState<File | null>(null);
+  const [documentName, setDocumentName] = useState("");
+  const [documentDescription, setDocumentDescription] = useState("");
+  const [selectedTags, setSelectedTags] = useState<DocumentTag[]>([]);
+  const [customTag, setCustomTag] = useState("");
+  const [isAnalyzingDocument, setIsAnalyzingDocument] = useState(false);
+  const [suggestedTags, setSuggestedTags] = useState<DocumentTag[]>([]);
 
   // Initialize settings when selected project changes
   useEffect(() => {
@@ -109,6 +156,119 @@ export default function ProjectSettings() {
       setSaveSuccess(false);
     }
   }, [selectedProject?.id]);
+  
+  // Handle document file upload
+  const handleDocumentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setUploadedDocument(file);
+      // Use filename as default document name (without extension)
+      const fileNameWithoutExt = file.name.split('.').slice(0, -1).join('.');
+      setDocumentName(fileNameWithoutExt);
+      
+      // When a document is uploaded, analyze it for tag suggestions
+      analyzeDocumentForTags(file);
+    }
+  };
+  
+  // Simulate AI analysis of document to suggest tags
+  const analyzeDocumentForTags = async (file: File) => {
+    setIsAnalyzingDocument(true);
+    
+    try {
+      // In a real implementation, we'd send the file to an API endpoint
+      // that uses OpenAI to analyze the content and suggest tags
+      
+      // For now, let's simulate this with a delay and random tag selection
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // In a real implementation, this would come from the AI service
+      // For demo, just pick some random tags from our predefined list
+      const mockSuggestedTags = PREDEFINED_TAGS
+        .filter(_ => Math.random() > 0.7) // Randomly select some tags
+        .slice(0, 5); // Limit to 5 suggestions
+      
+      setSuggestedTags(mockSuggestedTags);
+    } catch (error) {
+      console.error("Error analyzing document:", error);
+      // Show error message to user
+    } finally {
+      setIsAnalyzingDocument(false);
+    }
+  };
+  
+  // Add a tag to the selected tags list
+  const addTag = (tag: DocumentTag) => {
+    // Check if tag is already selected
+    if (!selectedTags.some(t => t.id === tag.id)) {
+      setSelectedTags([...selectedTags, tag]);
+    }
+  };
+  
+  // Remove a tag from the selected tags list
+  const removeTag = (tagId: string) => {
+    setSelectedTags(selectedTags.filter(tag => tag.id !== tagId));
+  };
+  
+  // Add a custom tag
+  const addCustomTag = () => {
+    if (customTag.trim() !== '') {
+      const newTag: DocumentTag = {
+        id: `custom-${Date.now()}`,
+        name: customTag.trim(),
+        category: 'custom'
+      };
+      
+      setSelectedTags([...selectedTags, newTag]);
+      setCustomTag('');
+    }
+  };
+  
+  // Handle document saving
+  const handleSaveDocument = () => {
+    if (!uploadedDocument || !documentName.trim()) {
+      // Show validation error
+      return;
+    }
+    
+    // Create a new document object
+    const newDocument: ProjectDocument = {
+      id: `doc-${Date.now()}`, // In a real app, this would be a server-generated ID
+      name: documentName,
+      description: documentDescription,
+      uploadDate: new Date().toISOString().split('T')[0],
+      fileType: uploadedDocument.type,
+      fileSize: formatFileSize(uploadedDocument.size),
+      tags: selectedTags
+    };
+    
+    // Add to knowledge base documents
+    setSettings(prev => ({
+      ...prev,
+      knowledgeBaseDocuments: [...prev.knowledgeBaseDocuments, newDocument]
+    }));
+    
+    // Reset form and close dialog
+    resetDocumentForm();
+    setIsDocumentDialogOpen(false);
+  };
+  
+  // Helper function to format file size
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return bytes + ' bytes';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+  
+  // Reset document form
+  const resetDocumentForm = () => {
+    setUploadedDocument(null);
+    setDocumentName("");
+    setDocumentDescription("");
+    setSelectedTags([]);
+    setCustomTag("");
+    setSuggestedTags([]);
+  };
 
   const handleChange = (name: keyof ProjectSettings, value: string) => {
     setSettings(prev => ({
@@ -575,6 +735,217 @@ export default function ProjectSettings() {
     </div>
   );
 
+  // Document Upload Dialog
+  const DocumentUploadDialog = () => {
+    return (
+      <Dialog open={isDocumentDialogOpen} onOpenChange={setIsDocumentDialogOpen}>
+        <DialogContent className="bg-atmf-card border-atmf-card-border max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold">Add Knowledge Base Document</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-2">
+            {/* File Upload Section */}
+            {!uploadedDocument ? (
+              <div className="flex flex-col items-center justify-center p-8 border border-dashed border-white/10 rounded-md bg-atmf-main/50">
+                <IconWrapper variant="muted" size="lg" className="mb-3">
+                  <Upload className="h-6 w-6" />
+                </IconWrapper>
+                <p className="text-center mb-4 text-sm text-atmf-muted">
+                  Drag and drop your document here, or click to browse
+                </p>
+                <label htmlFor="document-upload" className="inline-block">
+                  <Button size="sm" className="bg-atmf-accent hover:bg-atmf-accent/90">
+                    <Upload className="h-4 w-4 mr-2" />
+                    Browse Files
+                  </Button>
+                  <input
+                    id="document-upload"
+                    type="file"
+                    className="hidden"
+                    accept=".pdf,.doc,.docx,.txt,.md,.json"
+                    onChange={handleDocumentUpload}
+                  />
+                </label>
+              </div>
+            ) : (
+              <div className="p-4 border border-white/10 rounded-md bg-atmf-main/50">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center">
+                    <FileText className="h-5 w-5 text-blue-400 mr-2" />
+                    <span className="font-medium">{uploadedDocument.name}</span>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 rounded-full hover:bg-white/5"
+                    onClick={() => setUploadedDocument(null)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="text-xs text-atmf-muted">
+                  {formatFileSize(uploadedDocument.size)} • {uploadedDocument.type}
+                </div>
+              </div>
+            )}
+            
+            {/* Document Details */}
+            {uploadedDocument && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="document-name">Document Name</Label>
+                  <Input
+                    id="document-name"
+                    value={documentName}
+                    onChange={(e) => setDocumentName(e.target.value)}
+                    placeholder="Enter document name"
+                    className="bg-atmf-main border-white/10 focus:border-white/20"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="document-description">Description</Label>
+                  <Textarea
+                    id="document-description"
+                    value={documentDescription}
+                    onChange={(e) => setDocumentDescription(e.target.value)}
+                    placeholder="Brief description of the document content and purpose"
+                    className="h-20 bg-atmf-main border-white/10 focus:border-white/20"
+                  />
+                </div>
+                
+                {/* Tag Selection */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Document Tags</Label>
+                    {isAnalyzingDocument && (
+                      <div className="flex items-center text-xs text-atmf-muted">
+                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                        Analyzing document...
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Selected Tags */}
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {selectedTags.map(tag => (
+                      <Badge 
+                        key={tag.id} 
+                        className={`px-2 py-1 ${
+                          tag.category === 'document_type' ? 'bg-blue-900/50 hover:bg-blue-900/70' :
+                          tag.category === 'content_type' ? 'bg-purple-900/50 hover:bg-purple-900/70' :
+                          tag.category === 'purpose' ? 'bg-green-900/50 hover:bg-green-900/70' :
+                          'bg-gray-800 hover:bg-gray-700'
+                        }`}
+                      >
+                        <span>{tag.name}</span>
+                        <button 
+                          className="ml-1 text-white/70 hover:text-white"
+                          onClick={() => removeTag(tag.id)}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                  
+                  {/* AI Suggested Tags */}
+                  {suggestedTags.length > 0 && (
+                    <div className="mb-3">
+                      <p className="text-xs text-atmf-muted mb-2">AI-suggested tags:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {suggestedTags.map(tag => (
+                          <Badge 
+                            key={tag.id}
+                            variant="outline" 
+                            className="cursor-pointer px-2 py-1 bg-white/5 hover:bg-white/10"
+                            onClick={() => addTag(tag)}
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            {tag.name}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Predefined Tag Categories */}
+                  <div className="space-y-3 pt-2">
+                    {['document_type', 'content_type', 'purpose'].map(category => (
+                      <div key={category} className="space-y-1">
+                        <p className="text-xs text-atmf-muted capitalize">
+                          {category.replace('_', ' ')}:
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {PREDEFINED_TAGS
+                            .filter(tag => tag.category === category && !selectedTags.some(t => t.id === tag.id))
+                            .map(tag => (
+                              <Badge 
+                                key={tag.id}
+                                variant="outline" 
+                                className="cursor-pointer px-2 py-1 bg-white/5 hover:bg-white/10"
+                                onClick={() => addTag(tag)}
+                              >
+                                <Plus className="h-3 w-3 mr-1" />
+                                {tag.name}
+                              </Badge>
+                            ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Custom Tag Input */}
+                  <div className="flex items-center gap-2 mt-4">
+                    <Input
+                      value={customTag}
+                      onChange={(e) => setCustomTag(e.target.value)}
+                      placeholder="Add custom tag"
+                      className="bg-atmf-main border-white/10 focus:border-white/20"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          addCustomTag();
+                        }
+                      }}
+                    />
+                    <Button 
+                      variant="secondary"
+                      size="sm"
+                      onClick={addCustomTag}
+                      className="bg-atmf-main border-white/10"
+                      disabled={!customTag.trim()}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline" className="bg-atmf-main border-white/10">
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button 
+              onClick={handleSaveDocument}
+              className="bg-atmf-accent hover:bg-atmf-accent/90"
+              disabled={!uploadedDocument || !documentName.trim()}
+            >
+              <Save className="h-4 w-4 mr-2" />
+              Save Document
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  };
+
   // Knowledge Base content
   const knowledgeBaseContent = (
     <ATMFCard>
@@ -584,7 +955,11 @@ export default function ProjectSettings() {
             <FileText className="h-5 w-5 mr-2 text-green-400" />
             Project Knowledge Base
           </h3>
-          <Button size="sm" className="bg-atmf-accent hover:bg-atmf-accent/90">
+          <Button 
+            size="sm" 
+            className="bg-atmf-accent hover:bg-atmf-accent/90"
+            onClick={() => setIsDocumentDialogOpen(true)}
+          >
             <Plus className="h-4 w-4 mr-2" />
             Add Document
           </Button>
@@ -610,7 +985,11 @@ export default function ProjectSettings() {
                 Upload project documentation to help the AI better understand your project context and generate more relevant test cases and recommendations.
               </p>
             </div>
-            <Button size="sm" className="mt-2 bg-atmf-accent hover:bg-atmf-accent/90">
+            <Button 
+              size="sm" 
+              className="mt-2 bg-atmf-accent hover:bg-atmf-accent/90"
+              onClick={() => setIsDocumentDialogOpen(true)}
+            >
               <Upload className="h-4 w-4 mr-2" />
               Upload Documents
             </Button>
@@ -618,27 +997,58 @@ export default function ProjectSettings() {
         ) : (
           <div className="space-y-2">
             {settings.knowledgeBaseDocuments.map((doc) => (
-              <div key={doc.id} className="flex items-center justify-between p-3 rounded-md bg-atmf-main border border-white/10">
-                <div className="flex items-center space-x-3">
-                  <FileText className="h-5 w-5 text-blue-400" />
-                  <div>
-                    <h4 className="font-medium">{doc.name}</h4>
-                    <p className="text-xs text-atmf-muted">{doc.description}</p>
+              <div key={doc.id} className="flex flex-col p-3 rounded-md bg-atmf-main border border-white/10">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center space-x-3">
+                    <FileText className="h-5 w-5 text-blue-400" />
+                    <div>
+                      <h4 className="font-medium">{doc.name}</h4>
+                      <p className="text-xs text-atmf-muted">{doc.description}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-white/5">
+                      <FileText className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-white/5">
+                      <Trash2 className="h-4 w-4 text-red-400" />
+                    </Button>
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-white/5">
-                    <FileText className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-white/5">
-                    <Trash2 className="h-4 w-4 text-red-400" />
-                  </Button>
+                
+                {/* Document metadata */}
+                <div className="flex items-center text-xs text-atmf-muted mb-3">
+                  <span className="mr-3">{doc.fileType}</span>
+                  <span className="mr-3">{doc.fileSize}</span>
+                  <span>Added: {doc.uploadDate}</span>
                 </div>
+                
+                {/* Document tags */}
+                {doc.tags && doc.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {doc.tags.map(tag => (
+                      <Badge 
+                        key={tag.id} 
+                        className={`text-xs px-2 py-1 ${
+                          tag.category === 'document_type' ? 'bg-blue-900/50' :
+                          tag.category === 'content_type' ? 'bg-purple-900/50' :
+                          tag.category === 'purpose' ? 'bg-green-900/50' :
+                          'bg-gray-800'
+                        }`}
+                      >
+                        {tag.name}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>
         )}
       </ATMFCardBody>
+      
+      {/* Document Upload Dialog */}
+      <DocumentUploadDialog />
     </ATMFCard>
   );
 
