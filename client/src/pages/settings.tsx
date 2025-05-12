@@ -747,26 +747,78 @@ export default function ProjectSettings() {
           <div className="space-y-4 py-2">
             {/* File Upload Section */}
             {!uploadedDocument ? (
-              <div className="flex flex-col items-center justify-center p-8 border border-dashed border-white/10 rounded-md bg-atmf-main/50">
+              <div 
+                className="flex flex-col items-center justify-center p-8 border border-dashed border-white/10 rounded-md bg-atmf-main/50"
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  e.currentTarget.classList.add('border-blue-500');
+                }}
+                onDragLeave={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  e.currentTarget.classList.remove('border-blue-500');
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  e.currentTarget.classList.remove('border-blue-500');
+                  
+                  const files = e.dataTransfer.files;
+                  if (files && files.length > 0) {
+                    // Use the first file
+                    const file = files[0];
+                    // Check if the file type is acceptable
+                    const acceptedTypes = ['.pdf', '.doc', '.docx', '.txt', '.md', '.json'];
+                    const fileExt = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+                    
+                    if (acceptedTypes.some(type => 
+                      type === fileExt || 
+                      type === file.type ||
+                      (type === '.pdf' && file.type === 'application/pdf') ||
+                      (type === '.doc' && file.type === 'application/msword') ||
+                      (type === '.docx' && file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+                    )) {
+                      // Create a mock event to reuse the existing handler
+                      const mockEvent = {
+                        target: {
+                          files: [file]
+                        }
+                      } as unknown as React.ChangeEvent<HTMLInputElement>;
+                      
+                      handleDocumentUpload(mockEvent);
+                    } else {
+                      alert('Invalid file type. Please upload a PDF, DOC, DOCX, TXT, MD, or JSON file.');
+                    }
+                  }
+                }}
+              >
                 <IconWrapper variant="muted" size="lg" className="mb-3">
                   <Upload className="h-6 w-6" />
                 </IconWrapper>
                 <p className="text-center mb-4 text-sm text-atmf-muted">
                   Drag and drop your document here, or click to browse
                 </p>
-                <label htmlFor="document-upload" className="inline-block">
-                  <Button size="sm" className="bg-atmf-accent hover:bg-atmf-accent/90">
+                <div className="relative inline-block">
+                  <Button 
+                    type="button"
+                    size="sm" 
+                    className="bg-atmf-accent hover:bg-atmf-accent/90 relative z-10"
+                    onClick={() => {
+                      document.getElementById('document-upload')?.click();
+                    }}
+                  >
                     <Upload className="h-4 w-4 mr-2" />
                     Browse Files
                   </Button>
                   <input
                     id="document-upload"
                     type="file"
-                    className="hidden"
+                    className="absolute inset-0 opacity-0 cursor-pointer z-0"
                     accept=".pdf,.doc,.docx,.txt,.md,.json"
                     onChange={handleDocumentUpload}
                   />
-                </label>
+                </div>
               </div>
             ) : (
               <div className="p-4 border border-white/10 rounded-md bg-atmf-main/50">
