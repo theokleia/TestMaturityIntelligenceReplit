@@ -21,11 +21,20 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface ProjectSettings {
   language: string;
+  // Project details for AI context
+  projectType: string;
+  industryArea: string;
+  regulations: string;
+  techStack: string;
+  targetAudience: string;
+  businessContext: string;
+  qualityFocus: string;
+  // Integration settings
   jiraUrl: string;
-  jiraProjectId: string;  // Added Jira Project ID field
+  jiraProjectId: string;
   jiraApiKey: string;
   jiraJql: string;
-  jiraIssueType: string;  // Added Jira Issue Type field for test failures
+  jiraIssueType: string;
   githubToken: string;
   githubRepo: string;
   testCaseFormat: "structured" | "plain";
@@ -34,11 +43,20 @@ interface ProjectSettings {
 
 const defaultSettings: ProjectSettings = {
   language: "English",
+  // Project details defaults
+  projectType: "",
+  industryArea: "",
+  regulations: "",
+  techStack: "",
+  targetAudience: "",
+  businessContext: "",
+  qualityFocus: "",
+  // Integration settings
   jiraUrl: "",
-  jiraProjectId: "",  // Added Jira Project ID field
+  jiraProjectId: "",
   jiraApiKey: "",
   jiraJql: "",
-  jiraIssueType: "Bug",  // Default issue type for test failures
+  jiraIssueType: "Bug",
   githubToken: "",
   githubRepo: "",
   testCaseFormat: "structured",
@@ -57,23 +75,23 @@ export default function ProjectSettings() {
       // Initialize with project values for connections
       setSettings({
         ...defaultSettings,
-        // Pre-fill GitHub repo if set
+        // Project details
+        projectType: selectedProject.projectType || '',
+        industryArea: selectedProject.industryArea || '',
+        regulations: selectedProject.regulations || '',
+        techStack: selectedProject.techStack || '',
+        targetAudience: selectedProject.targetAudience || '',
+        businessContext: selectedProject.businessContext || '',
+        qualityFocus: selectedProject.qualityFocus || '',
+        // Integration settings
         githubRepo: selectedProject.githubRepo || '',
-        // Pre-fill GitHub token if set (masked for security)
         githubToken: selectedProject.githubToken ? '••••••••••••••••' : '',
-        // Use the saved Jira URL if available
         jiraUrl: selectedProject.jiraUrl || '',
-        // Use the saved Jira project ID if available
         jiraProjectId: selectedProject.jiraProjectId || '',
-        // For API key, if stored, initialize it (masked for security)
         jiraApiKey: selectedProject.jiraApiKey ? '••••••••••••••••' : '',
-        // Load saved JQL query if available
         jiraJql: selectedProject.jiraJql || '',
-        // Load saved Jira issue type for test failures
         jiraIssueType: selectedProject.jiraIssueType || 'Bug',
-        // Load saved test case format preference
         testCaseFormat: selectedProject.testCaseFormat || 'structured',
-        // Load saved output format preference
         outputFormat: selectedProject.outputFormat || 'markdown',
       });
       setSaveSuccess(false);

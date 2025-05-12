@@ -18,6 +18,15 @@ export const projects = pgTable("projects", {
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
   status: varchar("status", { length: 20 }).default("active"), // Added status field for archiving
+  // Project details for AI context
+  projectType: varchar("project_type", { length: 50 }), // Greenfield, New Software, Legacy, etc.
+  industryArea: varchar("industry_area", { length: 100 }), // Healthcare, Finance, E-commerce, etc.
+  regulations: text("regulations"), // Applicable regulations (HIPAA, SOX, GDPR, etc.)
+  techStack: text("tech_stack"), // Primary technologies used
+  targetAudience: text("target_audience"), // Description of users/customers
+  businessContext: text("business_context"), // Business goals and priorities
+  qualityFocus: text("quality_focus"), // Areas of quality focus (security, performance, usability)
+  // Integration settings
   jiraProjectId: varchar("jira_project_id", { length: 10 }),
   jiraUrl: text("jira_url"), // Added jiraUrl field to store the Jira base URL
   jiraJql: text("jira_jql"),
