@@ -137,11 +137,20 @@ export default function DocumenterPage() {
       
       const allDocuments = await res.json();
       
-      // Filter out Knowledge Base documents
-      const filteredDocuments = allDocuments.filter((doc: Document) => doc.type !== "Knowledge Base");
+      // Add more detailed logging to debug filtering
+      console.log(`All documents:`, allDocuments);
       
-      console.log(`All documents:`, allDocuments.length);
+      // Filter out Knowledge Base documents
+      const filteredDocuments = allDocuments.filter((doc: Document) => {
+        const isKnowledgeBase = doc.type === "Knowledge Base";
+        console.log(`Document ${doc.id} - ${doc.title} type: ${doc.type} - Include? ${!isKnowledgeBase}`);
+        return !isKnowledgeBase;
+      });
+      
+      console.log(`All documents count:`, allDocuments.length);
       console.log(`AI-generated documents loaded:`, filteredDocuments.length);
+      console.log(`AI-generated documents:`, filteredDocuments);
+      
       return filteredDocuments;
     },
     enabled: !!selectedProject?.id,
