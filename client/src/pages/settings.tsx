@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useProject } from "@/context/ProjectContext";
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '../lib/queryClient';
 import { useDropzone } from 'react-dropzone';
 import { useToast } from "@/hooks/use-toast";
@@ -181,7 +181,11 @@ export default function ProjectSettings() {
       return await response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
+      // Invalidate both the general documents query and the project-specific one
+      queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
+      if (selectedProject?.id) {
+        queryClient.invalidateQueries({ queryKey: ['/api/documents', selectedProject.id] });
+      }
       toast({
         title: "Document saved",
         description: "Your document has been successfully saved to the database",
@@ -229,17 +233,17 @@ export default function ProjectSettings() {
   useEffect(() => {
     if (projectDocuments && projectDocuments.length > 0 && selectedProject) {
       // Convert database documents to display format
-      const displayDocuments: DocumentDisplay[] = projectDocuments.map(doc => ({
+      const displayDocuments: DocumentDisplay[] = projectDocuments.map((doc: any) => ({
         id: doc.id.toString(),
         name: doc.title,
         description: doc.description || '',
         uploadDate: new Date(doc.createdAt || Date.now()).toISOString().split('T')[0],
         fileType: 'application/pdf', // Assuming PDF as default if not available
         fileSize: 'Unknown size', // We don't store file size
-        tags: doc.tags ? doc.tags.map(tag => ({ 
+        tags: doc.tags ? doc.tags.map((tag: string) => ({ 
           id: `tag-${tag}`, 
           name: tag,
-          category: 'custom'
+          category: 'custom' as 'custom'
         })) : []
       }));
       
