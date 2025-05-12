@@ -28,6 +28,7 @@ import {
   generateWhisperSuggestions
 } from "./openai-service";
 import { handleWhisperSuggestions } from "./api/handle-whisper-suggestions";
+import { handleDocumentAnalysis } from "./api/handle-document-analysis";
 import { setupAuth } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -968,6 +969,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // AI Whisper Mode endpoint - using enhanced handler for specialized context
   app.post("/api/ai/whisper", handleWhisperSuggestions);
+  
+  // AI Document Analysis endpoint - analyze document content for automatic tagging
+  app.post("/api/ai/analyze-document", handleDocumentAnalysis);
 
   // Projects API endpoints
   app.get("/api/projects", async (req, res) => {
