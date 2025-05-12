@@ -158,22 +158,33 @@ export default function ProjectSettings() {
   }, [selectedProject?.id]);
   
   // Handle document file upload
-  const handleDocumentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // First start the analysis process without showing the dialog yet
+      setIsAnalyzingDocument(true);
+      
+      // Set the uploaded document and prepare the filename
       setUploadedDocument(file);
-      // Use filename as default document name (without extension)
       const fileNameWithoutExt = file.name.split('.').slice(0, -1).join('.');
       setDocumentName(fileNameWithoutExt);
       
-      // When a document is uploaded, analyze it for tag suggestions
-      analyzeDocumentForTags(file);
+      try {
+        // Wait for analysis to complete before showing the dialog
+        await analyzeDocumentForTags(file);
+        
+        // Now show the dialog with the analysis results ready
+        setIsDocumentDialogOpen(true);
+      } finally {
+        // Ensure we clear the loading state even if analysis fails
+        setIsAnalyzingDocument(false);
+      }
     }
   };
   
   // AI analysis of document to suggest tags and description
   const analyzeDocumentForTags = async (file: File) => {
-    setIsAnalyzingDocument(true);
+    // Analysis is already marked as in progress by the parent function
     
     try {
       // Read the file content
@@ -795,8 +806,18 @@ export default function ProjectSettings() {
           </DialogHeader>
           
           <div className="space-y-4 py-2">
+            {/* Loading indicator for document analysis */}
+            {isAnalyzingDocument && (
+              <div className="flex flex-col items-center justify-center p-8">
+                <Loader2 className="h-8 w-8 animate-spin text-atmf-accent mb-4" />
+                <p className="text-center text-sm text-atmf-muted">
+                  Analyzing document content with AI...
+                </p>
+              </div>
+            )}
+            
             {/* File Upload Section */}
-            {!uploadedDocument ? (
+            {!uploadedDocument && !isAnalyzingDocument ? (
               <div 
                 className="flex flex-col items-center justify-center p-8 border border-dashed border-white/10 rounded-md bg-atmf-main/50"
                 onDragOver={(e) => {
@@ -875,7 +896,7 @@ export default function ProjectSettings() {
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center">
                     <FileText className="h-5 w-5 text-blue-400 mr-2" />
-                    <span className="font-medium">{uploadedDocument.name}</span>
+                    <span className="font-medium">{uploadedDocument?.name || "Document"}</span>
                   </div>
                   <Button 
                     variant="ghost" 
@@ -887,13 +908,13 @@ export default function ProjectSettings() {
                   </Button>
                 </div>
                 <div className="text-xs text-atmf-muted">
-                  {formatFileSize(uploadedDocument.size)} • {uploadedDocument.type}
+                  {uploadedDocument ? `${formatFileSize(uploadedDocument.size)} • ${uploadedDocument.type}` : ""}
                 </div>
               </div>
             )}
             
-            {/* Document Details */}
-            {uploadedDocument && (
+            {/* Document Details - only show when analysis is complete */}
+            {uploadedDocument && !isAnalyzingDocument && (
               <>
                 <div className="space-y-2">
                   <Label htmlFor="document-name">Document Name</Label>
