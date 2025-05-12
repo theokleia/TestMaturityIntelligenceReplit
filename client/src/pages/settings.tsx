@@ -122,6 +122,15 @@ export default function ProjectSettings() {
           outputFormat: settings.outputFormat
         };
         
+        // Add project details
+        updatePayload.projectType = settings.projectType;
+        updatePayload.industryArea = settings.industryArea;
+        updatePayload.regulations = settings.regulations;
+        updatePayload.techStack = settings.techStack;
+        updatePayload.targetAudience = settings.targetAudience;
+        updatePayload.businessContext = settings.businessContext;
+        updatePayload.qualityFocus = settings.qualityFocus;
+        
         // Add Jira URL if provided
         if (settings.jiraUrl) {
           updatePayload.jiraUrl = settings.jiraUrl;
@@ -352,6 +361,127 @@ export default function ProjectSettings() {
                     </Label>
                   </div>
                 </RadioGroup>
+              </div>
+            </ATMFCardBody>
+          </ATMFCard>
+
+          {/* Project Details Card for AI context */}
+          <ATMFCard>
+            <ATMFCardHeader>
+              <h3 className="text-lg font-medium flex items-center">
+                <Info className="h-5 w-5 mr-2 text-purple-400" />
+                Project Details for AI
+              </h3>
+            </ATMFCardHeader>
+            <ATMFCardBody className="space-y-4">
+              <Alert className="bg-slate-900/30 border-white/10">
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  The following details help our AI features better understand your project context when generating documents, test cases, and recommendations.
+                </AlertDescription>
+              </Alert>
+
+              <div className="space-y-2">
+                <Label htmlFor="projectType">Project Type</Label>
+                <Select 
+                  value={settings.projectType} 
+                  onValueChange={(value) => handleChange("projectType", value)}
+                >
+                  <SelectTrigger id="projectType" className="bg-atmf-main border-white/10 focus:border-white/20">
+                    <SelectValue placeholder="Select project type" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-atmf-card border-white/10">
+                    <SelectItem value="Greenfield">Greenfield (Brand New)</SelectItem>
+                    <SelectItem value="New Development">New Development (Existing Organization)</SelectItem>
+                    <SelectItem value="Legacy Modernization">Legacy Modernization</SelectItem>
+                    <SelectItem value="Maintenance">Maintenance & Support</SelectItem>
+                    <SelectItem value="Replatforming">Replatforming / Migration</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="industryArea">Industry Area</Label>
+                <Select 
+                  value={settings.industryArea} 
+                  onValueChange={(value) => handleChange("industryArea", value)}
+                >
+                  <SelectTrigger id="industryArea" className="bg-atmf-main border-white/10 focus:border-white/20">
+                    <SelectValue placeholder="Select industry" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-atmf-card border-white/10">
+                    <SelectItem value="Healthcare">Healthcare</SelectItem>
+                    <SelectItem value="Finance">Finance & Banking</SelectItem>
+                    <SelectItem value="E-commerce">E-commerce & Retail</SelectItem>
+                    <SelectItem value="Government">Government</SelectItem>
+                    <SelectItem value="Education">Education</SelectItem>
+                    <SelectItem value="Manufacturing">Manufacturing</SelectItem>
+                    <SelectItem value="Technology">Technology</SelectItem>
+                    <SelectItem value="Transportation">Transportation & Logistics</SelectItem>
+                    <SelectItem value="Telecommunications">Telecommunications</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="regulations">Regulatory Requirements</Label>
+                <Input
+                  id="regulations"
+                  placeholder="e.g., HIPAA, SOX, GDPR, FDA, ISO, etc."
+                  className="bg-atmf-main border-white/10 focus:border-white/20"
+                  value={settings.regulations}
+                  onChange={(e) => handleChange("regulations", e.target.value)}
+                />
+                <p className="text-xs text-atmf-muted">List any regulations or compliance standards that apply to this project</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="techStack">Technology Stack</Label>
+                <Input
+                  id="techStack"
+                  placeholder="e.g., React, Node.js, PostgreSQL, etc."
+                  className="bg-atmf-main border-white/10 focus:border-white/20"
+                  value={settings.techStack}
+                  onChange={(e) => handleChange("techStack", e.target.value)}
+                />
+                <p className="text-xs text-atmf-muted">Primary technologies, frameworks, and tools used in this project</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="targetAudience">Target Audience</Label>
+                <Input
+                  id="targetAudience"
+                  placeholder="e.g., Healthcare professionals, General consumers, etc."
+                  className="bg-atmf-main border-white/10 focus:border-white/20"
+                  value={settings.targetAudience}
+                  onChange={(e) => handleChange("targetAudience", e.target.value)}
+                />
+                <p className="text-xs text-atmf-muted">Who are the primary users or customers of this software?</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="businessContext">Business Context</Label>
+                <Input
+                  id="businessContext"
+                  placeholder="e.g., Increase sales, Improve customer service, etc."
+                  className="bg-atmf-main border-white/10 focus:border-white/20"
+                  value={settings.businessContext}
+                  onChange={(e) => handleChange("businessContext", e.target.value)}
+                />
+                <p className="text-xs text-atmf-muted">Key business goals and priorities for this project</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="qualityFocus">Quality Focus Areas</Label>
+                <Input
+                  id="qualityFocus"
+                  placeholder="e.g., Security, Performance, Accessibility, etc."
+                  className="bg-atmf-main border-white/10 focus:border-white/20"
+                  value={settings.qualityFocus}
+                  onChange={(e) => handleChange("qualityFocus", e.target.value)}
+                />
+                <p className="text-xs text-atmf-muted">Areas of quality that need special focus in testing</p>
               </div>
             </ATMFCardBody>
           </ATMFCard>
