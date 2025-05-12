@@ -78,8 +78,8 @@ interface ProjectSettings {
   githubRepo: string;
   testCaseFormat: "structured" | "plain";
   outputFormat: "markdown" | "pdf" | "html";
-  // Knowledge base documents
-  knowledgeBaseDocuments: ProjectDocument[];
+  // Knowledge base documents (local display only)
+  knowledgeBaseDocuments: DocumentDisplay[];
 }
 
 // Predefined document tags organized by category
@@ -147,6 +147,36 @@ export default function ProjectSettings() {
   const [customTag, setCustomTag] = useState("");
   const [isAnalyzingDocument, setIsAnalyzingDocument] = useState(false);
   const [suggestedTags, setSuggestedTags] = useState<DocumentTag[]>([]);
+  const [documentContent, setDocumentContent] = useState<string>("");
+  
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  
+  // Document save mutation
+  const saveDocumentMutation = useMutation({
+    mutationFn: async (document: Omit<ProjectDocument, "id">) => {
+      const response = await apiRequest("POST", "/api/documents", document);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to save document");
+      }
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
+      toast({
+        title: "Document saved",
+        description: "Your document has been successfully saved to the database",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error saving document",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
 
   // Initialize settings when selected project changes
   useEffect(() => {
@@ -307,32 +337,77 @@ export default function ProjectSettings() {
   };
   
   // Handle document saving
-  const handleSaveDocument = () => {
+  const handleSaveDocument = async () => {
     if (!uploadedDocument || !documentName.trim()) {
-      // Show validation error
+      toast({
+        title: "Validation Error",
+        description: "Document name is required",
+        variant: "destructive"
+      });
       return;
     }
     
-    // Create a new document object
-    const newDocument: ProjectDocument = {
-      id: `doc-${Date.now()}`, // In a real app, this would be a server-generated ID
-      name: documentName,
+    if (!documentContent) {
+      toast({
+        title: "Document Error",
+        description: "Document content is missing. Please try uploading the document again.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!selectedProject) {
+      toast({
+        title: "Project Error",
+        description: "No project selected",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Extract tag names from the selected tag objects
+    const tagNames = selectedTags.map(tag => tag.name);
+    
+    // Create server document object
+    const newServerDocument: Omit<ProjectDocument, "id"> = {
+      title: documentName,
       description: documentDescription,
-      uploadDate: new Date().toISOString().split('T')[0],
-      fileType: uploadedDocument.type,
-      fileSize: formatFileSize(uploadedDocument.size),
-      tags: selectedTags
+      type: "Knowledge Base",
+      content: documentContent,
+      tags: tagNames,
+      projectId: selectedProject.id,
+      status: "active",
+      version: "1.0"
     };
     
-    // Add to knowledge base documents
-    setSettings(prev => ({
-      ...prev,
-      knowledgeBaseDocuments: [...prev.knowledgeBaseDocuments, newDocument]
-    }));
-    
-    // Reset form and close dialog
-    resetDocumentForm();
-    setIsDocumentDialogOpen(false);
+    // Save to database
+    try {
+      await saveDocumentMutation.mutateAsync(newServerDocument);
+      
+      // Create a display object for the UI
+      const newDisplayDocument: DocumentDisplay = {
+        id: `local-${Date.now()}`, // Temporary ID until we refresh
+        name: documentName,
+        description: documentDescription,
+        uploadDate: new Date().toISOString().split('T')[0],
+        fileType: uploadedDocument.type,
+        fileSize: formatFileSize(uploadedDocument.size),
+        tags: selectedTags
+      };
+      
+      // Add to local state for immediate display
+      setSettings(prev => ({
+        ...prev,
+        knowledgeBaseDocuments: [...prev.knowledgeBaseDocuments, newDisplayDocument]
+      }));
+      
+      // Reset form and close dialog
+      resetDocumentForm();
+      setIsDocumentDialogOpen(false);
+    } catch (error) {
+      // Error is handled by the mutation
+      console.error("Error saving document:", error);
+    }
   };
   
   // Helper function to format file size
