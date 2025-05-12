@@ -152,24 +152,39 @@ export default function ProjectSettings() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
-  // Query to fetch documents for the selected project
+  // Query to fetch documents for the selected project - made more resilient
+  // We separate the document loading from project selection to avoid issues
   const { data: projectDocuments } = useQuery({
     queryKey: ['/api/documents', selectedProject?.id],
     queryFn: async () => {
-      if (!selectedProject?.id) return [];
+      // Added a safety check for project ID before fetching
+      if (!selectedProject?.id) {
+        console.log('No project selected, skipping document fetch');
+        return [];
+      }
+      
+      // Added more comprehensive error handling
       try {
+        console.log('Fetching documents for project:', selectedProject.id);
         const response = await fetch(`/api/documents?projectId=${selectedProject.id}&type=Knowledge Base`);
+        
         if (!response.ok) {
-          console.error('Failed to fetch documents:', await response.text());
+          console.error('Document fetch error:', response.status, response.statusText);
           return [];
         }
-        return response.json();
+        
+        const data = await response.json();
+        console.log('Documents loaded:', data?.length || 0);
+        return data || [];
       } catch (error) {
-        console.error('Error fetching documents:', error);
+        console.error('Exception in document fetch:', error);
         return [];
       }
     },
-    enabled: !!selectedProject?.id,
+    enabled: !!selectedProject?.id, // Only run the query when we have a project
+    staleTime: 30000, // Cache for 30 seconds to reduce API calls
+    retry: 1, // Only retry once to avoid excessive error messages
+    refetchOnWindowFocus: false, // Don't refetch when window gets focus to reduce errors
   });
   
   // Document save mutation
@@ -237,29 +252,55 @@ export default function ProjectSettings() {
   
   // Update settings with fetched documents when they load
   useEffect(() => {
+    // If settings page is initialized first, make sure this doesn't run and cause errors
+    if (!selectedProject) {
+      console.log('No project selected yet, skipping document processing');
+      return;
+    }
+    
+    // Wrap everything in try/catch to make absolutely sure this doesn't break anything
     try {
-      // Make sure we have the selected project first
-      if (!selectedProject) return;
+      // Log for debugging
+      console.log('Processing documents for UI display');
       
       // Handle the case where projectDocuments is undefined or empty
-      const docs = projectDocuments || [];
+      const docs = Array.isArray(projectDocuments) ? projectDocuments : [];
+      console.log(`Processing ${docs.length} documents`);
       
-      // Convert database documents to display format (even if empty array)
-      const displayDocuments: DocumentDisplay[] = docs.map((doc: any) => ({
-        id: doc.id.toString(),
-        name: doc.title,
-        description: doc.description || '',
-        uploadDate: new Date(doc.createdAt || Date.now()).toISOString().split('T')[0],
-        fileType: 'application/pdf', // Assuming PDF as default if not available
-        fileSize: 'Unknown size', // We don't store file size
-        tags: doc.tags ? doc.tags.map((tag: string) => ({ 
-          id: `tag-${tag}`, 
-          name: tag,
-          category: 'custom' as 'custom'
-        })) : []
-      }));
+      // Array to store our converted documents 
+      const displayDocuments: DocumentDisplay[] = [];
+      
+      // Process each document individually to avoid TypeScript errors
+      for (const doc of docs) {
+        try {
+          // Only add valid documents that match our type expectations
+          if (doc && typeof doc === 'object') {
+            const displayDoc: DocumentDisplay = {
+              id: String(doc.id || Date.now()),
+              name: doc.title || 'Untitled Document',
+              description: doc.description || '',
+              uploadDate: doc.createdAt ? 
+                new Date(doc.createdAt).toISOString().split('T')[0] : 
+                new Date().toISOString().split('T')[0],
+              fileType: 'application/pdf', // Assuming PDF as default
+              fileSize: 'Unknown size', // We don't store file size
+              tags: Array.isArray(doc.tags) ? doc.tags.map((tag: string) => ({ 
+                id: `tag-${tag}`, 
+                name: tag,
+                category: 'custom' as 'custom'
+              })) : []
+            };
+            
+            displayDocuments.push(displayDoc);
+          }
+        } catch (docError) {
+          console.error('Error processing individual document:', docError);
+          // Skip this document
+        }
+      }
       
       // Update settings with documents (could be empty array)
+      console.log(`Setting ${displayDocuments.length} documents in UI state`);
       setSettings(prev => ({
         ...prev,
         knowledgeBaseDocuments: displayDocuments
@@ -436,6 +477,7 @@ export default function ProjectSettings() {
   
   // Handle document saving
   const handleSaveDocument = async () => {
+    // Enhanced form validation
     if (!uploadedDocument || !documentName.trim()) {
       toast({
         title: "Validation Error",
@@ -466,10 +508,10 @@ export default function ProjectSettings() {
     // Extract tag names from the selected tag objects
     const tagNames = selectedTags.map(tag => tag.name);
     
-    // Create server document object
+    // Create server document object with explicit typing
     const newServerDocument: Omit<ProjectDocument, "id"> = {
-      title: documentName,
-      description: documentDescription,
+      title: documentName.trim(),
+      description: documentDescription.trim(),
       type: "Knowledge Base",
       content: documentContent,
       tags: tagNames,
@@ -478,17 +520,25 @@ export default function ProjectSettings() {
       version: "1.0"
     };
     
-    // Save to database
+    // Save to database with better error handling
     try {
-      await saveDocumentMutation.mutateAsync(newServerDocument);
+      console.log('Saving document to server:', {
+        ...newServerDocument,
+        content: newServerDocument.content.length > 50 ? 
+          `${newServerDocument.content.substring(0, 50)}... (${newServerDocument.content.length} chars)` : 
+          newServerDocument.content
+      });
+      
+      const savedDocument = await saveDocumentMutation.mutateAsync(newServerDocument);
+      console.log('Document saved successfully with ID:', savedDocument.id);
       
       // Create a display object for the UI
       const newDisplayDocument: DocumentDisplay = {
-        id: `local-${Date.now()}`, // Temporary ID until we refresh
-        name: documentName,
-        description: documentDescription,
+        id: String(savedDocument.id || `local-${Date.now()}`),
+        name: documentName.trim(),
+        description: documentDescription.trim(),
         uploadDate: new Date().toISOString().split('T')[0],
-        fileType: uploadedDocument.type,
+        fileType: uploadedDocument.type || 'application/pdf',
         fileSize: formatFileSize(uploadedDocument.size),
         tags: selectedTags
       };
@@ -502,9 +552,24 @@ export default function ProjectSettings() {
       // Reset form and close dialog
       resetDocumentForm();
       setIsDocumentDialogOpen(false);
+      
+      // Show explicit success message
+      toast({
+        title: "Document Saved",
+        description: "The document has been successfully saved and added to the Knowledge Base",
+      });
     } catch (error) {
-      // Error is handled by the mutation
+      // Enhanced error handling and logging
       console.error("Error saving document:", error);
+      
+      // Show more detailed error to user
+      toast({
+        title: "Error Saving Document",
+        description: error instanceof Error ? 
+          error.message : 
+          "An unknown error occurred while saving the document",
+        variant: "destructive"
+      });
     }
   };
   
