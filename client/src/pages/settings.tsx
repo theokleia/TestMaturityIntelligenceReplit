@@ -152,6 +152,20 @@ export default function ProjectSettings() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
+  // Query to fetch documents for the selected project
+  const { data: projectDocuments, isLoading: isLoadingDocuments } = useQuery({
+    queryKey: ['/api/documents', selectedProject?.id],
+    queryFn: async () => {
+      if (!selectedProject?.id) return [];
+      const response = await fetch(`/api/documents?projectId=${selectedProject.id}&type=Knowledge Base`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch documents');
+      }
+      return response.json();
+    },
+    enabled: !!selectedProject?.id,
+  });
+  
   // Document save mutation
   const saveDocumentMutation = useMutation({
     mutationFn: async (document: Omit<ProjectDocument, "id">) => {
@@ -204,13 +218,37 @@ export default function ProjectSettings() {
         jiraIssueType: selectedProject.jiraIssueType || 'Bug',
         testCaseFormat: selectedProject.testCaseFormat || 'structured',
         outputFormat: selectedProject.outputFormat || 'markdown',
-        // For now, we'll use an empty array for knowledge base documents
-        // In the future, this would be populated from the database
+        // Initialize with empty array (will be updated when documents are loaded)
         knowledgeBaseDocuments: []
       });
       setSaveSuccess(false);
     }
   }, [selectedProject?.id]);
+  
+  // Update settings with fetched documents when they load
+  useEffect(() => {
+    if (projectDocuments && projectDocuments.length > 0 && selectedProject) {
+      // Convert database documents to display format
+      const displayDocuments: DocumentDisplay[] = projectDocuments.map(doc => ({
+        id: doc.id.toString(),
+        name: doc.title,
+        description: doc.description || '',
+        uploadDate: new Date(doc.createdAt || Date.now()).toISOString().split('T')[0],
+        fileType: 'application/pdf', // Assuming PDF as default if not available
+        fileSize: 'Unknown size', // We don't store file size
+        tags: doc.tags ? doc.tags.map(tag => ({ 
+          id: `tag-${tag}`, 
+          name: tag,
+          category: 'custom'
+        })) : []
+      }));
+      
+      setSettings(prev => ({
+        ...prev,
+        knowledgeBaseDocuments: displayDocuments
+      }));
+    }
+  }, [projectDocuments, selectedProject?.id]);
   
   // Handle document file upload
   const handleDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
