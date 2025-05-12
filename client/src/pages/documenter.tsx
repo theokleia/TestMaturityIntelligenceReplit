@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { AppLayout } from "@/components/layout/app-layout";
 import { PageContainer, PageHeader, PageContent } from "@/components/design-system/page-container";
 import { TabView } from "@/components/design-system/tab-view";
@@ -120,37 +120,57 @@ export default function DocumenterPage() {
     }
   }, [selectedDocument, editDocumentForm]);
 
-  // Query for fetching documents - only show AI-generated documents (exclude Knowledge Base)
-  const { data: documents, isLoading: isLoadingDocuments } = useQuery<Document[]>({
+  // Query for fetching ALL documents
+  const { data: allDocuments, isLoading: isLoadingAllDocuments, refetch: refetchDocuments } = useQuery<Document[]>({
     queryKey: ["/api/documents", selectedProject?.id],
     queryFn: async () => {
       if (!selectedProject?.id) return [];
+      
+      console.log(`Fetching documents for project:`, selectedProject.id);
       const res = await apiRequest(
         `/api/documents?projectId=${selectedProject.id}`,
         { method: "GET" }
       );
       
-      // Filter out "Knowledge Base" documents - we only want to show generated documents
-      const allDocuments = await res.json();
-      
-      // Force document display for debugging - this should show ALL documents including PRD
-      console.log("ALL DOCUMENTS FROM API:", allDocuments);
-      console.log("API URL used:", `/api/documents?projectId=${selectedProject.id}`);
-      
-      // Force display of PRD documents by type
-      return allDocuments.filter((doc: any) => doc.type === "PRD");
+      const documents = await res.json();
+      console.log(`Documents loaded:`, documents.length);
+      return documents;
     },
-    enabled: !!selectedProject?.id
+    enabled: !!selectedProject?.id,
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
+    staleTime: 0 // Always refetch when component mounts
   });
+  
+  // Filter documents for display - only show AI-generated (non-Knowledge Base) documents
+  const documents = useMemo(() => {
+    if (!allDocuments) return [];
+    
+    console.log("Processing documents for UI display");
+    console.log(`Processing ${allDocuments.length} documents`);
+    
+    // Filter to show only non-Knowledge Base documents
+    const filtered = allDocuments.filter(doc => doc.type !== "Knowledge Base");
+    console.log(`Setting ${filtered.length} documents in UI state`);
+    return filtered;
+  }, [allDocuments]);
+  
+  const isLoadingDocuments = isLoadingAllDocuments;
 
   // Mutation for creating documents
   const createDocumentMutation = useMutation({
     mutationFn: async (document: DocumentFormValues) => {
+      // Add logging to debug document creation
+      console.log("Saving document to server:", document);
+      
       // The apiRequest function already calls res.json() and returns the result
-      return await apiRequest("/api/documents", { 
+      const result = await apiRequest("/api/documents", { 
         method: "POST", 
         body: JSON.stringify(document) 
       });
+      
+      console.log("Document saved successfully with ID:", result.id);
+      return result;
     },
     onSuccess: () => {
       toast({
@@ -159,7 +179,15 @@ export default function DocumenterPage() {
       });
       setCreateDocumentOpen(false);
       createDocumentForm.reset();
-      queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
+      
+      // Force invalidation with specific project ID
+      if (selectedProject?.id) {
+        console.log("Fetching documents for project:", selectedProject.id);
+        queryClient.invalidateQueries({ queryKey: ["/api/documents", selectedProject.id] });
+      }
+      
+      // Also refresh the document list with a direct refetch
+      refetchDocuments();
     },
     onError: (error: Error) => {
       toast({
@@ -173,11 +201,14 @@ export default function DocumenterPage() {
   // Mutation for updating documents
   const updateDocumentMutation = useMutation({
     mutationFn: async ({ id, document }: { id: number; document: Partial<DocumentFormValues> }) => {
+      console.log(`Updating document ${id} with data:`, document);
       // The apiRequest function already calls res.json() and returns the result
-      return await apiRequest(`/api/documents/${id}`, { 
+      const result = await apiRequest(`/api/documents/${id}`, { 
         method: "PATCH", 
         body: JSON.stringify(document) 
       });
+      console.log("Document updated successfully:", result);
+      return result;
     },
     onSuccess: () => {
       toast({
@@ -185,7 +216,14 @@ export default function DocumenterPage() {
         description: "Your document has been updated successfully.",
       });
       setEditDocumentOpen(false);
-      queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
+      
+      // More specific cache invalidation with project ID
+      if (selectedProject?.id) {
+        queryClient.invalidateQueries({ queryKey: ["/api/documents", selectedProject.id] });
+      }
+      
+      // Also force a direct refetch
+      refetchDocuments();
     },
     onError: (error: Error) => {
       toast({
