@@ -132,10 +132,13 @@ export default function DocumenterPage() {
       
       // Filter out "Knowledge Base" documents - we only want to show generated documents
       const allDocuments = await res.json();
-      console.log("All documents from API:", allDocuments);
-      const filteredDocuments = allDocuments.filter((doc: any) => doc.type !== "Knowledge Base");
-      console.log("Filtered documents (excluding Knowledge Base):", filteredDocuments);
-      return filteredDocuments;
+      
+      // Force document display for debugging - this should show ALL documents including PRD
+      console.log("ALL DOCUMENTS FROM API:", allDocuments);
+      console.log("API URL used:", `/api/documents?projectId=${selectedProject.id}`);
+      
+      // Force display of PRD documents by type
+      return allDocuments.filter((doc: any) => doc.type === "PRD");
     },
     enabled: !!selectedProject?.id
   });
