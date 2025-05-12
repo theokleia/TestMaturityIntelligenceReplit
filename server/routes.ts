@@ -2045,6 +2045,282 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Document routes for Documenter AI
+  // Get all documents or filter by projectId, type, etc.
+  app.get("/api/documents", async (req, res) => {
+    try {
+      const filters: any = {};
+      
+      // Parse filters from query parameters
+      if (req.query.projectId) {
+        filters.projectId = parseInt(req.query.projectId as string);
+      }
+      if (req.query.type) {
+        filters.type = req.query.type as string;
+      }
+      if (req.query.status) {
+        filters.status = req.query.status as string;
+      }
+      if (req.query.createdBy) {
+        filters.createdBy = parseInt(req.query.createdBy as string);
+      }
+      
+      const documents = await storage.getDocuments(filters);
+      res.json(documents);
+    } catch (error) {
+      console.error("Error fetching documents:", error);
+      res.status(500).json({ message: "Failed to fetch documents" });
+    }
+  });
+
+  // Get a specific document by ID
+  app.get("/api/documents/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const document = await storage.getDocument(id);
+      
+      if (!document) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+      
+      res.json(document);
+    } catch (error) {
+      console.error("Error fetching document:", error);
+      res.status(500).json({ message: "Failed to fetch document" });
+    }
+  });
+
+  // Create a new document
+  app.post("/api/documents", async (req, res) => {
+    try {
+      // Validate request body against schema
+      const documentData = insertDocumentSchema.parse(req.body);
+      
+      // Set authenticated user as the creator if available
+      if (req.user && !documentData.createdBy) {
+        documentData.createdBy = req.user.id;
+      }
+      
+      const newDocument = await storage.createDocument(documentData);
+      res.status(201).json(newDocument);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data format", errors: error.errors });
+      }
+      console.error("Error creating document:", error);
+      res.status(500).json({ message: "Failed to create document" });
+    }
+  });
+
+  // Update an existing document
+  app.patch("/api/documents/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const documentUpdate = req.body;
+      
+      // Add updatedAt timestamp
+      documentUpdate.updatedAt = new Date().toISOString();
+      
+      const updatedDocument = await storage.updateDocument(id, documentUpdate);
+      
+      if (!updatedDocument) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+      
+      res.json(updatedDocument);
+    } catch (error) {
+      console.error("Error updating document:", error);
+      res.status(500).json({ message: "Failed to update document" });
+    }
+  });
+
+  // Delete a document
+  app.delete("/api/documents/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteDocument(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Document not found or could not be deleted" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      console.error("Error deleting document:", error);
+      res.status(500).json({ message: "Failed to delete document" });
+    }
+  });
+
+  // AI Document Generation route
+  app.post("/api/ai/generate-document", async (req, res) => {
+    try {
+      const { projectId, type, customPrompt } = req.body;
+
+      if (!projectId) {
+        return res.status(400).json({ message: "Project ID is required" });
+      }
+
+      if (!type) {
+        return res.status(400).json({ message: "Document type is required" });
+      }
+
+      // Get project data for context
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      // Generate document content based on type and project data
+      let title = "";
+      let description = "";
+      let content = "";
+      let prompt = "";
+
+      // Determine document details based on type
+      switch (type) {
+        case "PRD":
+          title = `Product Requirements Document - ${project.name}`;
+          description = `Comprehensive product requirements document for ${project.name}`;
+          prompt = customPrompt || `Generate a detailed Product Requirements Document (PRD) for the project "${project.name}". ${project.description || ''}
+          Include the following sections:
+          1. Introduction and Purpose
+          2. Target Users and Market
+          3. Product Overview
+          4. Feature Requirements
+          5. User Stories
+          6. Non-functional Requirements
+          7. Constraints and Limitations
+          8. Success Metrics`;
+          break;
+          
+        case "SRS":
+          title = `Software Requirements Specification - ${project.name}`;
+          description = `Technical software requirements specification for ${project.name}`;
+          prompt = customPrompt || `Generate a detailed Software Requirements Specification (SRS) for the project "${project.name}". ${project.description || ''}
+          Include the following sections:
+          1. Introduction
+          2. Overall Description
+          3. System Features
+          4. External Interface Requirements
+          5. System Features
+          6. Other Non-functional Requirements
+          7. Database Requirements`;
+          break;
+          
+        case "SDDS":
+          title = `Software Design Document - ${project.name}`;
+          description = `Software architecture and design document for ${project.name}`;
+          prompt = customPrompt || `Generate a detailed Software Design Document (SDDS) for the project "${project.name}". ${project.description || ''}
+          Include the following sections:
+          1. Introduction
+          2. System Architecture
+          3. Database Design
+          4. UI Design
+          5. API Design
+          6. Security Design
+          7. Performance Considerations`;
+          break;
+          
+        case "Trace Matrix":
+          title = `Traceability Matrix - ${project.name}`;
+          description = `Requirements to test cases traceability matrix for ${project.name}`;
+          prompt = customPrompt || `Generate a traceability matrix for the project "${project.name}". ${project.description || ''}
+          This should map requirements to test cases and show coverage.
+          Include the following sections:
+          1. Introduction
+          2. Requirements Overview
+          3. Test Case Overview
+          4. Traceability Matrix
+          5. Coverage Analysis
+          6. Gaps and Recommendations`;
+          break;
+          
+        case "Test Plan":
+          title = `Test Plan - ${project.name}`;
+          description = `Comprehensive test plan for ${project.name}`;
+          prompt = customPrompt || `Generate a detailed Test Plan for the project "${project.name}". ${project.description || ''}
+          Include the following sections:
+          1. Introduction
+          2. Test Strategy
+          3. Test Scope
+          4. Test Environment
+          5. Test Schedule
+          6. Test Deliverables
+          7. Testing Tools
+          8. Risks and Mitigation`;
+          break;
+          
+        case "Test Report":
+          title = `Test Execution Report - ${project.name}`;
+          description = `Test execution results and metrics for ${project.name}`;
+          prompt = customPrompt || `Generate a detailed Test Execution Report for the project "${project.name}". ${project.description || ''}
+          Include the following sections:
+          1. Executive Summary
+          2. Test Scope
+          3. Test Execution Summary
+          4. Test Results
+          5. Defect Analysis
+          6. Recommendations
+          7. Conclusions`;
+          break;
+          
+        default:
+          title = `${type} - ${project.name}`;
+          description = `${type} for ${project.name}`;
+          prompt = customPrompt || `Generate a detailed ${type} for the project "${project.name}". ${project.description || ''}`;
+      }
+
+      // Generate content based on prompt, project context, and document type
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+          messages: [
+            {
+              role: "system",
+              content: `You are an expert documentation generator specializing in software development documentation. 
+              Generate content in markdown format that is detailed, professional, and ready for use in a software project.
+              Focus on producing high-quality, actionable content that provides real value.`
+            },
+            {
+              role: "user",
+              content: prompt
+            }
+          ],
+          max_tokens: 4000,
+          temperature: 0.7
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`);
+      }
+
+      const aiResponse = await response.json();
+      content = aiResponse.choices[0].message.content;
+
+      // Return the generated document information
+      res.json({
+        title,
+        type,
+        description,
+        content,
+        projectId,
+        status: "draft",
+        version: "1.0",
+        prompt
+      });
+    } catch (error) {
+      console.error("Error generating document:", error);
+      res.status(500).json({ message: "Failed to generate document", error: String(error) });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
