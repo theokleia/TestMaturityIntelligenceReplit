@@ -858,6 +858,13 @@ export class DatabaseStorage implements IStorage {
     return updatedRun || undefined;
   }
 
+  async deleteDocument(id: number): Promise<boolean> {
+    const result = await db
+      .delete(documents)
+      .where(eq(documents.id, id));
+    return result.rowCount > 0;
+  }
+
   // Documents
   async getDocuments(filters?: {
     type?: string;
