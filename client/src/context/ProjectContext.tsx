@@ -9,6 +9,13 @@ export interface Project {
   status?: "active" | "archived"; // Project status - active or archived
   createdAt?: string;
   updatedAt?: string;
+  // Project details for AI context
+  projectType?: string; // Greenfield, New Software, Legacy, etc.
+  industryArea?: string; // Healthcare, Finance, E-commerce, etc.
+  regulations?: string; // Applicable regulations (HIPAA, SOX, GDPR, etc.)
+  additionalContext?: string; // Detailed text about intended use, users, and business context
+  qualityFocus?: string; // Areas of quality focus (security, performance, usability)
+  // Integration settings
   jiraProjectId?: string; // Add Jira Project ID (optional, max 10 chars)
   jiraUrl?: string; // Add Jira base URL (optional)
   jiraJql?: string; // Add Jira JQL search query (optional)
