@@ -566,18 +566,15 @@ export async function generateTestStrategy(
       - toolRecommendations (array of objects with category, recommendation, rationale)
     `;
 
-    const response = await openai.chat.completions.create({
-      model: MODEL,
-      messages: [
+    const response = await callOpenAI([
         { 
           role: "system", 
           content: "You are an expert testing consultant specializing in test strategy development." 
         },
         { role: "user", content: prompt }
-      ],
+      ], {
       temperature: 0.7,
-      max_tokens: 1200,
-      response_format: { type: "json_object" }
+      max_tokens: 1200
     });
 
     const result = JSON.parse(response.choices[0].message.content || "{}");
@@ -693,15 +690,13 @@ export async function generateAssistantResponse(
     `;
 
     console.log(`Generating AI Assistant response for project ${project.id} - ${project.name}`);
-    const response = await openai.chat.completions.create({
-      model: MODEL,
-      messages: [
+    const response = await callOpenAI([
         { 
           role: "system", 
           content: "You are ATMosFera Assistant, an expert in test automation, quality engineering, and the Adaptive Testing Maturity Framework (ATMF). You provide concise, practical advice to help testing teams improve their processes and deliverables by leveraging their actual project data from integrations." 
         },
         { role: "user", content: prompt }
-      ],
+      ], {
       temperature: 0.7,
       max_tokens: 800
     });
@@ -991,18 +986,15 @@ export async function generateWhisperSuggestions(
       `;
       
       console.log(`Generating whisper suggestions for projects page`);
-      const response = await openai.chat.completions.create({
-        model: MODEL,
-        messages: [
+      const response = await callOpenAI([
           { 
             role: "system", 
             content: "You are ATMosFera WhisperMode, a non-intrusive assistant that provides short, timely contextual suggestions for project organization." 
           },
           { role: "user", content: promptContent as string }
-        ],
+        ], {
         temperature: 0.7,
-        max_tokens: 200,
-        response_format: { type: "json_object" }
+        max_tokens: 200
       });
       
       // Process the response
@@ -1136,14 +1128,11 @@ Respond in this JSON format:
 }
 `;
 
-    const response = await openai.chat.completions.create({
-      model: MODEL,
-      messages: [
+    const response = await callOpenAI([
         { role: "system", content: systemPrompt },
         { role: "user", content: content.substring(0, 8000) } // Limit content to prevent token overflow
-      ],
-      temperature: 0.3,
-      response_format: { type: "json_object" },
+      ], {
+      temperature: 0.3
     });
 
     // Parse the response
