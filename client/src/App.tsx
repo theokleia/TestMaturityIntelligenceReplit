@@ -37,6 +37,7 @@ function Router() {
       <ProtectedRoute path="/settings" component={Settings} />
       <ProtectedRoute path="/design-system" component={DesignSystem} />
       <ProtectedRoute path="/documenter" component={Documenter} />
+      <ProtectedRoute path="/ai-settings" component={AISettings} />
       <ProtectedRoute path="/atmf" component={ATMF} />
       {/* Redirect old documentation path to new ATMF path */}
       <Route path="/documentation">

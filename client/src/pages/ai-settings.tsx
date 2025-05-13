@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, ReactNode } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,10 +8,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import PageContainer from "@/components/ui/page-container";
 import { Loader2, Save } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Redirect } from "wouter";
+
+// Define PageContainer component inline since it might not be available
+const PageContainer = ({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) => (
+  <div className="container mx-auto p-6">
+    <div className="mb-8">
+      <h1 className="text-3xl font-bold text-primary">{title}</h1>
+      <p className="text-muted-foreground">{subtitle}</p>
+    </div>
+    {children}
+  </div>
+);
 
 interface GlobalSetting {
   id: number;
@@ -41,9 +51,14 @@ export default function AISettings() {
   const { data: aiSettings, isLoading } = useQuery<GlobalSetting[]>({
     queryKey: ["/api/global-settings"],
     queryFn: async () => {
-      const res = await apiRequest("GET", "/api/global-settings?category=AI");
-      if (!res.ok) throw new Error("Failed to fetch AI settings");
-      return await res.json();
+      try {
+        const res = await fetch("/api/global-settings?category=AI");
+        if (!res.ok) throw new Error("Failed to fetch AI settings");
+        return await res.json();
+      } catch (error) {
+        console.error("Failed to fetch settings:", error);
+        throw error;
+      }
     },
     enabled: !!user && user.role === "admin"
   });
@@ -51,7 +66,13 @@ export default function AISettings() {
   // Update existing setting
   const updateSettingMutation = useMutation({
     mutationFn: async ({ id, value }: { id: number; value: string }) => {
-      const res = await apiRequest("PATCH", `/api/global-settings/${id}`, { value });
+      const res = await fetch(`/api/global-settings/${id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ value }),
+      });
       if (!res.ok) throw new Error("Failed to update setting");
       return await res.json();
     },
@@ -62,10 +83,10 @@ export default function AISettings() {
         description: "AI configuration has been updated successfully.",
       });
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast({
         title: "Update failed",
-        description: error.message,
+        description: error instanceof Error ? error.message : "Unknown error",
         variant: "destructive",
       });
     }
@@ -74,7 +95,13 @@ export default function AISettings() {
   // Create new setting
   const createSettingMutation = useMutation({
     mutationFn: async (setting: Omit<GlobalSetting, "id" | "createdAt" | "updatedAt">) => {
-      const res = await apiRequest("POST", "/api/global-settings", setting);
+      const res = await fetch("/api/global-settings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(setting),
+      });
       if (!res.ok) throw new Error("Failed to create setting");
       return await res.json();
     },
@@ -85,10 +112,10 @@ export default function AISettings() {
         description: "New AI configuration has been created successfully.",
       });
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast({
         title: "Creation failed",
-        description: error.message,
+        description: error instanceof Error ? error.message : "Unknown error",
         variant: "destructive",
       });
     }
