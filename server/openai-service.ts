@@ -40,17 +40,27 @@ async function getOpenAIModel() {
 // Helper function to make OpenAI API calls with dynamic client and model
 async function callOpenAI(
   messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
-  options: { max_tokens?: number; temperature?: number } = {}
+  options: { max_tokens?: number; temperature?: number; response_format?: { type: string } } = {}
 ) {
-  const openaiClient = await getOpenAIClient();
-  const model = await getOpenAIModel();
-  
-  return openaiClient.chat.completions.create({
-    model,
-    messages: messages as any, // Type cast to avoid typing issues
-    max_tokens: options.max_tokens || 1000,
-    temperature: options.temperature || 0.7
-  });
+  try {
+    const openaiClient = await getOpenAIClient();
+    const model = await getOpenAIModel();
+    
+    return openaiClient.chat.completions.create({
+      model,
+      messages,
+      max_tokens: options.max_tokens || 1000,
+      temperature: options.temperature || 0.7,
+      response_format: options.response_format
+    });
+  } catch (error: unknown) {
+    console.error("Error calling OpenAI API:", error);
+    if (error instanceof Error) {
+      throw new Error(`OpenAI API error: ${error.message}`);
+    } else {
+      throw new Error("Unknown error calling OpenAI API");
+    }
+  }
 }
 
 // Define project contexts to enhance assistant responses
