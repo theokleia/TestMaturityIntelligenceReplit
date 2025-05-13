@@ -9,8 +9,16 @@ import { storage } from "./storage";
 async function getOpenAIClient() {
   try {
     // Try to get API key from global settings
-    const setting = await storage.getGlobalSetting("openai_api_key");
-    const apiKey = setting?.value || process.env.OPENAI_API_KEY;
+    let apiKey = process.env.OPENAI_API_KEY;
+    
+    try {
+      const setting = await storage.getGlobalSetting("openai_api_key");
+      if (setting?.value) {
+        apiKey = setting.value;
+      }
+    } catch (dbError) {
+      console.warn("Database error when getting OpenAI key, using environment variable:", dbError);
+    }
     
     if (!apiKey) {
       console.warn("OpenAI API key not found in global settings or environment variables");
@@ -26,15 +34,22 @@ async function getOpenAIClient() {
 
 // Function to get the configured model from global settings (or use default)
 async function getOpenAIModel() {
+  // Default model
+  const defaultModel = "gpt-4o";
+  
   try {
     // Try to get model from global settings
-    const setting = await storage.getGlobalSetting("openai_model");
-    // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-    return setting?.value || "gpt-4o";
+    try {
+      const setting = await storage.getGlobalSetting("openai_model");
+      // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+      return setting?.value || defaultModel;
+    } catch (dbError) {
+      console.warn("Database error when getting OpenAI model, using default:", dbError);
+      return defaultModel;
+    }
   } catch (error) {
     console.error("Error getting OpenAI model, using default:", error);
-    // Default model
-    return "gpt-4o";
+    return defaultModel;
   }
 }
 
@@ -72,8 +87,16 @@ async function callOpenAI(
 async function getAnthropicClient() {
   try {
     // Try to get API key from global settings
-    const setting = await storage.getGlobalSetting("anthropic_api_key");
-    const apiKey = setting?.value || process.env.ANTHROPIC_API_KEY;
+    let apiKey = process.env.ANTHROPIC_API_KEY;
+    
+    try {
+      const setting = await storage.getGlobalSetting("anthropic_api_key");
+      if (setting?.value) {
+        apiKey = setting.value;
+      }
+    } catch (dbError) {
+      console.warn("Database error when getting Anthropic key, using environment variable:", dbError);
+    }
     
     if (!apiKey) {
       console.warn("Anthropic API key not found in global settings or environment variables");
@@ -89,21 +112,28 @@ async function getAnthropicClient() {
 
 // Function to get the configured Anthropic model from global settings
 async function getAnthropicModel() {
+  // Default model
+  const defaultModel = "claude-3-7-sonnet-20250219";
+  
   try {
     // Try to get model from global settings
-    const setting = await storage.getGlobalSetting("anthropic_model");
-    // the newest Anthropic model is "claude-3-7-sonnet-20250219" which was released February 24, 2025
-    return setting?.value || "claude-3-7-sonnet-20250219";
+    try {
+      const setting = await storage.getGlobalSetting("anthropic_model");
+      // the newest Anthropic model is "claude-3-7-sonnet-20250219" which was released February 24, 2025
+      return setting?.value || defaultModel;
+    } catch (dbError) {
+      console.warn("Database error when getting Anthropic model, using default:", dbError);
+      return defaultModel;
+    }
   } catch (error) {
     console.error("Error getting Anthropic model, using default:", error);
-    // Default model
-    return "claude-3-7-sonnet-20250219";
+    return defaultModel;
   }
 }
 
 // Helper function to make Anthropic API calls with dynamic client and model
 async function callAnthropic(
-  messages: Array<{ role: "user" | "assistant"; content: string | Array<any> }>,
+  messages: Array<{ role: "user" | "assistant"; content: string }>,
   systemPrompt?: string,
   options: { 
     max_tokens?: number; 
@@ -1523,7 +1553,17 @@ export async function generateDocument(
       }
     ], systemPrompt, { max_tokens: 4000, temperature: 0.7 });
     
-    const content = response.content[0].text || "Error generating document content.";
+    let content = "Error generating document content.";
+    
+    // Extract content from Anthropic response
+    if (response && response.content && response.content.length > 0) {
+      // The content field is an array of content blocks
+      // Each block has a type field that could be 'text' or other types
+      const textBlock = response.content.find(block => block.type === 'text');
+      if (textBlock && 'text' in textBlock) {
+        content = textBlock.text;
+      }
+    }
     
     return {
       title,
