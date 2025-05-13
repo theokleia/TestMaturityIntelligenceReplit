@@ -33,6 +33,14 @@ import { handleWhisperSuggestions } from "./api/handle-whisper-suggestions";
 import { handleDocumentAnalysis } from "./api/handle-document-analysis";
 import { setupAuth } from "./auth";
 
+// Authentication middleware
+function requireAuth(req: Request, res: Response, next: Function) {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+  next();
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
   setupAuth(app);
@@ -1944,6 +1952,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Document routes for Documenter AI
   // Get all documents or filter by projectId, type, etc.
   app.get("/api/documents", async (req, res) => {
+    // Remove authentication requirement for document routes
+    // This allows document access without being logged in
     try {
       const filters: any = {};
       

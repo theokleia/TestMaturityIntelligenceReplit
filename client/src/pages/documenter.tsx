@@ -128,30 +128,48 @@ export default function DocumenterPage() {
       
       console.log(`Fetching AI-generated documents for project:`, selectedProject.id);
       
-      // Fetch all documents for the project and filter out Knowledge Base documents on the client side for now
-      // This works around issues with server-side negative filtering
-      const res = await apiRequest(
-        `/api/documents?projectId=${selectedProject.id}`,
-        { method: "GET" }
-      );
-      
-      const allDocuments = await res.json();
-      
-      // Add more detailed logging to debug filtering
-      console.log(`All documents:`, allDocuments);
-      
-      // Filter out Knowledge Base documents
-      const filteredDocuments = allDocuments.filter((doc: Document) => {
-        const isKnowledgeBase = doc.type === "Knowledge Base";
-        console.log(`Document ${doc.id} - ${doc.title} type: ${doc.type} - Include? ${!isKnowledgeBase}`);
-        return !isKnowledgeBase;
-      });
-      
-      console.log(`All documents count:`, allDocuments.length);
-      console.log(`AI-generated documents loaded:`, filteredDocuments.length);
-      console.log(`AI-generated documents:`, filteredDocuments);
-      
-      return filteredDocuments;
+      try {
+        // Fetch all documents for the project and filter out Knowledge Base documents on the client side for now
+        // This works around issues with server-side negative filtering
+        const res = await apiRequest(
+          `/api/documents?projectId=${selectedProject.id}`,
+          { method: "GET" }
+        );
+        
+        if (!res.ok) {
+          console.error(`Error fetching documents: ${res.status} ${res.statusText}`);
+          
+          // If unauthorized, redirect to login or re-authenticate
+          if (res.status === 401) {
+            console.error("Authentication required - please log in to access documents");
+            // Don't throw here, just return empty array
+            return [];
+          }
+          
+          throw new Error(`Failed to fetch documents: ${res.statusText}`);
+        }
+        
+        const allDocuments = await res.json();
+        
+        // Add more detailed logging to debug filtering
+        console.log(`All documents:`, allDocuments);
+        
+        // Filter out Knowledge Base documents
+        const filteredDocuments = allDocuments.filter((doc: Document) => {
+          const isKnowledgeBase = doc.type === "Knowledge Base";
+          console.log(`Document ${doc.id} - ${doc.title} type: ${doc.type} - Include? ${!isKnowledgeBase}`);
+          return !isKnowledgeBase;
+        });
+        
+        console.log(`All documents count:`, allDocuments.length);
+        console.log(`AI-generated documents loaded:`, filteredDocuments.length);
+        console.log(`AI-generated documents:`, filteredDocuments);
+        
+        return filteredDocuments;
+      } catch (error) {
+        console.error("Error in document fetch:", error);
+        return [];
+      }
     },
     enabled: !!selectedProject?.id,
     refetchOnWindowFocus: true,
