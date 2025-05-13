@@ -1,0 +1,9 @@
+CREATE TABLE IF NOT EXISTS global_settings (
+  id SERIAL PRIMARY KEY,
+  key VARCHAR(100) NOT NULL UNIQUE,
+  value TEXT,
+  description TEXT,
+  category VARCHAR(50) NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
