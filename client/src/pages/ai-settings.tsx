@@ -1,4 +1,4 @@
-import { useState, useEffect, ReactNode } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -7,21 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
 import { Loader2, Save } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Redirect } from "wouter";
-
-// Define PageContainer component inline since it might not be available
-const PageContainer = ({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) => (
-  <div className="container mx-auto p-6">
-    <div className="mb-8">
-      <h1 className="text-3xl font-bold text-primary">{title}</h1>
-      <p className="text-muted-foreground">{subtitle}</p>
-    </div>
-    {children}
-  </div>
-);
+import { PageContainer } from "@/components/design-system/page-container";
 
 interface GlobalSetting {
   id: number;

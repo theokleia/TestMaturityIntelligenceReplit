@@ -17,7 +17,7 @@ export function Sidebar() {
   const { user, logoutMutation } = useAuth();
   
   // Navigation items definition
-  const navigationItems: NavigationItem[] = [
+  let navigationItems: NavigationItem[] = [
     {
       title: "Dashboard",
       path: "/",
@@ -70,6 +70,15 @@ export function Sidebar() {
       icon: "bx-cog",
     },
   ];
+  
+  // Add AI Settings link for admin users
+  if (user?.role === "admin") {
+    navigationItems.push({
+      title: "AI Settings",
+      path: "/ai-settings",
+      icon: "bx-chip",
+    });
+  };
 
   return (
     <div className={cn(
