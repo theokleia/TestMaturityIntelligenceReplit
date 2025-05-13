@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 import { Project } from "@shared/schema";
 import { fetchJiraIssues, getJiraContextForAI } from "./services/jira-service";
 import { fetchRepoFiles, fetchRecentCommits, fetchFileContent, getGitHubContextForAI } from "./services/github-service";
@@ -63,6 +64,69 @@ async function callOpenAI(
       throw new Error(`OpenAI API error: ${error.message}`);
     } else {
       throw new Error("Unknown error calling OpenAI API");
+    }
+  }
+}
+
+// Function to get Anthropic client with API key from global settings
+async function getAnthropicClient() {
+  try {
+    // Try to get API key from global settings
+    const setting = await storage.getGlobalSetting("anthropic_api_key");
+    const apiKey = setting?.value || process.env.ANTHROPIC_API_KEY;
+    
+    if (!apiKey) {
+      console.warn("Anthropic API key not found in global settings or environment variables");
+    }
+    
+    return new Anthropic({ apiKey });
+  } catch (error) {
+    console.error("Error getting Anthropic client, falling back to environment variable:", error);
+    // Fallback to environment variable
+    return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  }
+}
+
+// Function to get the configured Anthropic model from global settings
+async function getAnthropicModel() {
+  try {
+    // Try to get model from global settings
+    const setting = await storage.getGlobalSetting("anthropic_model");
+    // the newest Anthropic model is "claude-3-7-sonnet-20250219" which was released February 24, 2025
+    return setting?.value || "claude-3-7-sonnet-20250219";
+  } catch (error) {
+    console.error("Error getting Anthropic model, using default:", error);
+    // Default model
+    return "claude-3-7-sonnet-20250219";
+  }
+}
+
+// Helper function to make Anthropic API calls with dynamic client and model
+async function callAnthropic(
+  messages: Array<{ role: "user" | "assistant"; content: string | Array<any> }>,
+  systemPrompt?: string,
+  options: { 
+    max_tokens?: number; 
+    temperature?: number;
+  } = {}
+) {
+  try {
+    const anthropicClient = await getAnthropicClient();
+    const model = await getAnthropicModel();
+    
+    return anthropicClient.messages.create({
+      model,
+      messages,
+      system: systemPrompt,
+      max_tokens: options.max_tokens || 4000,
+      temperature: options.temperature || 0.7
+    });
+  } catch (error: unknown) {
+    console.error("Error calling Anthropic API:", error);
+    if (error instanceof Error) {
+      throw new Error(`Anthropic API error: ${error.message}`);
+    } else {
+      throw new Error("Unknown error when calling Anthropic API");
     }
   }
 }
@@ -1445,23 +1509,21 @@ export async function generateDocument(
       }
     }
     
-    // Call OpenAI to generate document content
-    console.log(`Generating ${documentType} document using OpenAI...`);
+    // Call Anthropic to generate document content (using Claude for better document generation)
+    console.log(`Generating ${documentType} document using Anthropic Claude...`);
     
-    const response = await callOpenAI([
-      {
-        role: "system",
-        content: `You are an expert documentation generator specializing in software development documentation. 
-        Generate content in markdown format that is detailed, professional, and ready for use in a software project.
-        Focus on producing high-quality, actionable content that provides real value.`
-      },
+    const systemPrompt = `You are an expert documentation generator specializing in software development documentation. 
+    Generate content in markdown format that is detailed, professional, and ready for use in a software project.
+    Focus on producing high-quality, actionable content that provides real value.`;
+    
+    const response = await callAnthropic([
       {
         role: "user",
         content: prompt
       }
-    ], { max_tokens: 4000, temperature: 0.7 });
+    ], systemPrompt, { max_tokens: 4000, temperature: 0.7 });
     
-    const content = response.choices[0].message.content || "Error generating document content.";
+    const content = response.content[0].text || "Error generating document content.";
     
     return {
       title,
