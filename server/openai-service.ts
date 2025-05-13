@@ -293,15 +293,12 @@ export async function analyzeTestingData(
       Return your response in JSON format with these fields: insights (array of strings) and riskAreas (array of objects with area and risk properties).
     `;
 
-    const response = await openai.chat.completions.create({
-      model: MODEL,
-      messages: [
-        { role: "system", content: "You are an expert testing consultant specializing in the Adaptive Testing Maturity Framework (ATMF)." },
-        { role: "user", content: prompt }
-      ],
+    const response = await callOpenAI([
+      { role: "system", content: "You are an expert testing consultant specializing in the Adaptive Testing Maturity Framework (ATMF)." },
+      { role: "user", content: prompt }
+    ], {
       temperature: 0.7,
-      max_tokens: 500,
-      response_format: { type: "json_object" }
+      max_tokens: 500
     });
 
     const result = JSON.parse(response.choices[0].message.content || "{}");
@@ -354,18 +351,15 @@ export async function generateMaturityRoadmap(
       level, name, description, keyInitiatives (array), estimatedTimeframe.
     `;
 
-    const response = await openai.chat.completions.create({
-      model: MODEL,
-      messages: [
-        { 
-          role: "system", 
-          content: "You are an expert testing consultant specializing in the Adaptive Testing Maturity Framework (ATMF)." 
-        },
-        { role: "user", content: prompt }
-      ],
+    const response = await callOpenAI([
+      { 
+        role: "system", 
+        content: "You are an expert testing consultant specializing in the Adaptive Testing Maturity Framework (ATMF)." 
+      },
+      { role: "user", content: prompt }
+    ], {
       temperature: 0.7,
-      max_tokens: 1000,
-      response_format: { type: "json_object" }
+      max_tokens: 1000
     });
 
     const result = JSON.parse(response.choices[0].message.content || "{}");
@@ -421,18 +415,15 @@ export async function analyzeTestPatterns(
       - coverageGaps (array of strings)
     `;
 
-    const response = await openai.chat.completions.create({
-      model: MODEL,
-      messages: [
+    const response = await callOpenAI([
         { 
           role: "system", 
           content: "You are an expert testing consultant specializing in test automation optimization." 
         },
         { role: "user", content: prompt }
-      ],
+      ], {
       temperature: 0.7,
-      max_tokens: 800,
-      response_format: { type: "json_object" }
+      max_tokens: 800
     });
 
     const result = JSON.parse(response.choices[0].message.content || "{}");
@@ -511,18 +502,15 @@ export async function generateTestCases(
       ${jiraInfo?.jiraJql ? 'Incorporate specific details from Jira issues matching the JQL query to make the test cases more relevant and aligned with actual project requirements.' : ''}
     `;
 
-    const response = await openai.chat.completions.create({
-      model: MODEL,
-      messages: [
+    const response = await callOpenAI([
         { 
           role: "system", 
           content: "You are an expert test engineer specializing in test case design and automation." 
         },
         { role: "user", content: prompt }
-      ],
+      ], {
       temperature: 0.7,
-      max_tokens: 1500,
-      response_format: { type: "json_object" }
+      max_tokens: 1500
     });
 
     const result = JSON.parse(response.choices[0].message.content || "{}");
