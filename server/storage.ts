@@ -135,6 +135,13 @@ export interface IStorage {
   createDocument(document: InsertDocument): Promise<Document>;
   updateDocument(id: number, document: Partial<InsertDocument>): Promise<Document | undefined>;
   deleteDocument(id: number): Promise<boolean>;
+  
+  // Global Settings
+  getGlobalSettings(category?: string): Promise<GlobalSetting[]>;
+  getGlobalSetting(key: string): Promise<GlobalSetting | undefined>;
+  createGlobalSetting(setting: InsertGlobalSetting): Promise<GlobalSetting>;
+  updateGlobalSetting(id: number, setting: Partial<InsertGlobalSetting>): Promise<GlobalSetting | undefined>;
+  deleteGlobalSetting(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -937,6 +944,53 @@ export class DatabaseStorage implements IStorage {
       return true;
     } catch (error) {
       console.error("Error deleting document:", error);
+      return false;
+    }
+  }
+
+  // Global Settings implementation
+  async getGlobalSettings(category?: string): Promise<GlobalSetting[]> {
+    if (category) {
+      return db.select()
+        .from(globalSettings)
+        .where(eq(globalSettings.category, category))
+        .orderBy(asc(globalSettings.key));
+    }
+    return db.select().from(globalSettings).orderBy(asc(globalSettings.key));
+  }
+
+  async getGlobalSetting(key: string): Promise<GlobalSetting | undefined> {
+    const [setting] = await db.select()
+      .from(globalSettings)
+      .where(eq(globalSettings.key, key));
+    return setting || undefined;
+  }
+
+  async createGlobalSetting(setting: InsertGlobalSetting): Promise<GlobalSetting> {
+    const [result] = await db.insert(globalSettings)
+      .values(setting)
+      .returning();
+    return result;
+  }
+
+  async updateGlobalSetting(id: number, setting: Partial<InsertGlobalSetting>): Promise<GlobalSetting | undefined> {
+    const [result] = await db.update(globalSettings)
+      .set({
+        ...setting,
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(globalSettings.id, id))
+      .returning();
+    return result || undefined;
+  }
+
+  async deleteGlobalSetting(id: number): Promise<boolean> {
+    try {
+      await db.delete(globalSettings)
+        .where(eq(globalSettings.id, id));
+      return true;
+    } catch (error) {
+      console.error("Error deleting global setting:", error);
       return false;
     }
   }
