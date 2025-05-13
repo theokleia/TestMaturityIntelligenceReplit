@@ -43,7 +43,7 @@ async function callOpenAI(
   options: { 
     max_tokens?: number; 
     temperature?: number; 
-    response_format?: { type: "json_object" } | { type: "text" } | undefined
+    response_format?: { type: "json_object" } | { type: "text" } 
   } = {}
 ) {
   try {
@@ -1071,7 +1071,7 @@ export async function generateWhisperSuggestions(
       ],
       temperature: 0.7,
       max_tokens: 500,
-      response_format: { type: "json_object" }
+      response_format: { type: "json_object" as const }
     });
 
     const responseContent = response.choices[0].message.content || '{"suggestions": ["Unable to generate suggestions"], "priority": "low"}';
@@ -1470,10 +1470,10 @@ export async function generateDocument(
     };
   } catch (error: unknown) {
     console.error("Error generating document:", error);
-    if (error instanceof Error) {
-      throw new Error(`Failed to generate document: ${error.message}`);
-    } else {
-      throw new Error("Failed to generate document due to an unknown error");
-    }
+    throw new Error(
+      error instanceof Error 
+        ? `Failed to generate document: ${error.message}` 
+        : "Failed to generate document due to an unknown error"
+    );
   }
 }
