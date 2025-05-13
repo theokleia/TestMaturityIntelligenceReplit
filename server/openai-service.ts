@@ -40,7 +40,11 @@ async function getOpenAIModel() {
 // Helper function to make OpenAI API calls with dynamic client and model
 async function callOpenAI(
   messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
-  options: { max_tokens?: number; temperature?: number; response_format?: { type: string } } = {}
+  options: { 
+    max_tokens?: number; 
+    temperature?: number; 
+    response_format?: { type: "json_object" } | { type: "text" } | undefined
+  } = {}
 ) {
   try {
     const openaiClient = await getOpenAIClient();
@@ -1149,7 +1153,7 @@ Respond in this JSON format:
     const result = JSON.parse(response.choices[0].message.content || "{}");
     
     // Format the response
-    const suggestedTags = (result.tags || []).map((tag: any) => ({
+    const suggestedTags = (result.tags || []).map((tag: { name: string; category: string }) => ({
       id: tag.name.toLowerCase().replace(/\s+/g, '_'),
       name: tag.name,
       category: tag.category
@@ -1340,10 +1344,10 @@ export async function generateDocument(
           ${project.projectType ? `Project type: ${project.projectType}` : ''}
           
           ${githubData ? `Based on the GitHub repository ${githubData.repoName}, please analyze:
-          - Repository structure: ${JSON.stringify(githubData.files?.slice(0, 15).map(f => ({ name: f.name, type: f.type, path: f.path })) || [])}
-          - Recent commits: ${JSON.stringify(githubData.commits?.slice(0, 5).map(c => ({ message: c.commit.message })) || [])}
+          - Repository structure: ${JSON.stringify(githubData.files?.slice(0, 15).map((f: { name: string; type: string; path: string }) => ({ name: f.name, type: f.type, path: f.path })) || [])}
+          - Recent commits: ${JSON.stringify(githubData.commits?.slice(0, 5).map((c: { commit: { message: string } }) => ({ message: c.commit.message })) || [])}
           ${githubData.fileContents?.length ? `
-          - Key file contents:\n${githubData.fileContents.map((content, i) => `File ${i+1}:\n${content?.substring(0, 500)}...\n`).join('\n')}` : ''}
+          - Key file contents:\n${githubData.fileContents.map((content: string | undefined, i: number) => `File ${i+1}:\n${content?.substring(0, 500)}...\n`).join('\n')}` : ''}
           ` : ''}
           
           The SDDS should include:
@@ -1464,8 +1468,12 @@ export async function generateDocument(
       content,
       description
     };
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error generating document:", error);
-    throw new Error(`Failed to generate document: ${error.message}`);
+    if (error instanceof Error) {
+      throw new Error(`Failed to generate document: ${error.message}`);
+    } else {
+      throw new Error("Failed to generate document due to an unknown error");
+    }
   }
 }
