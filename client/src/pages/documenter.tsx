@@ -260,14 +260,32 @@ export default function DocumenterPage() {
   const deleteDocumentMutation = useMutation({
     mutationFn: async (id: number) => {
       console.log(`Deleting document with ID: ${id}`);
-      await apiRequest(`/api/documents/${id}`, { method: "DELETE" });
+      
+      // Using direct fetch instead of apiRequest for better error handling
+      const response = await fetch(`/api/documents/${id}`, {
+        method: "DELETE",
+        credentials: "include"
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to delete document: ${response.status} ${response.statusText}`);
+      }
+      
       console.log(`Document ${id} deleted successfully`);
+      return id;
     },
-    onSuccess: () => {
+    onSuccess: (deletedId) => {
       toast({
         title: "Document deleted",
         description: "Your document has been deleted successfully.",
       });
+      
+      // Manually update the local state to immediately remove the document
+      const updatedDocs = documents?.filter(doc => doc.id !== deletedId) || [];
+      queryClient.setQueryData(
+        ["/api/documents", selectedProject?.id, "ai-generated"], 
+        updatedDocs
+      );
       
       // More specific cache invalidation with project ID and document type filter
       if (selectedProject?.id) {
@@ -281,6 +299,7 @@ export default function DocumenterPage() {
       refetchDocuments();
     },
     onError: (error: Error) => {
+      console.error("Error deleting document:", error);
       toast({
         title: "Failed to delete document",
         description: error.message,
