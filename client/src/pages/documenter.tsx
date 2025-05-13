@@ -129,12 +129,9 @@ export default function DocumenterPage() {
       console.log(`Fetching AI-generated documents for project:`, selectedProject.id);
       
       try {
-        // Fetch all documents for the project and filter out Knowledge Base documents on the client side for now
-        // This works around issues with server-side negative filtering
-        const res = await apiRequest(
-          `/api/documents?projectId=${selectedProject.id}`,
-          { method: "GET" }
-        );
+        // Using regular fetch instead of apiRequest to get better error handling
+        console.log(`Using direct fetch to access API endpoint`);
+        const res = await fetch(`/api/documents?projectId=${selectedProject.id}`);
         
         if (!res.ok) {
           console.error(`Error fetching documents: ${res.status} ${res.statusText}`);
