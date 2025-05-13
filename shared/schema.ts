@@ -463,3 +463,21 @@ export const insertDocumentSchema = createInsertSchema(documents)
 
 export type InsertDocument = z.infer<typeof insertDocumentSchema>;
 export type Document = typeof documents.$inferSelect;
+
+// Global settings for AI integration and system configuration
+export const globalSettings = pgTable("global_settings", {
+  id: serial("id").primaryKey(),
+  key: varchar("key", { length: 100 }).notNull().unique(), // e.g., "openai_api_key", "openai_model", "anthropic_api_key", "anthropic_model"
+  value: text("value"),
+  description: text("description"),
+  category: varchar("category", { length: 50 }).notNull(), // e.g., "AI", "System", "Integration"
+  createdAt: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: 'string', withTimezone: true }).defaultNow(),
+});
+
+// Schemas and types for global settings
+export const insertGlobalSettingSchema = createInsertSchema(globalSettings)
+  .omit({ id: true, createdAt: true, updatedAt: true });
+
+export type InsertGlobalSetting = z.infer<typeof insertGlobalSettingSchema>;
+export type GlobalSetting = typeof globalSettings.$inferSelect;

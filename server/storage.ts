@@ -12,7 +12,8 @@ import {
   testCycles, type TestCycle, type InsertTestCycle,
   testCycleItems, type TestCycleItem, type InsertTestCycleItem,
   testRuns, type TestRun, type InsertTestRun,
-  documents, type Document, type InsertDocument
+  documents, type Document, type InsertDocument,
+  globalSettings, type GlobalSetting, type InsertGlobalSetting
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc, or, inArray, lt, gte, isNull } from "drizzle-orm";
