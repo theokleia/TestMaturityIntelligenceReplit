@@ -71,14 +71,8 @@ export function Sidebar() {
     },
   ];
   
-  // Add AI Settings link for admin users
-  if (user?.role === "admin") {
-    navigationItems.push({
-      title: "AI Settings",
-      path: "/ai-settings",
-      icon: "bx-chip",
-    });
-  };
+  // No admin-specific sidebar links needed now
+  // (moved AI Settings to topbar dropdown)
 
   return (
     <div className={cn(
