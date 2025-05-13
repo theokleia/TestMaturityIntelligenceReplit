@@ -1009,6 +1009,47 @@ export class DatabaseStorage implements IStorage {
       });
     }
     
+    // Initialize global settings for AI integration
+    const openaiKeyExists = await this.getGlobalSetting("openai_api_key");
+    if (!openaiKeyExists) {
+      await this.createGlobalSetting({
+        key: "openai_api_key",
+        value: process.env.OPENAI_API_KEY || "",
+        description: "OpenAI API key for AI features",
+        category: "AI"
+      });
+    }
+    
+    const openaiModelExists = await this.getGlobalSetting("openai_model");
+    if (!openaiModelExists) {
+      await this.createGlobalSetting({
+        key: "openai_model",
+        value: "gpt-4o",
+        description: "OpenAI model to use for general AI features",
+        category: "AI"
+      });
+    }
+    
+    const anthropicKeyExists = await this.getGlobalSetting("anthropic_api_key");
+    if (!anthropicKeyExists) {
+      await this.createGlobalSetting({
+        key: "anthropic_api_key",
+        value: process.env.ANTHROPIC_API_KEY || "",
+        description: "Anthropic API key for document generation",
+        category: "AI"
+      });
+    }
+    
+    const anthropicModelExists = await this.getGlobalSetting("anthropic_model");
+    if (!anthropicModelExists) {
+      await this.createGlobalSetting({
+        key: "anthropic_model",
+        value: "claude-3-7-sonnet-20250219",
+        description: "Anthropic model to use for document generation",
+        category: "AI"
+      });
+    }
+    
     // Create sample projects if none exist
     const existingProjects = await this.getProjects();
     if (existingProjects.length === 0) {

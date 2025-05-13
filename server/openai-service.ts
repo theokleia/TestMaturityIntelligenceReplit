@@ -39,15 +39,15 @@ async function getOpenAIModel() {
 
 // Helper function to make OpenAI API calls with dynamic client and model
 async function callOpenAI(
-  messages: ChatCompletionCreateParams.Message[],
+  messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
   options: { max_tokens?: number; temperature?: number } = {}
 ) {
-  const openai = await getOpenAIClient();
+  const openaiClient = await getOpenAIClient();
   const model = await getOpenAIModel();
   
-  return openai.chat.completions.create({
+  return openaiClient.chat.completions.create({
     model,
-    messages,
+    messages: messages as any, // Type cast to avoid typing issues
     max_tokens: options.max_tokens || 1000,
     temperature: options.temperature || 0.7
   });
@@ -1066,8 +1066,13 @@ export async function generateWhisperSuggestions(
     }
     
     console.log(`Generating whisper suggestions for project ${project.id} - ${project.name}`);
-    const response = await openai.chat.completions.create({
-      model: MODEL,
+    
+    // Get OpenAI client and model from settings
+    const openaiClient = await getOpenAIClient();
+    const model = await getOpenAIModel();
+    
+    const response = await openaiClient.chat.completions.create({
+      model,
       messages: [
         { 
           role: "system", 

@@ -49,7 +49,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/global-settings", requireAuth, async (req, res) => {
     try {
       // Check if user is admin
-      if (req.user.role !== "admin") {
+      if (req.user?.role !== "admin") {
         return res.status(403).json({ message: "Unauthorized. Admin access required." });
       }
       
@@ -65,7 +65,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/global-settings/:key", requireAuth, async (req, res) => {
     try {
       // Check if user is admin
-      if (req.user.role !== "admin") {
+      if (req.user?.role !== "admin") {
         return res.status(403).json({ message: "Unauthorized. Admin access required." });
       }
       
@@ -86,7 +86,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/global-settings", requireAuth, async (req, res) => {
     try {
       // Check if user is admin
-      if (req.user.role !== "admin") {
+      if (req.user?.role !== "admin") {
         return res.status(403).json({ message: "Unauthorized. Admin access required." });
       }
       
@@ -102,7 +102,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/global-settings/:id", requireAuth, async (req, res) => {
     try {
       // Check if user is admin
-      if (req.user.role !== "admin") {
+      if (req.user?.role !== "admin") {
         return res.status(403).json({ message: "Unauthorized. Admin access required." });
       }
       
@@ -124,7 +124,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/global-settings/:id", requireAuth, async (req, res) => {
     try {
       // Check if user is admin
-      if (req.user.role !== "admin") {
+      if (req.user?.role !== "admin") {
         return res.status(403).json({ message: "Unauthorized. Admin access required." });
       }
       

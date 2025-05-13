@@ -16,6 +16,7 @@ import ProjectHealth from "@/pages/project-health";
 import TestFetch from "@/pages/test-fetch";
 import AuthPage from "@/pages/auth-page";
 import Documenter from "@/pages/documenter";
+import AISettings from "@/pages/ai-settings";
 import Layout from "@/components/layout/layout";
 import { ProjectProvider } from "@/context/ProjectContext";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
