@@ -2,12 +2,56 @@ import OpenAI from "openai";
 import { Project } from "@shared/schema";
 import { fetchJiraIssues, getJiraContextForAI } from "./services/jira-service";
 import { fetchRepoFiles, fetchRecentCommits, fetchFileContent, getGitHubContextForAI } from "./services/github-service";
+import { storage } from "./storage";
 
-// Initialize the OpenAI client with the API key from environment variables
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Function to get OpenAI client with API key from global settings (or fallback to env var)
+async function getOpenAIClient() {
+  try {
+    // Try to get API key from global settings
+    const setting = await storage.getGlobalSetting("openai_api_key");
+    const apiKey = setting?.value || process.env.OPENAI_API_KEY;
+    
+    if (!apiKey) {
+      console.warn("OpenAI API key not found in global settings or environment variables");
+    }
+    
+    return new OpenAI({ apiKey });
+  } catch (error) {
+    console.error("Error getting OpenAI client, falling back to environment variable:", error);
+    // Fallback to environment variable
+    return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+}
 
-// the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-const MODEL = "gpt-4o";
+// Function to get the configured model from global settings (or use default)
+async function getOpenAIModel() {
+  try {
+    // Try to get model from global settings
+    const setting = await storage.getGlobalSetting("openai_model");
+    // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+    return setting?.value || "gpt-4o";
+  } catch (error) {
+    console.error("Error getting OpenAI model, using default:", error);
+    // Default model
+    return "gpt-4o";
+  }
+}
+
+// Helper function to make OpenAI API calls with dynamic client and model
+async function callOpenAI(
+  messages: ChatCompletionCreateParams.Message[],
+  options: { max_tokens?: number; temperature?: number } = {}
+) {
+  const openai = await getOpenAIClient();
+  const model = await getOpenAIModel();
+  
+  return openai.chat.completions.create({
+    model,
+    messages,
+    max_tokens: options.max_tokens || 1000,
+    temperature: options.temperature || 0.7
+  });
+}
 
 // Define project contexts to enhance assistant responses
 interface ProjectContext {
@@ -1413,23 +1457,18 @@ export async function generateDocument(
     // Call OpenAI to generate document content
     console.log(`Generating ${documentType} document using OpenAI...`);
     
-    const response = await openai.chat.completions.create({
-      model: MODEL,
-      messages: [
-        {
-          role: "system",
-          content: `You are an expert documentation generator specializing in software development documentation. 
-          Generate content in markdown format that is detailed, professional, and ready for use in a software project.
-          Focus on producing high-quality, actionable content that provides real value.`
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      max_tokens: 4000,
-      temperature: 0.7
-    });
+    const response = await callOpenAI([
+      {
+        role: "system",
+        content: `You are an expert documentation generator specializing in software development documentation. 
+        Generate content in markdown format that is detailed, professional, and ready for use in a software project.
+        Focus on producing high-quality, actionable content that provides real value.`
+      },
+      {
+        role: "user",
+        content: prompt
+      }
+    ], { max_tokens: 4000, temperature: 0.7 });
     
     const content = response.choices[0].message.content || "Error generating document content.";
     

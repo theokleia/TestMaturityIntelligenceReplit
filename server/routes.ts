@@ -44,6 +44,103 @@ function requireAuth(req: Request, res: Response, next: Function) {
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
   setupAuth(app);
+  
+  // Global settings routes - protected for admin use
+  app.get("/api/global-settings", requireAuth, async (req, res) => {
+    try {
+      // Check if user is admin
+      if (req.user.role !== "admin") {
+        return res.status(403).json({ message: "Unauthorized. Admin access required." });
+      }
+      
+      const category = req.query.category as string | undefined;
+      const settings = await storage.getGlobalSettings(category);
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching global settings:", error);
+      res.status(500).json({ message: "Failed to fetch global settings" });
+    }
+  });
+  
+  app.get("/api/global-settings/:key", requireAuth, async (req, res) => {
+    try {
+      // Check if user is admin
+      if (req.user.role !== "admin") {
+        return res.status(403).json({ message: "Unauthorized. Admin access required." });
+      }
+      
+      const key = req.params.key;
+      const setting = await storage.getGlobalSetting(key);
+      
+      if (!setting) {
+        return res.status(404).json({ message: `Setting with key '${key}' not found` });
+      }
+      
+      res.json(setting);
+    } catch (error) {
+      console.error(`Error fetching global setting '${req.params.key}':`, error);
+      res.status(500).json({ message: "Failed to fetch global setting" });
+    }
+  });
+  
+  app.post("/api/global-settings", requireAuth, async (req, res) => {
+    try {
+      // Check if user is admin
+      if (req.user.role !== "admin") {
+        return res.status(403).json({ message: "Unauthorized. Admin access required." });
+      }
+      
+      const setting = req.body;
+      const result = await storage.createGlobalSetting(setting);
+      res.status(201).json(result);
+    } catch (error) {
+      console.error("Error creating global setting:", error);
+      res.status(500).json({ message: "Failed to create global setting" });
+    }
+  });
+  
+  app.patch("/api/global-settings/:id", requireAuth, async (req, res) => {
+    try {
+      // Check if user is admin
+      if (req.user.role !== "admin") {
+        return res.status(403).json({ message: "Unauthorized. Admin access required." });
+      }
+      
+      const id = parseInt(req.params.id);
+      const setting = req.body;
+      const result = await storage.updateGlobalSetting(id, setting);
+      
+      if (!result) {
+        return res.status(404).json({ message: `Setting with id ${id} not found` });
+      }
+      
+      res.json(result);
+    } catch (error) {
+      console.error(`Error updating global setting ${req.params.id}:`, error);
+      res.status(500).json({ message: "Failed to update global setting" });
+    }
+  });
+  
+  app.delete("/api/global-settings/:id", requireAuth, async (req, res) => {
+    try {
+      // Check if user is admin
+      if (req.user.role !== "admin") {
+        return res.status(403).json({ message: "Unauthorized. Admin access required." });
+      }
+      
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteGlobalSetting(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: `Setting with id ${id} not found` });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error(`Error deleting global setting ${req.params.id}:`, error);
+      res.status(500).json({ message: "Failed to delete global setting" });
+    }
+  });
   // Get all maturity dimensions
   app.get("/api/dimensions", async (req, res) => {
     try {
