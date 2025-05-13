@@ -210,12 +210,10 @@ export async function generateMaturityInsights(
       Limit your response to 3-4 sentences maximum and use plain text only.
     `;
 
-    const response = await openai.chat.completions.create({
-      model: MODEL,
-      messages: [
-        { role: "system", content: "You are an expert testing consultant specializing in the Adaptive Testing Maturity Framework (ATMF)." },
-        { role: "user", content: prompt }
-      ],
+    const response = await callOpenAI([
+      { role: "system", content: "You are an expert testing consultant specializing in the Adaptive Testing Maturity Framework (ATMF)." },
+      { role: "user", content: prompt }
+    ], {
       temperature: 0.7,
       max_tokens: 200,
     });
@@ -251,15 +249,12 @@ export async function generateRecommendations(
       Return your response in JSON format with these fields: title, description, priority, and actions (array).
     `;
 
-    const response = await openai.chat.completions.create({
-      model: MODEL,
-      messages: [
-        { role: "system", content: "You are an expert testing consultant specializing in the Adaptive Testing Maturity Framework (ATMF)." },
-        { role: "user", content: prompt }
-      ],
+    const response = await callOpenAI([
+      { role: "system", content: "You are an expert testing consultant specializing in the Adaptive Testing Maturity Framework (ATMF)." },
+      { role: "user", content: prompt }
+    ], {
       temperature: 0.7,
       max_tokens: 400,
-      response_format: { type: "json_object" }
     });
 
     const result = JSON.parse(response.choices[0].message.content || "{}");
