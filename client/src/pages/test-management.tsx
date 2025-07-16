@@ -249,6 +249,42 @@ export default function TestManagement() {
     suiteId: selectedSuite?.id,
     projectId
   });
+
+  // Store test case counts for each suite
+  const [testCaseCounts, setTestCaseCounts] = useState<Record<number, number>>({});
+
+  // Function to get test case count for a suite
+  const getTestCasesCount = (suiteId: number): number => {
+    return testCaseCounts[suiteId] || 0;
+  };
+
+  // Fetch test case counts for all suites
+  useEffect(() => {
+    const fetchTestCaseCounts = async () => {
+      if (!testSuitesData || !projectId) return;
+
+      const counts: Record<number, number> = {};
+      
+      for (const suite of testSuitesData) {
+        try {
+          const response = await fetch(`/api/test-cases?suiteId=${suite.id}`);
+          if (response.ok) {
+            const data = await response.json();
+            counts[suite.id] = data.length;
+          } else {
+            counts[suite.id] = 0;
+          }
+        } catch (error) {
+          console.error(`Error fetching test cases for suite ${suite.id}:`, error);
+          counts[suite.id] = 0;
+        }
+      }
+
+      setTestCaseCounts(counts);
+    };
+
+    fetchTestCaseCounts();
+  }, [testSuitesData, projectId]);
   
   // Form for creating a new test suite
   const newSuiteForm = useForm<z.infer<typeof createTestSuiteSchema>>({
@@ -939,8 +975,26 @@ export default function TestManagement() {
                           >
                             <div className="p-4">
                               <div className="flex items-center justify-between mb-1">
-                                <div className="truncate font-medium" title={suite.name}>
-                                  {suite.name}
+                                <div className="flex items-center gap-2">
+                                  <div className="truncate font-medium" title={suite.name}>
+                                    {suite.name}
+                                  </div>
+                                  {/* Test Case Count Indicator */}
+                                  <div className={`inline-flex items-center justify-center h-4 w-4 rounded-full ${
+                                    getTestCasesCount(suite.id) > 0 
+                                      ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' 
+                                      : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500'
+                                  }`} title={
+                                    getTestCasesCount(suite.id) > 0 
+                                      ? `${getTestCasesCount(suite.id)} test case${getTestCasesCount(suite.id) === 1 ? '' : 's'}`
+                                      : 'No test cases'
+                                  }>
+                                    {getTestCasesCount(suite.id) > 0 ? (
+                                      <Check className="h-2.5 w-2.5" />
+                                    ) : (
+                                      <X className="h-2.5 w-2.5" />
+                                    )}
+                                  </div>
                                 </div>
                                 <div className="flex items-center gap-1">
                                   <StatusBadge status={suite.status} variant="test" />

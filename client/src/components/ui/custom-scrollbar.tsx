@@ -12,27 +12,32 @@ const CustomScrollbar = forwardRef<HTMLDivElement, CustomScrollbarProps>(
   ({ children, className, maxHeight = "400px", orientation = "vertical" }, ref) => {
     const scrollbarClasses = cn(
       "relative overflow-auto",
-      // Base scrollbar styling
-      "[&::-webkit-scrollbar]:w-2",
-      "[&::-webkit-scrollbar]:h-2",
-      "[&::-webkit-scrollbar-track]:bg-transparent",
+      // Base scrollbar styling - making it more visible
+      "[&::-webkit-scrollbar]:w-3",
+      "[&::-webkit-scrollbar]:h-3",
+      "[&::-webkit-scrollbar-track]:bg-gray-100",
       "[&::-webkit-scrollbar-track]:rounded-full",
+      "[&::-webkit-scrollbar-track]:border",
+      "[&::-webkit-scrollbar-track]:border-gray-200",
       
-      // Scrollbar thumb styling - dark blue theme
-      "[&::-webkit-scrollbar-thumb]:bg-blue-600/60",
+      // Scrollbar thumb styling - dark blue theme, more opaque
+      "[&::-webkit-scrollbar-thumb]:bg-blue-600/80",
       "[&::-webkit-scrollbar-thumb]:rounded-full",
       "[&::-webkit-scrollbar-thumb]:border-2",
-      "[&::-webkit-scrollbar-thumb]:border-transparent",
+      "[&::-webkit-scrollbar-thumb]:border-gray-100",
       "[&::-webkit-scrollbar-thumb]:bg-clip-padding",
       
       // Hover states
-      "[&::-webkit-scrollbar-thumb]:hover:bg-blue-600/80",
-      "[&::-webkit-scrollbar-thumb]:active:bg-blue-600",
+      "[&::-webkit-scrollbar-thumb]:hover:bg-blue-700",
+      "[&::-webkit-scrollbar-thumb]:active:bg-blue-800",
       
       // Dark mode adjustments
-      "dark:[&::-webkit-scrollbar-thumb]:bg-blue-400/60",
-      "dark:[&::-webkit-scrollbar-thumb]:hover:bg-blue-400/80",
-      "dark:[&::-webkit-scrollbar-thumb]:active:bg-blue-400",
+      "dark:[&::-webkit-scrollbar-track]:bg-gray-800",
+      "dark:[&::-webkit-scrollbar-track]:border-gray-700",
+      "dark:[&::-webkit-scrollbar-thumb]:bg-blue-400/80",
+      "dark:[&::-webkit-scrollbar-thumb]:border-gray-800",
+      "dark:[&::-webkit-scrollbar-thumb]:hover:bg-blue-300",
+      "dark:[&::-webkit-scrollbar-thumb]:active:bg-blue-200",
       
       // Corner styling
       "[&::-webkit-scrollbar-corner]:bg-transparent",
