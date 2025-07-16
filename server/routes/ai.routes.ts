@@ -249,17 +249,3 @@ export function registerAIRoutes(app: Express) {
   });
 }
 
-// Helper function for generating test suites (placeholder - would need to be implemented)
-async function generateTestSuites(project: any, organizationType: string, documents: any[], jiraTickets: any[]) {
-  // This would contain the logic for generating test suites based on organization type
-  // For now, return a placeholder structure
-  return [
-    {
-      name: `${organizationType} Test Suite 1`,
-      description: `Test suite organized by ${organizationType}`,
-      type: "functional",
-      priority: "high",
-      projectArea: organizationType
-    }
-  ];
-}
