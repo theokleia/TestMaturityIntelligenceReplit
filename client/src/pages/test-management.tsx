@@ -99,6 +99,7 @@ import { StatusBadge } from "@/components/design-system/status-badge";
 import { IconWrapper } from "@/components/design-system/icon-wrapper";
 import { PageContainer, PageHeader, PageContent } from "@/components/design-system/page-container";
 import { useProject } from "@/context/ProjectContext";
+import { AILoadingAnimation, CompactAILoader, AISuccessAnimation } from "@/components/ui/loading-animations";
 
 // Schema for creating a test suite
 const createTestSuiteSchema = z.object({
@@ -176,12 +177,16 @@ export default function TestManagement() {
   const [organizationType, setOrganizationType] = useState<string>("");
   const [proposedSuites, setProposedSuites] = useState<any[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [suiteGenerationStage, setSuiteGenerationStage] = useState("");
   
   // AI Test Coverage state
   const [aiCoverageDialogOpen, setAiCoverageDialogOpen] = useState(false);
   const [proposedTestCases, setProposedTestCases] = useState<ProposedTestCase[]>([]);
   const [coverageAnalysis, setCoverageAnalysis] = useState<any>(null);
   const [isGeneratingCoverage, setIsGeneratingCoverage] = useState(false);
+  const [coverageLoadingStage, setCoverageLoadingStage] = useState("");
+  const [testCaseGenerationLoading, setTestCaseGenerationLoading] = useState(false);
+  const [aiGenerationStage, setAiGenerationStage] = useState("");
   
   // Debug selected project
   console.log("TestManagement - selectedProject:", selectedProject);
@@ -367,22 +372,49 @@ export default function TestManagement() {
   
   // Handle generating AI test cases
   function onGenerateAiTestCases(data: z.infer<typeof generateTestCasesSchema>) {
+    setTestCaseGenerationLoading(true);
+    setAiGenerationStage("Analyzing feature requirements...");
+    setAiGenerateDialogOpen(false);
+    
+    // Simulate stages for better UX
+    const stages = [
+      "Analyzing feature requirements...",
+      "Understanding complexity factors...",
+      "Designing test scenarios...",
+      "Creating detailed test cases...",
+      "Finalizing test steps..."
+    ];
+    
+    let stageIndex = 0;
+    const stageInterval = setInterval(() => {
+      if (stageIndex < stages.length - 1) {
+        stageIndex++;
+        setAiGenerationStage(stages[stageIndex]);
+      }
+    }, 1200);
+    
     // Ensure complexity is properly typed
     generateTestCases({
       ...data,
       complexity: data.complexity as "high" | "medium" | "low"
     });
     
-    // Handle success actions
-    toast({
-      title: "Success",
-      description: "Generated test cases successfully",
-    });
-    setAiGenerateDialogOpen(false);
-    generateAiCasesForm.reset();
-    if (selectedSuite) {
-      generateAiCasesForm.setValue("testSuiteId", selectedSuite.id);
-    }
+    // Handle success actions (will be triggered by the mutation)
+    setTimeout(() => {
+      clearInterval(stageInterval);
+      setTestCaseGenerationLoading(false);
+      setAiGenerationStage("");
+      
+      toast({
+        title: "Success",
+        description: "Generated test cases successfully",
+      });
+      
+      generateAiCasesForm.reset();
+      if (selectedSuite) {
+        generateAiCasesForm.setValue("testSuiteId", selectedSuite.id);
+      }
+    }, 6000); // Total duration for the loading animation
   }
   
   // Handle updating a test case
@@ -497,6 +529,25 @@ export default function TestManagement() {
     if (!selectedProject || !organizationType) return;
     
     setIsGenerating(true);
+    setSuiteGenerationStage("Understanding project context...");
+    
+    // Simulate stages for better UX
+    const stages = [
+      "Understanding project context...",
+      "Analyzing project structure...",
+      "Designing test architecture...",
+      "Creating test suites...",
+      "Optimizing organization..."
+    ];
+    
+    let stageIndex = 0;
+    const stageInterval = setInterval(() => {
+      if (stageIndex < stages.length - 1) {
+        stageIndex++;
+        setSuiteGenerationStage(stages[stageIndex]);
+      }
+    }, 1500);
+    
     try {
       const response = await fetch('/api/ai/generate-test-suites', {
         method: 'POST',
@@ -535,7 +586,9 @@ export default function TestManagement() {
         variant: "destructive"
       });
     } finally {
+      clearInterval(stageInterval);
       setIsGenerating(false);
+      setSuiteGenerationStage("");
     }
   }
 
@@ -616,6 +669,24 @@ export default function TestManagement() {
     }
 
     setIsGeneratingCoverage(true);
+    setCoverageLoadingStage("Initializing analysis...");
+    
+    // Simulate stages for better UX
+    const stages = [
+      "Scanning existing test cases...",
+      "Analyzing project documentation...",
+      "Reviewing Jira tickets...",
+      "Identifying coverage gaps...",
+      "Generating recommendations..."
+    ];
+    
+    let stageIndex = 0;
+    const stageInterval = setInterval(() => {
+      if (stageIndex < stages.length - 1) {
+        stageIndex++;
+        setCoverageLoadingStage(stages[stageIndex]);
+      }
+    }, 2000);
     
     try {
       const response = await fetch(`/api/test-suites/${selectedSuite.id}/generate-coverage`, {
@@ -656,7 +727,9 @@ export default function TestManagement() {
         variant: "destructive",
       });
     } finally {
+      clearInterval(stageInterval);
       setIsGeneratingCoverage(false);
+      setCoverageLoadingStage("");
     }
   }
 
@@ -1542,10 +1615,17 @@ export default function TestManagement() {
               <DialogFooter>
                 <Button 
                   type="submit" 
+                  disabled={testCaseGenerationLoading}
                   className="flex items-center gap-2"
                 >
-                  <Bot className="h-4 w-4" />
-                  <span>Generate Test Cases</span>
+                  {testCaseGenerationLoading ? (
+                    <CompactAILoader message="Generating..." />
+                  ) : (
+                    <>
+                      <Bot className="h-4 w-4" />
+                      <span>Generate Test Cases</span>
+                    </>
+                  )}
                 </Button>
               </DialogFooter>
             </form>
@@ -2495,6 +2575,36 @@ export default function TestManagement() {
               </DialogFooter>
             </div>
           ) : null}
+        </DialogContent>
+      </Dialog>
+
+      {/* AI Test Coverage Loading Dialog */}
+      <Dialog open={isGeneratingCoverage} onOpenChange={() => {}}>
+        <DialogContent className="max-w-lg">
+          <AILoadingAnimation 
+            type="coverage-analysis"
+            stage={coverageLoadingStage}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* AI Test Case Generation Loading Dialog */}
+      <Dialog open={testCaseGenerationLoading} onOpenChange={() => {}}>
+        <DialogContent className="max-w-lg">
+          <AILoadingAnimation 
+            type="test-generation"
+            stage={aiGenerationStage}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* AI Test Suite Generation Loading Dialog */}
+      <Dialog open={isGenerating} onOpenChange={() => {}}>
+        <DialogContent className="max-w-lg">
+          <AILoadingAnimation 
+            type="test-suites"
+            stage={suiteGenerationStage}
+          />
         </DialogContent>
       </Dialog>
     </AppLayout>
