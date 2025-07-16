@@ -1220,17 +1220,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         createdTestCases.push(newTestCase);
         
-        // Create Jira links if provided
-        if (proposal.jiraTicketIds && proposal.jiraTicketIds.length > 0) {
-          for (const ticketId of proposal.jiraTicketIds) {
+        // Create Jira links if provided (support both jiraTickets and jiraTicketIds)
+        const ticketKeys = [];
+        
+        // Prefer jiraTickets array with summaries
+        if (proposal.jiraTickets && proposal.jiraTickets.length > 0) {
+          ticketKeys.push(...proposal.jiraTickets.map(ticket => ticket.key));
+        } 
+        // Fallback to jiraTicketIds for backwards compatibility
+        else if (proposal.jiraTicketIds && proposal.jiraTicketIds.length > 0) {
+          ticketKeys.push(...proposal.jiraTicketIds);
+        }
+        
+        // Create Jira links for all ticket keys
+        if (ticketKeys.length > 0) {
+          for (const ticketKey of ticketKeys) {
             try {
               await storage.createTestCaseJiraLink({
                 testCaseId: newTestCase.id,
-                jiraTicketKey: ticketId,
+                jiraTicketKey: ticketKey,
                 projectId: testProjectId
               });
             } catch (error) {
-              console.error(`Error creating Jira link for ticket ${ticketId}:`, error);
+              console.error(`Error creating Jira link for ticket ${ticketKey}:`, error);
             }
           }
         }

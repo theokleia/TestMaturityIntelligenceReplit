@@ -730,7 +730,7 @@ ${existingTestCases.map(tc => `- ${tc.title}: ${tc.description} (Priority: ${tc.
       ${relevantDocs.map(doc => `- ${doc.title}: ${doc.content?.substring(0, 500)}...`).join('\n')}
 
       ## Related Jira Tickets:
-      ${relevantTickets.map(ticket => `- ${ticket.key}: ${ticket.fields?.summary} (Status: ${ticket.fields?.status?.name})`).join('\n')}
+      ${relevantTickets.map(ticket => `- ${ticket.key}: ${ticket.fields?.summary} (Status: ${ticket.fields?.status?.name}) - ${ticket.fields?.description?.substring(0, 200) || 'No description'}`).join('\n')}
 
       ## Task:
       ${existingTestCases.length > 0 
@@ -753,6 +753,7 @@ ${existingTestCases.map(tc => `- ${tc.title}: ${tc.description} (Priority: ${tc.
             "description": "Detailed description of what this test validates (1-2 sentences)",
             "priority": "high|medium|low based on business impact and risk",
             "jiraTicketIds": ["Array of relevant Jira ticket keys"],
+            "jiraTickets": [{"key": "TICKET-123", "summary": "Shortened summary of the ticket (max 50 chars)"}],
             "reasoning": "Brief explanation of why this test case is important (1 sentence)"
           }
         ],
@@ -781,14 +782,35 @@ ${existingTestCases.map(tc => `- ${tc.title}: ${tc.description} (Priority: ${tc.
     
     const result = JSON.parse(content);
     
+    // Enhance proposed test cases with actual Jira ticket data
+    const enhancedTestCases = result.proposedTestCases?.map((testCase: any) => {
+      const jiraTickets = testCase.jiraTicketIds?.map((ticketKey: string) => {
+        const ticket = relevantTickets.find(t => t.key === ticketKey);
+        return ticket ? {
+          key: ticket.key,
+          summary: ticket.fields?.summary?.substring(0, 50) || 'No summary'
+        } : { key: ticketKey, summary: 'Ticket not found' };
+      }) || [];
+      
+      return {
+        ...testCase,
+        jiraTickets
+      };
+    }) || [];
+
     // Ensure proper structure
     return {
-      proposedTestCases: Array.isArray(result.proposedTestCases) ? result.proposedTestCases : [],
+      proposedTestCases: enhancedTestCases,
       analysis: result.analysis || {
         existingCoverage: existingTestCases.length > 0 ? "Existing test cases provide partial coverage" : "No existing coverage",
         gaps: ["Unable to analyze coverage gaps"],
         recommendation: "Manual review recommended"
-      }
+      },
+      jiraTicketsContext: relevantTickets.map(ticket => ({
+        key: ticket.key,
+        summary: ticket.fields?.summary || 'No summary',
+        status: ticket.fields?.status?.name || 'Unknown'
+      }))
     };
   } catch (error) {
     console.error("Error generating test coverage:", error);

@@ -137,6 +137,19 @@ const generateTestCasesSchema = z.object({
   testSuiteId: z.coerce.number().min(1, "Test suite is required"),
 });
 
+// Interface for proposed test cases from AI
+interface ProposedTestCase {
+  title: string;
+  description: string;
+  priority: "high" | "medium" | "low";
+  jiraTicketIds: string[];
+  jiraTickets: Array<{
+    key: string;
+    summary: string;
+  }>;
+  reasoning: string;
+}
+
 // Test Management page component
 export default function TestManagement() {
   const { toast } = useToast();
@@ -166,7 +179,7 @@ export default function TestManagement() {
   
   // AI Test Coverage state
   const [aiCoverageDialogOpen, setAiCoverageDialogOpen] = useState(false);
-  const [proposedTestCases, setProposedTestCases] = useState<any[]>([]);
+  const [proposedTestCases, setProposedTestCases] = useState<ProposedTestCase[]>([]);
   const [coverageAnalysis, setCoverageAnalysis] = useState<any>(null);
   const [isGeneratingCoverage, setIsGeneratingCoverage] = useState(false);
   
@@ -2402,7 +2415,30 @@ export default function TestManagement() {
                         </div>
                       </div>
                       
-                      {testCase.jiraTicketIds && testCase.jiraTicketIds.length > 0 && (
+                      {/* Jira Ticket Coverage */}
+                      {testCase.jiraTickets && testCase.jiraTickets.length > 0 && (
+                        <div className="mt-3">
+                          <h5 className="font-medium text-sm text-text-muted mb-2">Covers Jira Tickets:</h5>
+                          <div className="space-y-2">
+                            {testCase.jiraTickets.map((ticket, ticketIndex) => (
+                              <div key={ticketIndex} className="bg-atmf-main/50 p-2 rounded border border-white/10">
+                                <div className="flex items-start gap-2">
+                                  <Badge variant="outline" className="text-xs font-mono">
+                                    {ticket.key}
+                                  </Badge>
+                                  <span className="text-sm text-text-muted flex-1">
+                                    {ticket.summary}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Fallback for jiraTicketIds (for backwards compatibility) */}
+                      {(!testCase.jiraTickets || testCase.jiraTickets.length === 0) && 
+                       testCase.jiraTicketIds && testCase.jiraTicketIds.length > 0 && (
                         <div className="mt-3 flex flex-wrap gap-1">
                           {testCase.jiraTicketIds.map((ticketId: string) => (
                             <Badge key={ticketId} variant="outline" className="text-xs">
