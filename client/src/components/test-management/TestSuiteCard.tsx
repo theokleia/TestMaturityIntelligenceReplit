@@ -2,6 +2,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/ui/status-badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { 
   FileText, 
   Calendar, 
@@ -15,7 +21,8 @@ import {
   Eye,
   GitBranch,
   BookOpen,
-  Shield
+  Shield,
+  Layers
 } from "lucide-react";
 
 interface TestSuite {
@@ -46,6 +53,30 @@ interface TestSuiteCardProps {
   onImportToSuite: (suite: TestSuite) => void;
 }
 
+function CoverageTooltipContent({ coverage }: { coverage: string }) {
+  const sections = parseCoverage(coverage);
+  
+  if (!sections || sections.length === 0) {
+    return <div className="text-xs">No coverage information available</div>;
+  }
+  
+  return (
+    <div className="space-y-2 text-xs">
+      {sections.map((section, index) => (
+        <div key={index}>
+          <div className="flex items-center gap-1 font-medium mb-1">
+            <section.icon className="h-3 w-3" />
+            <span>{section.type}:</span>
+          </div>
+          <div className="ml-4 text-text-muted">
+            {section.items.join(', ')}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function parseCoverage(coverage?: string) {
   if (!coverage) return null;
   
@@ -72,7 +103,7 @@ function parseCoverage(coverage?: string) {
     }
   });
   
-  return sections;
+  return sections.length > 0 ? sections : null;
 }
 
 export function TestSuiteCard({
@@ -115,6 +146,21 @@ export function TestSuiteCard({
               <Calendar className="h-3 w-3 text-primary" />
               <span className="text-text-muted">{suite.type}</span>
             </div>
+            {suite.coverage && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center gap-1 cursor-help">
+                      <Layers className="h-3 w-3 text-purple-500" />
+                      <span className="text-xs text-purple-600">Coverage</span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-sm">
+                    <CoverageTooltipContent coverage={suite.coverage} />
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </div>
           
           {suite.aiGenerated && (
