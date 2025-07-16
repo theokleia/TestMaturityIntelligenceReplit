@@ -1232,15 +1232,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ticketKeys.push(...proposal.jiraTicketIds);
         }
         
-        // Create Jira links for all ticket keys
+        // Create Jira links for all ticket keys (only for tickets that exist in database)
         if (ticketKeys.length > 0) {
           for (const ticketKey of ticketKeys) {
             try {
-              await storage.createTestCaseJiraLink({
-                testCaseId: newTestCase.id,
-                jiraTicketKey: ticketKey,
-                projectId: testProjectId
-              });
+              const link = await storage.createTestCaseJiraLinkByKey(
+                newTestCase.id,
+                ticketKey,
+                testProjectId,
+                "covers"
+              );
+              if (link) {
+                console.log(`Created Jira link for existing ticket ${ticketKey}`);
+              } else {
+                console.log(`Skipped creating link for non-existent ticket ${ticketKey}`);
+              }
             } catch (error) {
               console.error(`Error creating Jira link for ticket ${ticketKey}:`, error);
             }

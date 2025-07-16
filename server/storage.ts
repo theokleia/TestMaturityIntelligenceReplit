@@ -151,7 +151,7 @@ export interface IStorage {
   // Jira Tickets
   getJiraTicketsByProject(projectId: number): Promise<JiraTicket[]>;
   getJiraTicket(id: number): Promise<JiraTicket | undefined>;
-  getJiraTicketByKey(jiraKey: string): Promise<JiraTicket | undefined>;
+  getJiraTicketByKey(jiraKey: string, projectId: number): Promise<JiraTicket | undefined>;
   createJiraTicket(ticket: InsertJiraTicket): Promise<JiraTicket>;
   updateJiraTicket(id: number, ticket: Partial<InsertJiraTicket>): Promise<JiraTicket | undefined>;
   softDeleteJiraTicket(id: number): Promise<boolean>;
@@ -1529,11 +1529,6 @@ export class DatabaseStorage implements IStorage {
     return ticket || undefined;
   }
 
-  async getJiraTicketByKey(jiraKey: string): Promise<JiraTicket | undefined> {
-    const [ticket] = await db.select().from(jiraTickets).where(eq(jiraTickets.jiraKey, jiraKey));
-    return ticket || undefined;
-  }
-
   async createJiraTicket(ticket: InsertJiraTicket): Promise<JiraTicket> {
     const [newTicket] = await db.insert(jiraTickets).values(ticket).returning();
     return newTicket;
@@ -1600,6 +1595,36 @@ export class DatabaseStorage implements IStorage {
 
   async createTestCaseJiraLink(link: InsertTestCaseJiraLink): Promise<TestCaseJiraLink> {
     const [newLink] = await db.insert(testCaseJiraLinks).values(link).returning();
+    return newLink;
+  }
+
+  async getJiraTicketByKey(jiraKey: string, projectId: number): Promise<JiraTicket | undefined> {
+    const [ticket] = await db.select()
+      .from(jiraTickets)
+      .where(and(
+        eq(jiraTickets.jiraKey, jiraKey),
+        eq(jiraTickets.projectId, projectId)
+      ))
+      .limit(1);
+    return ticket || undefined;
+  }
+
+  async createTestCaseJiraLinkByKey(testCaseId: number, jiraKey: string, projectId: number, linkType: string = "covers"): Promise<TestCaseJiraLink | null> {
+    // First, find the Jira ticket by key
+    const jiraTicket = await this.getJiraTicketByKey(jiraKey, projectId);
+    
+    if (!jiraTicket) {
+      console.log(`Jira ticket ${jiraKey} not found in database - skipping link creation`);
+      return null;
+    }
+
+    // Create the link using the database ticket ID
+    const [newLink] = await db.insert(testCaseJiraLinks).values({
+      testCaseId,
+      jiraTicketId: jiraTicket.id,
+      linkType
+    }).returning();
+    
     return newLink;
   }
 

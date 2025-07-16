@@ -2503,11 +2503,21 @@ export default function TestManagement() {
                             {testCase.jiraTickets.map((ticket, ticketIndex) => (
                               <div key={ticketIndex} className="bg-atmf-main/50 p-2 rounded border border-white/10">
                                 <div className="flex items-start gap-2">
-                                  <Badge variant="outline" className="text-xs font-mono">
-                                    {ticket.key}
-                                  </Badge>
+                                  <div className="flex items-center gap-1">
+                                    <Badge variant="outline" className="text-xs font-mono">
+                                      {ticket.key}
+                                    </Badge>
+                                    {ticket.summary === 'Ticket not found' && (
+                                      <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-800 border-amber-200">
+                                        NEW
+                                      </Badge>
+                                    )}
+                                  </div>
                                   <span className="text-sm text-text-muted flex-1">
-                                    {ticket.summary}
+                                    {ticket.summary === 'Ticket not found' 
+                                      ? 'This ticket needs to be created in Jira'
+                                      : ticket.summary
+                                    }
                                   </span>
                                 </div>
                               </div>
