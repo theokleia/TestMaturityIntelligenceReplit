@@ -35,6 +35,15 @@ ATMosFera is an advanced AI-powered test management and documentation platform b
 
 ## Recent Changes
 
+### 2025-07-16: Enhanced AI Loading Animations and Jira Link Fix
+- Implemented playful loading animations for all AI test generation features
+- Added floating icons, pulsing dots, progress rings, and staged progress messages
+- Enhanced AI Test Coverage, Test Case Generation, and Test Suite Generation with interactive loading states
+- Fixed critical Jira link creation bug by ensuring proper operation order: test cases created first, then Jira links
+- Added "NEW" badge indicators for non-existent Jira tickets in AI coverage proposals
+- Improved error handling to gracefully skip links for missing tickets while maintaining database integrity
+- Updated database interface to properly handle ticket existence checking with projectId parameter
+
 ### 2025-07-16: Jira Integration and Ticket Management System
 - Implemented comprehensive Jira ticket storage and synchronization system
 - Added three new database tables: jira_tickets, jira_sync_logs, test_case_jira_links

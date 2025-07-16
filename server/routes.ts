@@ -1199,7 +1199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const testProjectId = projectId || testSuite.projectId;
       const createdTestCases = [];
       
-      // Create test cases from the accepted proposals
+      // First, create all test cases
       for (const proposal of proposedTestCases) {
         const newTestCase = await storage.createTestCase({
           title: proposal.title,
@@ -1219,8 +1219,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         createdTestCases.push(newTestCase);
+      }
+      
+      // Then, create Jira links for the created test cases
+      for (let i = 0; i < proposedTestCases.length; i++) {
+        const proposal = proposedTestCases[i];
+        const testCase = createdTestCases[i];
         
-        // Create Jira links if provided (support both jiraTickets and jiraTicketIds)
+        // Get ticket keys from proposal (support both jiraTickets and jiraTicketIds)
         const ticketKeys = [];
         
         // Prefer jiraTickets array with summaries
@@ -1237,18 +1243,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           for (const ticketKey of ticketKeys) {
             try {
               const link = await storage.createTestCaseJiraLinkByKey(
-                newTestCase.id,
+                testCase.id,
                 ticketKey,
                 testProjectId,
                 "covers"
               );
               if (link) {
-                console.log(`Created Jira link for existing ticket ${ticketKey}`);
+                console.log(`Created Jira link for test case "${testCase.title}" to existing ticket ${ticketKey}`);
               } else {
-                console.log(`Skipped creating link for non-existent ticket ${ticketKey}`);
+                console.log(`Skipped creating link for test case "${testCase.title}" to non-existent ticket ${ticketKey}`);
               }
             } catch (error) {
-              console.error(`Error creating Jira link for ticket ${ticketKey}:`, error);
+              console.error(`Error creating Jira link for test case "${testCase.title}" to ticket ${ticketKey}:`, error);
             }
           }
         }
