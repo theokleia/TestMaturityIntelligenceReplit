@@ -105,6 +105,7 @@ import { PageContainer, PageHeader, PageContent } from "@/components/design-syst
 import { useProject } from "@/context/ProjectContext";
 import { AILoadingAnimation, CompactAILoader, AISuccessAnimation } from "@/components/ui/loading-animations";
 import { JiraTicketsBadge } from "@/components/test-management/JiraTicketsBadge";
+import { CustomScrollbar } from "@/components/ui/custom-scrollbar";
 
 // Schema for creating a test suite
 const createTestSuiteSchema = z.object({
@@ -919,7 +920,7 @@ export default function TestManagement() {
                     />
                   </div>
                   
-                  <div className="max-h-[calc(100vh-350px)] overflow-y-auto">
+                  <CustomScrollbar maxHeight="calc(100vh-350px)">
                     {isLoadingTestSuites ? (
                       <div className="flex justify-center items-center h-24">
                         <p>Loading test suites...</p>
@@ -1012,7 +1013,7 @@ export default function TestManagement() {
                         </Button>
                       </div>
                     )}
-                  </div>
+                  </CustomScrollbar>
                 </div>
               </ATMFCard>
             </div>

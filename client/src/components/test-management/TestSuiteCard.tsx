@@ -22,7 +22,9 @@ import {
   GitBranch,
   BookOpen,
   Shield,
-  Layers
+  Layers,
+  Check,
+  X
 } from "lucide-react";
 
 interface TestSuite {
@@ -121,9 +123,37 @@ export function TestSuiteCard({
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <CardTitle className="text-lg font-semibold mb-1 group-hover:text-primary transition-colors">
-              {suite.name}
-            </CardTitle>
+            <div className="flex items-center gap-2 mb-1">
+              <CardTitle className="text-lg font-semibold group-hover:text-primary transition-colors">
+                {suite.name}
+              </CardTitle>
+              {/* Test Case Count Indicator */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className={`inline-flex items-center justify-center h-5 w-5 rounded-full ${
+                      testCasesCount > 0 
+                        ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' 
+                        : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500'
+                    }`}>
+                      {testCasesCount > 0 ? (
+                        <Check className="h-3 w-3" />
+                      ) : (
+                        <X className="h-3 w-3" />
+                      )}
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="text-xs">
+                      {testCasesCount > 0 
+                        ? `${testCasesCount} test case${testCasesCount === 1 ? '' : 's'} in this suite`
+                        : 'No test cases in this suite'
+                      }
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
             <p className="text-sm text-text-muted line-clamp-2">
               {suite.description}
             </p>

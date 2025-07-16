@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { ATMFCard } from "@/components/design-system/atmf-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { IconWrapper } from "@/components/design-system/icon-wrapper";
+import { CustomScrollbar } from "@/components/ui/custom-scrollbar";
 import { 
   Brain, 
   Bot,
@@ -64,7 +65,7 @@ export function AITestCoverageDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[80vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Bot className="h-5 w-5" />
@@ -75,8 +76,9 @@ export function AITestCoverageDialog({
           </DialogDescription>
         </DialogHeader>
         
-        {/* Coverage Analysis Summary */}
-        {coverageAnalysis && (
+        <CustomScrollbar maxHeight="calc(80vh - 200px)">
+          {/* Coverage Analysis Summary */}
+          {coverageAnalysis && (
           <div className="mb-6">
             <h3 className="font-medium text-lg mb-3">Coverage Analysis</h3>
             <div className="grid gap-4 md:grid-cols-2">
@@ -173,8 +175,9 @@ export function AITestCoverageDialog({
                 </ATMFCard>
               ))}
             </div>
+        </CustomScrollbar>
             
-            <DialogFooter className="flex items-center gap-2">
+        <DialogFooter className="flex items-center gap-2">
               <Button 
                 type="button" 
                 variant="outline" 
@@ -202,18 +205,22 @@ export function AITestCoverageDialog({
             <p className="text-text-muted">
               {coverageAnalysis.recommendation || "Review the analysis above for detailed coverage insights."}
             </p>
-            
-            <DialogFooter className="flex justify-center mt-6">
-              <Button 
-                onClick={handleClose}
-                className="flex items-center gap-2"
-              >
-                <Check className="h-4 w-4" />
-                <span>Close Analysis</span>
-              </Button>
-            </DialogFooter>
           </div>
         ) : null}
+        </CustomScrollbar>
+        
+        {/* Footer for coverage analysis only (when no test cases) */}
+        {proposedTestCases.length === 0 && coverageAnalysis && (
+          <DialogFooter className="flex justify-center mt-6">
+            <Button 
+              onClick={handleClose}
+              className="flex items-center gap-2"
+            >
+              <Check className="h-4 w-4" />
+              <span>Close Analysis</span>
+            </Button>
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );
