@@ -223,17 +223,45 @@ export function registerTestManagementRoutes(app: Express) {
         return res.status(404).json({ message: "Project not found" });
       }
       
+      // Parse coverage field to extract specific Jira tickets
+      let filteredJiraTickets = [];
+      if (testSuite.coverage) {
+        const parts = testSuite.coverage.split(' | ');
+        const jiraTicketsPart = parts.find(part => part.trim().startsWith('JIRA_TICKETS:'));
+        
+        if (jiraTicketsPart) {
+          const ticketKeys = jiraTicketsPart
+            .replace('JIRA_TICKETS:', '')
+            .trim()
+            .split(',')
+            .map(t => t.trim())
+            .filter(t => t);
+          
+          // Fetch only the specific tickets mentioned in coverage
+          const allJiraTickets = await storage.getJiraTicketsByProject(testProjectId);
+          filteredJiraTickets = allJiraTickets.filter(ticket => 
+            ticketKeys.includes(ticket.jiraKey)
+          );
+          
+          console.log(`Filtering Jira tickets for test suite ${testSuite.name}: Found ${filteredJiraTickets.length} tickets from coverage field (${ticketKeys.join(', ')})`);
+        } else {
+          console.log(`No Jira tickets specified in coverage field for test suite ${testSuite.name}`);
+        }
+      } else {
+        console.log(`No coverage field found for test suite ${testSuite.name}, using all project tickets`);
+        filteredJiraTickets = await storage.getJiraTicketsByProject(testProjectId);
+      }
+      
       // Fetch project context for AI analysis
       const documents = await storage.getDocuments({ projectId: testProjectId });
-      const jiraTickets = await storage.getJiraTicketsByProject(testProjectId);
       const existingTestCases = await storage.getTestCases({ projectId: testProjectId });
       
-      // Generate test coverage analysis
+      // Generate test coverage analysis with filtered tickets
       const coverageResult = await generateTestCoverage(
         project,
         testSuite,
         documents,
-        jiraTickets,
+        filteredJiraTickets,
         existingTestCases
       );
       
@@ -243,7 +271,7 @@ export function registerTestManagementRoutes(app: Express) {
         analysis: coverageResult.analysis,
         context: {
           documentsCount: documents.length,
-          jiraTicketsCount: jiraTickets.length,
+          jiraTicketsCount: filteredJiraTickets.length,
           existingTestCasesCount: existingTestCases.length
         }
       });
