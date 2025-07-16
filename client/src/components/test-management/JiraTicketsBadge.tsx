@@ -1,6 +1,5 @@
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Bug } from "lucide-react";
 
 interface JiraTicketsBadgeProps {
   jiraTicketIds?: string[];
@@ -43,12 +42,9 @@ export function JiraTicketsBadge({ jiraTicketIds, jiraTickets, className }: Jira
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger>
-          <div className="flex items-center gap-1">
-            <Bug className="h-3 w-3 text-blue-500" />
-            <Badge variant="outline" className={`text-xs ${className}`}>
-              {tickets.length}
-            </Badge>
-          </div>
+          <Badge variant="outline" className={`text-xs cursor-help ${className}`}>
+            {tickets.length}
+          </Badge>
         </TooltipTrigger>
         <TooltipContent>
           <div className="max-w-xs space-y-2">
