@@ -906,6 +906,18 @@ export class DatabaseStorage implements IStorage {
     // Add all test cases to the cycle
     return this.addTestCasesToCycle(cycleId, testCaseIds, suiteId);
   }
+
+  async removeTestCaseFromCycle(itemId: number): Promise<boolean> {
+    try {
+      await db
+        .delete(testCycleItems)
+        .where(eq(testCycleItems.id, itemId));
+      return true;
+    } catch (error) {
+      console.error("Error removing test case from cycle:", error);
+      return false;
+    }
+  }
   
   // Test Runs
   async getTestRuns(cycleItemId: number): Promise<TestRun[]> {

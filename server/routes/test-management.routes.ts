@@ -461,6 +461,82 @@ export function registerTestManagementRoutes(app: Express) {
     }
   });
 
+  // Test Cycle Items Routes
+  app.get("/api/test-cycle-items/:cycleId", async (req, res) => {
+    try {
+      const cycleId = parseInt(req.params.cycleId);
+      if (isNaN(cycleId)) {
+        return res.status(400).json({ message: "Invalid cycle ID" });
+      }
+      
+      const items = await storage.getTestCycleItems(cycleId);
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching test cycle items:", error);
+      res.status(500).json({ message: "Failed to fetch test cycle items" });
+    }
+  });
+
+  // Add test cases to cycle
+  app.post("/api/test-cycles/:cycleId/add-test-cases", requireAuth, async (req, res) => {
+    try {
+      const cycleId = parseInt(req.params.cycleId);
+      const { testCaseIds } = req.body;
+      
+      if (isNaN(cycleId)) {
+        return res.status(400).json({ message: "Invalid cycle ID" });
+      }
+      
+      if (!Array.isArray(testCaseIds) || testCaseIds.length === 0) {
+        return res.status(400).json({ message: "testCaseIds must be a non-empty array" });
+      }
+      
+      const items = await storage.addTestCasesToCycle(cycleId, testCaseIds);
+      res.status(201).json(items);
+    } catch (error) {
+      console.error("Error adding test cases to cycle:", error);
+      res.status(500).json({ message: "Failed to add test cases to cycle" });
+    }
+  });
+
+  // Add test suite to cycle
+  app.post("/api/test-cycles/:cycleId/add-suite/:suiteId", requireAuth, async (req, res) => {
+    try {
+      const cycleId = parseInt(req.params.cycleId);
+      const suiteId = parseInt(req.params.suiteId);
+      
+      if (isNaN(cycleId)) {
+        return res.status(400).json({ message: "Invalid cycle ID" });
+      }
+      
+      if (isNaN(suiteId)) {
+        return res.status(400).json({ message: "Invalid suite ID" });
+      }
+      
+      const items = await storage.addTestSuiteToCycle(cycleId, suiteId);
+      res.status(201).json(items);
+    } catch (error) {
+      console.error("Error adding test suite to cycle:", error);
+      res.status(500).json({ message: "Failed to add test suite to cycle" });
+    }
+  });
+
+  // Remove test case from cycle
+  app.delete("/api/test-cycle-items/:itemId", requireAuth, async (req, res) => {
+    try {
+      const itemId = parseInt(req.params.itemId);
+      if (isNaN(itemId)) {
+        return res.status(400).json({ message: "Invalid item ID" });
+      }
+      
+      await storage.removeTestCaseFromCycle(itemId);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error removing test case from cycle:", error);
+      res.status(500).json({ message: "Failed to remove test case from cycle" });
+    }
+  });
+
   // AI Test Steps Generation
   app.post("/api/ai/generate-test-steps", async (req, res) => {
     try {

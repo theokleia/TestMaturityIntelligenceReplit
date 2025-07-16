@@ -136,7 +136,7 @@ export default function TestExecution() {
   const [testRunDialogOpen, setTestRunDialogOpen] = useState(false);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [selectedCases, setSelectedCases] = useState<number[]>([]);
-  const [selectedSuiteId, setSelectedSuiteId] = useState<number | null>(null);
+  const [selectedSuiteIds, setSelectedSuiteIds] = useState<number[]>([]);
   const [selectedCycleItem, setSelectedCycleItem] = useState<TestCycleItem | null>(null);
   const [selectedTestCaseId, setSelectedTestCaseId] = useState<number | null>(null);
   const [testRunNotes, setTestRunNotes] = useState("");
@@ -345,43 +345,50 @@ export default function TestExecution() {
     );
   };
   
-  const handleAddTestSuite = () => {
-    if (!selectedCycle || !selectedSuiteId) return;
+  const handleAddTestSuites = () => {
+    if (!selectedCycle || selectedSuiteIds.length === 0) return;
     
-    console.log('Adding test suite to cycle:', {
+    console.log('Adding test suites to cycle:', {
       cycleId: selectedCycle.id,
-      suiteId: selectedSuiteId
+      suiteIds: selectedSuiteIds
     });
     
-    // Use the correct API endpoint path
-    console.log(`Using endpoint: /api/test-cycles/${selectedCycle.id}/add-suite/${selectedSuiteId}`);
-    addSuiteMutation.mutate(
-      {
-        cycleId: selectedCycle.id,
-        suiteId: selectedSuiteId,
-      },
-      {
-        onSuccess: (data) => {
-          console.log('Add test suite API response:', data);
-          toast({
-            title: "Success",
-            description: "Added test suite to cycle",
-          });
-          
-          setSelectSuiteDialogOpen(false);
-          setSelectedSuiteId(null);
-          refetchItems();
+    // Add each suite sequentially
+    let completed = 0;
+    selectedSuiteIds.forEach((suiteId) => {
+      console.log(`Using endpoint: /api/test-cycles/${selectedCycle.id}/add-suite/${suiteId}`);
+      addSuiteMutation.mutate(
+        {
+          cycleId: selectedCycle.id,
+          suiteId: suiteId,
         },
-        onError: (error) => {
-          console.error('Error adding test suite to cycle:', error);
-          toast({
-            title: "Error",
-            description: "Failed to add test suite to cycle",
-            variant: "destructive",
-          });
+        {
+          onSuccess: (data) => {
+            completed++;
+            console.log(`Add test suite ${suiteId} API response:`, data);
+            
+            if (completed === selectedSuiteIds.length) {
+              toast({
+                title: "Success",
+                description: `Added ${selectedSuiteIds.length} test suite${selectedSuiteIds.length !== 1 ? 's' : ''} to cycle`,
+              });
+              
+              setSelectSuiteDialogOpen(false);
+              setSelectedSuiteIds([]);
+              refetchItems();
+            }
+          },
+          onError: (error) => {
+            console.error('Error adding test suite to cycle:', error);
+            toast({
+              title: "Error",
+              description: "Failed to add test suite to cycle",
+              variant: "destructive",
+            });
+          }
         }
-      }
-    );
+      );
+    });
   };
   
   const handleRemoveTestCase = (item: TestCycleItem) => {
@@ -1015,9 +1022,9 @@ export default function TestExecution() {
       <Dialog open={selectSuiteDialogOpen} onOpenChange={setSelectSuiteDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Add Test Suite to Cycle</DialogTitle>
+            <DialogTitle>Add Test Suites to Cycle</DialogTitle>
             <DialogDescription>
-              Select a test suite to add all its test cases to the current cycle.
+              Select one or more test suites to add all their test cases to the current cycle.
             </DialogDescription>
           </DialogHeader>
           
@@ -1025,21 +1032,41 @@ export default function TestExecution() {
             {isLoadingSuites ? (
               <div className="text-center py-8">Loading test suites...</div>
             ) : testSuites && testSuites.length > 0 ? (
-              <Select 
-                onValueChange={(value) => setSelectedSuiteId(Number(value))}
-                value={selectedSuiteId?.toString()}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a test suite" />
-                </SelectTrigger>
-                <SelectContent>
+              <ScrollArea className="max-h-64 w-full rounded-md border p-4">
+                <div className="space-y-2">
                   {testSuites.map((suite) => (
-                    <SelectItem key={suite.id} value={suite.id.toString()}>
-                      {suite.name}
-                    </SelectItem>
+                    <div key={suite.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`suite-${suite.id}`}
+                        checked={selectedSuiteIds.includes(suite.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedSuiteIds([...selectedSuiteIds, suite.id]);
+                          } else {
+                            setSelectedSuiteIds(selectedSuiteIds.filter(id => id !== suite.id));
+                          }
+                        }}
+                      />
+                      <label
+                        htmlFor={`suite-${suite.id}`}
+                        className="flex-1 text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
+                        <div>
+                          <div className="font-medium">{suite.name}</div>
+                          {suite.description && (
+                            <div className="text-xs text-muted-foreground mt-1">
+                              {suite.description}
+                            </div>
+                          )}
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {testCases?.filter(tc => tc.suiteId === suite.id).length || 0} test cases
+                          </div>
+                        </div>
+                      </label>
+                    </div>
                   ))}
-                </SelectContent>
-              </Select>
+                </div>
+              </ScrollArea>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
                 No test suites found for this project.
@@ -1052,11 +1079,11 @@ export default function TestExecution() {
               Cancel
             </Button>
             <Button 
-              disabled={!selectedSuiteId} 
-              onClick={handleAddTestSuite}
+              disabled={selectedSuiteIds.length === 0} 
+              onClick={handleAddTestSuites}
               isPending={addSuiteMutation.isPending}
             >
-              Add Suite
+              Add {selectedSuiteIds.length} Suite{selectedSuiteIds.length !== 1 ? 's' : ''}
             </Button>
           </DialogFooter>
         </DialogContent>
