@@ -1037,7 +1037,7 @@ export default function TestManagement() {
                 />
                 <div className="p-4">
                   {selectedSuite?.coverage && (
-                    <div className="mb-4 p-3 bg-blue-50/50 dark:bg-blue-950/30 rounded-lg border border-blue-200/50 dark:border-blue-800/50">
+                    <div className="mb-4 p-3 bg-gradient-to-br from-blue-900/20 to-blue-800/20 rounded-lg border border-blue-400/30 shadow-lg shadow-blue-500/10">
                       <div className="flex items-center gap-2 mb-2">
                         <Layers className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                         <span className="font-medium text-blue-700 dark:text-blue-300">Test Coverage</span>
