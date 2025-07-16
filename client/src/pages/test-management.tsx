@@ -883,11 +883,12 @@ export default function TestManagement() {
                         <Button 
                           size="sm" 
                           variant="outline" 
-                          onClick={() => setAiGenerateDialogOpen(true)}
+                          onClick={handleGenerateTestCoverage}
+                          disabled={isGeneratingCoverage}
                           className="flex items-center gap-1"
                         >
                           <Brain className="h-3.5 w-3.5" />
-                          <span>Generate with AI</span>
+                          <span>{isGeneratingCoverage ? "Analyzing..." : "AI Test Coverage"}</span>
                         </Button>
                       </div>
                     )
