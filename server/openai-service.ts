@@ -696,22 +696,28 @@ export async function generateTestCoverage(
 
     // Get all required Jira tickets (these MUST be covered)
     const requiredTickets = jiraTickets.filter(ticket => 
-      requiredJiraTickets.includes(ticket.key)
+      requiredJiraTickets.includes(ticket.jiraKey || ticket.key)
     );
 
     // Get additional relevant tickets (these MAY be covered if relevant)
-    const additionalTickets = jiraTickets.filter(ticket => 
-      !requiredJiraTickets.includes(ticket.key) && (
-        ticket.fields?.summary?.toLowerCase().includes(testSuite.projectArea.toLowerCase()) ||
-        ticket.fields?.summary?.toLowerCase().includes(testSuite.name.toLowerCase()) ||
-        ticket.fields?.components?.some((comp: any) => 
-          testSuite.projectArea.toLowerCase().includes(comp.name.toLowerCase())
-        ) ||
-        ticket.fields?.labels?.some((label: string) => 
+    const additionalTickets = jiraTickets.filter(ticket => {
+      const ticketKey = ticket.jiraKey || ticket.key;
+      const ticketSummary = ticket.summary || ticket.fields?.summary || '';
+      const ticketComponents = ticket.components || ticket.fields?.components || [];
+      const ticketLabels = ticket.labels || ticket.fields?.labels || [];
+      
+      return !requiredJiraTickets.includes(ticketKey) && (
+        ticketSummary.toLowerCase().includes(testSuite.projectArea.toLowerCase()) ||
+        ticketSummary.toLowerCase().includes(testSuite.name.toLowerCase()) ||
+        ticketComponents.some((comp: any) => {
+          const compName = typeof comp === 'string' ? comp : comp.name;
+          return testSuite.projectArea.toLowerCase().includes(compName.toLowerCase());
+        }) ||
+        ticketLabels.some((label: string) => 
           testSuite.projectArea.toLowerCase().includes(label.toLowerCase())
         )
-      )
-    );
+      );
+    });
 
     // Combine required and additional tickets, prioritizing required ones
     const relevantTickets = [...requiredTickets, ...additionalTickets];
@@ -761,24 +767,39 @@ ${existingTestCases.map(tc => `- ${tc.title}: ${tc.description} (Priority: ${tc.
       ${requiredJiraTickets.length > 0 ? `
       **CRITICAL: The following Jira tickets MUST be covered by comprehensive test cases. Analyze each ticket's full content to generate complete test coverage:**
       ${requiredTickets.map(ticket => {
-        const description = ticket.fields?.description;
-        const descriptionText = typeof description === 'string' ? description : 'No description';
-        const priority = ticket.fields?.priority?.name || 'Unknown';
-        const components = ticket.fields?.components?.map(c => c.name).join(', ') || 'None';
-        const labels = ticket.fields?.labels?.join(', ') || 'None';
-        const issueType = ticket.fields?.issuetype?.name || 'Unknown';
+        // Handle both database tickets and Jira API tickets
+        const ticketKey = ticket.jiraKey || ticket.key;
+        const ticketSummary = ticket.summary || ticket.fields?.summary || 'No summary';
+        const description = ticket.description || ticket.fields?.description || 'No description';
+        const priority = ticket.priority || ticket.fields?.priority?.name || 'Unknown';
+        const status = ticket.status || ticket.fields?.status?.name || 'Unknown';
+        const issueType = ticket.issueType || ticket.fields?.issuetype?.name || 'Unknown';
+        const assignee = ticket.assignee || ticket.fields?.assignee?.displayName || 'Unassigned';
+        const reporter = ticket.reporter || ticket.fields?.reporter?.displayName || 'Unknown';
+        const created = ticket.jiraCreatedAt || ticket.fields?.created || ticket.createdAt || 'Unknown';
+        const updated = ticket.jiraUpdatedAt || ticket.fields?.updated || ticket.updatedAt || 'Unknown';
         
-        return `### ${ticket.key}: ${ticket.fields?.summary}
+        // Handle components and labels (can be arrays from DB or objects from API)
+        const components = ticket.components || ticket.fields?.components || [];
+        const labels = ticket.labels || ticket.fields?.labels || [];
+        const componentsText = Array.isArray(components) 
+          ? components.map(c => typeof c === 'string' ? c : c.name).join(', ') 
+          : 'None';
+        const labelsText = Array.isArray(labels) 
+          ? labels.join(', ') 
+          : 'None';
+        
+        return `### ${ticketKey}: ${ticketSummary}
         - Type: ${issueType}
         - Priority: ${priority}
-        - Status: ${ticket.fields?.status?.name}
-        - Components: ${components}
-        - Labels: ${labels}
-        - Description: ${descriptionText}
-        - Assignee: ${ticket.fields?.assignee?.displayName || 'Unassigned'}
-        - Reporter: ${ticket.fields?.reporter?.displayName || 'Unknown'}
-        - Created: ${ticket.fields?.created}
-        - Updated: ${ticket.fields?.updated}
+        - Status: ${status}
+        - Components: ${componentsText}
+        - Labels: ${labelsText}
+        - Description: ${description}
+        - Assignee: ${assignee}
+        - Reporter: ${reporter}
+        - Created: ${created}
+        - Updated: ${updated}
         `;
       }).join('\n\n')}
       ` : 'No mandatory Jira tickets specified in coverage field.'}
@@ -797,11 +818,16 @@ ${existingTestCases.map(tc => `- ${tc.title}: ${tc.description} (Priority: ${tc.
 
       ## Additional Relevant Jira Tickets (Optional Coverage):
       ${additionalTickets.length > 0 ? additionalTickets.map(ticket => {
-        const description = ticket.fields?.description;
+        const ticketKey = ticket.jiraKey || ticket.key;
+        const ticketSummary = ticket.summary || ticket.fields?.summary || 'No summary';
+        const description = ticket.description || ticket.fields?.description || 'No description';
         const descriptionText = typeof description === 'string' ? description.substring(0, 300) : 'No description';
-        return `### ${ticket.key}: ${ticket.fields?.summary}
-        - Type: ${ticket.fields?.issuetype?.name || 'Unknown'}
-        - Status: ${ticket.fields?.status?.name}
+        const issueType = ticket.issueType || ticket.fields?.issuetype?.name || 'Unknown';
+        const status = ticket.status || ticket.fields?.status?.name || 'Unknown';
+        
+        return `### ${ticketKey}: ${ticketSummary}
+        - Type: ${issueType}
+        - Status: ${status}
         - Description: ${descriptionText}`;
       }).join('\n\n') : 'No additional relevant tickets found.'}
 
@@ -902,12 +928,12 @@ ${existingTestCases.map(tc => `- ${tc.title}: ${tc.description} (Priority: ${tc.
     // Enhance proposed test cases with actual Jira ticket data
     const enhancedTestCases = result.proposedTestCases?.map((testCase: any) => {
       const jiraTickets = testCase.jiraTicketIds?.map((ticketKey: string) => {
-        const ticket = relevantTickets.find(t => t.key === ticketKey);
+        const ticket = relevantTickets.find(t => (t.key === ticketKey) || (t.jiraKey === ticketKey));
         if (ticket) {
-          const summary = ticket.fields?.summary;
+          const summary = ticket.summary || ticket.fields?.summary || 'No summary';
           const summaryText = typeof summary === 'string' ? summary.substring(0, 50) : 'No summary';
           return {
-            key: ticket.key,
+            key: ticketKey,
             summary: summaryText
           };
         }
@@ -949,9 +975,9 @@ ${existingTestCases.map(tc => `- ${tc.title}: ${tc.description} (Priority: ${tc.
     const additionalTestCases = [];
     if (uncoveredTickets.length > 0) {
       for (const ticketId of uncoveredTickets) {
-        const ticket = requiredTickets.find(t => t.key === ticketId);
+        const ticket = requiredTickets.find(t => (t.key === ticketId) || (t.jiraKey === ticketId));
         if (ticket) {
-          const summary = ticket.fields?.summary || 'No summary';
+          const summary = ticket.summary || ticket.fields?.summary || 'No summary';
           const shortSummary = typeof summary === 'string' ? summary.substring(0, 50) : 'No summary';
           
           additionalTestCases.push({
