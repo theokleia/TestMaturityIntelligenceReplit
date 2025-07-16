@@ -974,70 +974,26 @@ export default function TestManagement() {
                             }}
                           >
                             <div className="p-4">
-                              <div className="flex items-center justify-between mb-1">
-                                <div className="flex items-center gap-2">
-                                  <div className="truncate font-medium" title={suite.name}>
+                              <div className="flex items-start justify-between mb-1">
+                                <div className="flex-1 min-w-0 pr-2">
+                                  <div className="font-medium line-clamp-2 text-sm leading-tight" title={suite.name}>
                                     {suite.name}
                                   </div>
-                                  {/* Test Case Count Indicator */}
-                                  <div className={`inline-flex items-center justify-center h-4 w-4 rounded-full ${
-                                    getTestCasesCount(suite.id) > 0 
-                                      ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' 
-                                      : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500'
-                                  }`} title={
-                                    getTestCasesCount(suite.id) > 0 
-                                      ? `${getTestCasesCount(suite.id)} test case${getTestCasesCount(suite.id) === 1 ? '' : 's'}`
-                                      : 'No test cases'
-                                  }>
-                                    {getTestCasesCount(suite.id) > 0 ? (
-                                      <Check className="h-2.5 w-2.5" />
-                                    ) : (
-                                      <X className="h-2.5 w-2.5" />
-                                    )}
-                                  </div>
                                 </div>
-                                <div className="flex items-center gap-1">
-                                  <StatusBadge status={suite.status} variant="test" />
-                                  {selectedSuite?.id === suite.id && (
-                                    <div className="flex items-center ml-1">
-                                      <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        className="h-6 w-6"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setEditSuiteDialogOpen(true);
-                                        }}
-                                        title="Edit test suite"
-                                      >
-                                        <Pencil className="h-3.5 w-3.5" />
-                                      </Button>
-                                      <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        className="h-6 w-6 text-destructive hover:text-destructive"
-                                        onClick={async (e) => {
-                                          e.stopPropagation();
-                                          // Fetch test case count before showing dialog
-                                          try {
-                                            const response = await fetch(`/api/test-suites/${suite.id}/test-cases/count`);
-                                            if (response.ok) {
-                                              const data = await response.json();
-                                              setSelectedSuiteTestCaseCount(data.count);
-                                            } else {
-                                              setSelectedSuiteTestCaseCount(0);
-                                            }
-                                          } catch (error) {
-                                            console.error('Error fetching test case count:', error);
-                                            setSelectedSuiteTestCaseCount(0);
-                                          }
-                                          setDeleteSuiteConfirmOpen(true);
-                                        }}
-                                        title="Delete test suite"
-                                      >
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                      </Button>
-                                    </div>
+                                {/* Test Case Count Indicator - Fixed position in upper right */}
+                                <div className={`flex-shrink-0 inline-flex items-center justify-center h-5 w-5 rounded-full ${
+                                  getTestCasesCount(suite.id) > 0 
+                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' 
+                                    : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500'
+                                }`} title={
+                                  getTestCasesCount(suite.id) > 0 
+                                    ? `${getTestCasesCount(suite.id)} test case${getTestCasesCount(suite.id) === 1 ? '' : 's'}`
+                                    : 'No test cases'
+                                }>
+                                  {getTestCasesCount(suite.id) > 0 ? (
+                                    <Check className="h-3 w-3" />
+                                  ) : (
+                                    <X className="h-3 w-3" />
                                   )}
                                 </div>
                               </div>
