@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { RefreshCw, Search, ExternalLink, Clock, CheckCircle, AlertCircle, XCircle, FileText, Brain, Eye } from "lucide-react";
 import { useProject } from "@/context/ProjectContext";
 import { useToast } from "@/hooks/use-toast";
@@ -726,63 +727,67 @@ export default function JiraTickets() {
                       
                       return (
                         <div className="text-right">
-                          {/* Coverage Badge */}
-                          <div className="flex items-center justify-end mb-2">
-                            {coverageStatus === 'covered' && (
-                              <Badge className="bg-green-100 text-green-800 border-green-300 hover:bg-green-200">
-                                {coveringTestCases.length} test{coveringTestCases.length > 1 ? 's' : ''}
-                              </Badge>
-                            )}
-                            {coverageStatus === 'planned' && (
-                              <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300 hover:bg-yellow-200">
-                                planned
-                              </Badge>
-                            )}
-                            {coverageStatus === 'uncovered' && (
-                              <Badge className="bg-red-100 text-red-800 border-red-300 hover:bg-red-200">
-                                no coverage
-                              </Badge>
-                            )}
-                          </div>
-
-                          {/* Test Case Links (only show if covered) */}
-                          {coverageStatus === 'covered' && coveringTestCases.length > 0 && (
-                            <div className="space-y-1 mb-2">
-                              {coveringTestCases.slice(0, 2).map((testCase) => (
-                                <div
-                                  key={testCase.id}
-                                  className="flex items-center justify-between text-xs p-2 bg-gray-50 dark:bg-gray-800 rounded border hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
-                                  onClick={() => {
-                                    setSelectedTestCase(testCase);
-                                    setTestCaseDetailOpen(true);
-                                  }}
-                                  title={testCase.description}
-                                >
-                                  <span className="truncate flex-1 text-gray-700 dark:text-gray-300">
-                                    {testCase.title}
-                                  </span>
-                                  <Eye className="h-3 w-3 ml-2 text-gray-500" />
-                                </div>
-                              ))}
-                              {coveringTestCases.length > 2 && (
-                                <div className="text-xs text-center text-gray-500 pt-1">
-                                  +{coveringTestCases.length - 2} more
-                                </div>
+                          <TooltipProvider>
+                            {/* Coverage Badge with Tooltip */}
+                            <div className="flex items-center justify-end mb-2">
+                              {coverageStatus === 'covered' && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Badge className="bg-green-100 text-green-800 border-green-300 hover:bg-green-200 cursor-help">
+                                      {coveringTestCases.length} test{coveringTestCases.length > 1 ? 's' : ''}
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="left" className="max-w-xs">
+                                    <div className="text-sm">
+                                      <div className="font-medium mb-1">Test Cases Covering {ticket.jiraKey}:</div>
+                                      <div className="space-y-1">
+                                        {coveringTestCases.map((testCase, index) => (
+                                          <div key={testCase.id} className="text-xs border-b border-gray-200 last:border-b-0 pb-1 last:pb-0">
+                                            <div className="font-medium">{testCase.title}</div>
+                                            <div className="text-gray-600 truncate">{testCase.description}</div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
+                              {coverageStatus === 'planned' && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300 hover:bg-yellow-200 cursor-help">
+                                      planned
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="left" className="max-w-xs">
+                                    <div className="text-sm">
+                                      <div className="font-medium mb-1">Planned Coverage for {ticket.jiraKey}:</div>
+                                      <div className="text-xs">
+                                        This ticket is listed in test suite coverage fields, indicating tests are planned but not yet created.
+                                      </div>
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
+                              {coverageStatus === 'uncovered' && (
+                                <Badge className="bg-red-100 text-red-800 border-red-300 hover:bg-red-200">
+                                  no coverage
+                                </Badge>
                               )}
                             </div>
-                          )}
 
-                          {/* AI Coverage Button (only show if uncovered) */}
-                          {coverageStatus === 'uncovered' && (
-                            <Button 
-                              size="sm" 
-                              className="w-full text-xs bg-blue-900 hover:bg-blue-800 text-white border-blue-900"
-                              onClick={() => handleGenerateAICoverage(ticket)}
-                            >
-                              <Brain className="h-3 w-3 mr-1" />
-                              AI Coverage
-                            </Button>
-                          )}
+                            {/* AI Coverage Button (only show if uncovered) */}
+                            {coverageStatus === 'uncovered' && (
+                              <Button 
+                                size="sm" 
+                                className="w-full text-xs bg-blue-900 hover:bg-blue-800 text-white border-blue-900"
+                                onClick={() => handleGenerateAICoverage(ticket)}
+                              >
+                                <Brain className="h-3 w-3 mr-1" />
+                                AI Coverage
+                              </Button>
+                            )}
+                          </TooltipProvider>
                         </div>
                       );
                     })()}
