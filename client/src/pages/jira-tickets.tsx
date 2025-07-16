@@ -733,9 +733,11 @@ export default function JiraTickets() {
                               {coverageStatus === 'covered' && (
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <Badge className="bg-green-100 text-green-800 border-green-300 hover:bg-green-200 cursor-help">
-                                      {coveringTestCases.length} test{coveringTestCases.length > 1 ? 's' : ''}
-                                    </Badge>
+                                    <div className="inline-flex">
+                                      <Badge className="bg-green-100 text-green-800 border-green-300 hover:bg-green-200 cursor-help">
+                                        {coveringTestCases.length} test{coveringTestCases.length > 1 ? 's' : ''}
+                                      </Badge>
+                                    </div>
                                   </TooltipTrigger>
                                   <TooltipContent side="left" className="max-w-xs">
                                     <div className="text-sm">
@@ -755,9 +757,11 @@ export default function JiraTickets() {
                               {coverageStatus === 'planned' && (
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300 hover:bg-yellow-200 cursor-help">
-                                      planned
-                                    </Badge>
+                                    <div className="inline-flex">
+                                      <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300 hover:bg-yellow-200 cursor-help">
+                                        planned
+                                      </Badge>
+                                    </div>
                                   </TooltipTrigger>
                                   <TooltipContent side="left" className="max-w-xs">
                                     <div className="text-sm">
