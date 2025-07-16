@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMaturityRoadmap } from "@/hooks/use-ai-recommendations";
+import { useQueryClient } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/ui-spinner";
 import type { MaturityDimension } from "@shared/schema";
 import { useProject } from "@/context/ProjectContext";
@@ -15,6 +16,7 @@ export function MaturityRoadmap({ dimensions, className }: MaturityRoadmapProps)
   const [selectedDimension, setSelectedDimension] = useState<number>(dimensions[0]?.id || 1);
   const [currentLevel, setCurrentLevel] = useState<number>(1);
   const { selectedProject } = useProject();
+  const queryClient = useQueryClient();
   const projectId = selectedProject?.id;
   
   const { data: roadmapData, isLoading, error } = useMaturityRoadmap(selectedDimension, currentLevel, projectId);
@@ -83,7 +85,7 @@ export function MaturityRoadmap({ dimensions, className }: MaturityRoadmapProps)
                   <Button 
                     variant="outline" 
                     className="mt-4"
-                    onClick={() => window.location.reload()}
+                    onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/ai/roadmap"] })}
                   >
                     Retry
                   </Button>

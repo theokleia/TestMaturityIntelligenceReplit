@@ -4,6 +4,7 @@ import { ProjectInsights } from "@/components/dashboards/project-insights";
 import { GitHubMetrics } from "@/components/dashboards/github-metrics";
 import { Button } from "@/components/ui/button";
 import { useProject } from "@/context/ProjectContext";
+import { useQueryClient } from "@tanstack/react-query";
 import { BarChart3, RefreshCw } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -12,6 +13,7 @@ export default function ProjectHealthPage() {
   const { selectedProject, projects } = useProject();
   const [refreshing, setRefreshing] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   // If no project is selected but projects exist, auto-select the first one
   useEffect(() => {
@@ -22,9 +24,9 @@ export default function ProjectHealthPage() {
       console.log("Found stored project ID:", storedProjectId);
     } else if (projects && projects.length > 0 && !selectedProject) {
       console.log("No project selected but projects exist, auto-refreshing");
-      // Force a page reload after a short delay to ensure context updates properly
+      // Force data refresh after a short delay to ensure context updates properly
       const timer = setTimeout(() => {
-        window.location.reload();
+        queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       }, 500);
       
       return () => clearTimeout(timer);

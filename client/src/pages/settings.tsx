@@ -808,9 +808,10 @@ export default function ProjectSettings() {
         setIsSaving(false);
         setSaveSuccess(true);
         
-        // Add a small delay before reloading to show the success message
+        // Add a small delay before refreshing data to show the success message
         setTimeout(() => {
-          window.location.reload();
+          queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+          setSaveSuccess(false);
         }, 1500);
       } else {
         // For other non-API saves (only if we're not handling a project update)

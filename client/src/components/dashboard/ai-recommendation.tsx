@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 import { 
   useAiInsights,
   useGenerateRecommendation,
@@ -19,6 +20,7 @@ interface AiRecommendationProps {
 
 export function AiRecommendation({ dimensionId, className, onNewRecommendation }: AiRecommendationProps) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [isGenerating, setIsGenerating] = useState(false);
   
   // Fetch AI insights for the current dimension
@@ -89,7 +91,7 @@ export function AiRecommendation({ dimensionId, className, onNewRecommendation }
             </p>
             <Button 
               variant="outline" 
-              onClick={() => window.location.reload()}
+              onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/ai/insights"] })}
               className="mt-2"
             >
               Retry
