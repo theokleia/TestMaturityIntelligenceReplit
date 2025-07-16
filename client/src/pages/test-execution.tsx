@@ -237,11 +237,16 @@ export default function TestExecution() {
   const handleCreateCycle = (data: TestCycleFormValues) => {
     if (!projectId) return;
     
+    // Convert Date objects to ISO strings for API
+    const apiData = {
+      ...data,
+      projectId,
+      startDate: data.startDate?.toISOString() || null,
+      endDate: data.endDate?.toISOString() || null,
+    };
+    
     createCycleMutation.mutate(
-      {
-        ...data,
-        projectId
-      },
+      apiData,
       {
         onSuccess: (newCycle) => {
           toast({
@@ -269,11 +274,16 @@ export default function TestExecution() {
   const handleUpdateCycle = (data: TestCycleFormValues) => {
     if (!selectedCycle) return;
     
+    // Convert Date objects to ISO strings for API
+    const apiData = {
+      id: selectedCycle.id,
+      ...data,
+      startDate: data.startDate?.toISOString() || null,
+      endDate: data.endDate?.toISOString() || null,
+    };
+    
     updateCycleMutation.mutate(
-      {
-        id: selectedCycle.id,
-        ...data,
-      },
+      apiData,
       {
         onSuccess: (updatedCycle) => {
           toast({
