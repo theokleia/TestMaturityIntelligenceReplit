@@ -12,6 +12,7 @@ export interface TestSuite {
   priority: string;
   status: string;
   type: string;
+  coverage?: string;
   userId: number;
   aiGenerated: boolean;
   createdAt: string;

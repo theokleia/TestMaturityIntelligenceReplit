@@ -35,6 +35,18 @@ ATMosFera is an advanced AI-powered test management and documentation platform b
 
 ## Recent Changes
 
+### 2025-07-16: Coverage Information Display System Implementation
+- **Coverage Display Components**: Built comprehensive coverage visualization system
+  - CoverageDisplay.tsx: Main component for detailed coverage information display with organized sections
+  - CompactCoverageDisplay.tsx: Condensed coverage view for test suite cards
+  - coverage-parser.ts: Utility for parsing structured coverage text format
+- **Coverage Storage Format**: Standardized text format for test suite coverage tracking
+  - Format: "JIRA_TICKETS: XAM-123, XAM-124 | COMPLIANCE: GDPR data processing | DOCUMENTS: User authentication section"
+  - Database Field: test_suites.coverage (text field for flexible storage)
+- **Visual Enhancement**: Added organized sections with colored badges and icons for each coverage type
+- **TypeScript Integration**: Updated all interfaces across codebase to include coverage field support
+- **Test Management Integration**: Seamlessly integrated coverage display into test suite details view
+
 ### 2025-07-16: Comprehensive Codebase Refactoring and Modularization
 - **Frontend Component Refactoring**: Broke down massive test-management.tsx (2,621 lines) into 15 focused components
   - AITestCoverageDialog: Handles test coverage analysis and proposals display
