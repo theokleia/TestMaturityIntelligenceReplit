@@ -50,6 +50,11 @@ export function Sidebar() {
       icon: "bx-play-circle",
     },
     {
+      title: "Jira Tickets",
+      path: "/jira-tickets",
+      icon: "bx-bug",
+    },
+    {
       title: "AI Insights",
       path: "/ai-insights",
       icon: "bx-bulb",

@@ -13,7 +13,10 @@ import {
   testCycleItems, type TestCycleItem, type InsertTestCycleItem,
   testRuns, type TestRun, type InsertTestRun,
   documents, type Document, type InsertDocument,
-  globalSettings, type GlobalSetting, type InsertGlobalSetting
+  globalSettings, type GlobalSetting, type InsertGlobalSetting,
+  jiraTickets, type JiraTicket, type InsertJiraTicket,
+  jiraSyncLogs, type JiraSyncLog, type InsertJiraSyncLog,
+  testCaseJiraLinks, type TestCaseJiraLink, type InsertTestCaseJiraLink
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc, or, inArray, lt, gte, isNull } from "drizzle-orm";
@@ -142,6 +145,25 @@ export interface IStorage {
   createGlobalSetting(setting: InsertGlobalSetting): Promise<GlobalSetting>;
   updateGlobalSetting(id: number, setting: Partial<InsertGlobalSetting>): Promise<GlobalSetting | undefined>;
   deleteGlobalSetting(id: number): Promise<boolean>;
+  
+  // Jira Tickets
+  getJiraTicketsByProject(projectId: number): Promise<JiraTicket[]>;
+  getJiraTicket(id: number): Promise<JiraTicket | undefined>;
+  getJiraTicketByKey(jiraKey: string): Promise<JiraTicket | undefined>;
+  createJiraTicket(ticket: InsertJiraTicket): Promise<JiraTicket>;
+  updateJiraTicket(id: number, ticket: Partial<InsertJiraTicket>): Promise<JiraTicket | undefined>;
+  softDeleteJiraTicket(id: number): Promise<boolean>;
+  
+  // Jira Sync Logs
+  getJiraSyncLogs(projectId: number): Promise<JiraSyncLog[]>;
+  createJiraSyncLog(log: InsertJiraSyncLog): Promise<number>;
+  updateJiraSyncLog(id: number, log: Partial<JiraSyncLog>): Promise<JiraSyncLog | undefined>;
+  getLastSuccessfulSync(projectId: number): Promise<JiraSyncLog | undefined>;
+  
+  // Test Case Jira Links
+  getTestCaseJiraLinks(testCaseId: number): Promise<TestCaseJiraLink[]>;
+  createTestCaseJiraLink(link: InsertTestCaseJiraLink): Promise<TestCaseJiraLink>;
+  deleteTestCaseJiraLink(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1451,6 +1473,98 @@ export class DatabaseStorage implements IStorage {
         }
       });
     }
+  }
+
+  // Jira Tickets
+  async getJiraTicketsByProject(projectId: number): Promise<JiraTicket[]> {
+    return db.select()
+      .from(jiraTickets)
+      .where(and(eq(jiraTickets.projectId, projectId), eq(jiraTickets.isDeleted, false)))
+      .orderBy(desc(jiraTickets.jiraUpdatedAt));
+  }
+
+  async getJiraTicket(id: number): Promise<JiraTicket | undefined> {
+    const [ticket] = await db.select().from(jiraTickets).where(eq(jiraTickets.id, id));
+    return ticket || undefined;
+  }
+
+  async getJiraTicketByKey(jiraKey: string): Promise<JiraTicket | undefined> {
+    const [ticket] = await db.select().from(jiraTickets).where(eq(jiraTickets.jiraKey, jiraKey));
+    return ticket || undefined;
+  }
+
+  async createJiraTicket(ticket: InsertJiraTicket): Promise<JiraTicket> {
+    const [newTicket] = await db.insert(jiraTickets).values(ticket).returning();
+    return newTicket;
+  }
+
+  async updateJiraTicket(id: number, ticket: Partial<InsertJiraTicket>): Promise<JiraTicket | undefined> {
+    const [updatedTicket] = await db
+      .update(jiraTickets)
+      .set({ ...ticket, updatedAt: new Date().toISOString() })
+      .where(eq(jiraTickets.id, id))
+      .returning();
+    return updatedTicket || undefined;
+  }
+
+  async softDeleteJiraTicket(id: number): Promise<boolean> {
+    const result = await db
+      .update(jiraTickets)
+      .set({ isDeleted: true, updatedAt: new Date().toISOString() })
+      .where(eq(jiraTickets.id, id));
+    return (result.rowCount || 0) > 0;
+  }
+
+  // Jira Sync Logs
+  async getJiraSyncLogs(projectId: number): Promise<JiraSyncLog[]> {
+    return db.select()
+      .from(jiraSyncLogs)
+      .where(eq(jiraSyncLogs.projectId, projectId))
+      .orderBy(desc(jiraSyncLogs.startedAt))
+      .limit(50);
+  }
+
+  async createJiraSyncLog(log: InsertJiraSyncLog): Promise<number> {
+    const [newLog] = await db.insert(jiraSyncLogs).values(log).returning({ id: jiraSyncLogs.id });
+    return newLog.id;
+  }
+
+  async updateJiraSyncLog(id: number, log: Partial<JiraSyncLog>): Promise<JiraSyncLog | undefined> {
+    const [updatedLog] = await db
+      .update(jiraSyncLogs)
+      .set(log)
+      .where(eq(jiraSyncLogs.id, id))
+      .returning();
+    return updatedLog || undefined;
+  }
+
+  async getLastSuccessfulSync(projectId: number): Promise<JiraSyncLog | undefined> {
+    const [lastSync] = await db.select()
+      .from(jiraSyncLogs)
+      .where(and(
+        eq(jiraSyncLogs.projectId, projectId),
+        eq(jiraSyncLogs.status, 'success')
+      ))
+      .orderBy(desc(jiraSyncLogs.completedAt))
+      .limit(1);
+    return lastSync || undefined;
+  }
+
+  // Test Case Jira Links
+  async getTestCaseJiraLinks(testCaseId: number): Promise<TestCaseJiraLink[]> {
+    return db.select()
+      .from(testCaseJiraLinks)
+      .where(eq(testCaseJiraLinks.testCaseId, testCaseId));
+  }
+
+  async createTestCaseJiraLink(link: InsertTestCaseJiraLink): Promise<TestCaseJiraLink> {
+    const [newLink] = await db.insert(testCaseJiraLinks).values(link).returning();
+    return newLink;
+  }
+
+  async deleteTestCaseJiraLink(id: number): Promise<boolean> {
+    const result = await db.delete(testCaseJiraLinks).where(eq(testCaseJiraLinks.id, id));
+    return (result.rowCount || 0) > 0;
   }
 }
 

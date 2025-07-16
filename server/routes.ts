@@ -2221,6 +2221,119 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Jira Tickets routes
+  app.get("/api/projects/:projectId/jira-tickets", requireAuth, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.projectId);
+      const tickets = await storage.getJiraTicketsByProject(projectId);
+      res.json(tickets);
+    } catch (error) {
+      console.error("Error fetching Jira tickets:", error);
+      res.status(500).json({ message: "Failed to fetch Jira tickets" });
+    }
+  });
+
+  app.get("/api/jira-tickets/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const ticket = await storage.getJiraTicket(id);
+      
+      if (!ticket) {
+        return res.status(404).json({ message: "Jira ticket not found" });
+      }
+      
+      res.json(ticket);
+    } catch (error) {
+      console.error("Error fetching Jira ticket:", error);
+      res.status(500).json({ message: "Failed to fetch Jira ticket" });
+    }
+  });
+
+  // Jira Sync routes
+  app.post("/api/projects/:projectId/jira-sync", requireAuth, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.projectId);
+      const { type = 'manual' } = req.body;
+      
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      if (!project.jiraUrl || !project.jiraApiKey) {
+        return res.status(400).json({ message: "Jira configuration missing for project" });
+      }
+
+      // Import and use the JiraService
+      const { JiraService } = await import('./jira-service');
+      const jiraService = new JiraService(project.jiraUrl, project.jiraApiKey);
+      
+      const result = await jiraService.syncTickets(project, type);
+      
+      if (result.success) {
+        res.json({
+          message: "Jira sync completed successfully",
+          ...result
+        });
+      } else {
+        res.status(500).json({
+          message: "Jira sync failed",
+          error: result.error
+        });
+      }
+    } catch (error) {
+      console.error("Error syncing Jira tickets:", error);
+      res.status(500).json({ 
+        message: "Failed to sync Jira tickets", 
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  app.get("/api/projects/:projectId/jira-sync-logs", requireAuth, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.projectId);
+      const logs = await storage.getJiraSyncLogs(projectId);
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching Jira sync logs:", error);
+      res.status(500).json({ message: "Failed to fetch Jira sync logs" });
+    }
+  });
+
+  // Test Jira connection
+  app.post("/api/projects/:projectId/jira-test-connection", requireAuth, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.projectId);
+      
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      if (!project.jiraUrl || !project.jiraApiKey) {
+        return res.status(400).json({ message: "Jira configuration missing for project" });
+      }
+
+      const { JiraService } = await import('./jira-service');
+      const jiraService = new JiraService(project.jiraUrl, project.jiraApiKey);
+      
+      const isConnected = await jiraService.testConnection();
+      
+      res.json({
+        connected: isConnected,
+        message: isConnected ? "Jira connection successful" : "Jira connection failed"
+      });
+    } catch (error) {
+      console.error("Error testing Jira connection:", error);
+      res.status(500).json({ 
+        connected: false,
+        message: "Failed to test Jira connection", 
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

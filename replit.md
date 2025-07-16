@@ -35,6 +35,17 @@ ATMosFera is an advanced AI-powered test management and documentation platform b
 
 ## Recent Changes
 
+### 2025-07-16: Jira Integration and Ticket Management System
+- Implemented comprehensive Jira ticket storage and synchronization system
+- Added three new database tables: jira_tickets, jira_sync_logs, test_case_jira_links
+- Created JiraService with smart caching, change detection, and incremental sync capabilities
+- Built Jira Tickets page with real-time sync status, filtering, and ticket management
+- Added sync status indicators (synced, pending, error, stale) with visual feedback
+- Implemented API endpoints for ticket fetching, syncing, and connection testing
+- Added Jira Tickets menu item to sidebar navigation with bug icon
+- Enhanced error handling with retry mechanisms and comprehensive logging
+- Supports full, incremental, and manual sync modes with background processing
+
 ### 2025-07-16: Test Strategy Field Implementation
 - Added testStrategy field to projects database schema
 - Implemented Test Strategy tab in project settings with rich text editor

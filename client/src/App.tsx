@@ -8,6 +8,7 @@ import AiInsights from "@/pages/ai-insights";
 import TestManagement from "@/pages/test-management";
 import TestExecution from "@/pages/test-execution";
 import TestExecutionRefactored from "@/pages/test-execution-refactored";
+import JiraTickets from "@/pages/jira-tickets";
 import DesignSystem from "@/pages/design-system";
 import ATMF from "@/pages/atmf";
 import Projects from "@/pages/projects";
@@ -32,6 +33,7 @@ function Router() {
       <ProtectedRoute path="/test-management" component={TestManagement} />
       <ProtectedRoute path="/test-execution" component={TestExecutionRefactored} />
       <ProtectedRoute path="/test-execution-old" component={TestExecution} />
+      <ProtectedRoute path="/jira-tickets" component={JiraTickets} />
       <ProtectedRoute path="/projects" component={Projects} />
       <ProtectedRoute path="/project-health" component={ProjectHealth} />
       <ProtectedRoute path="/settings" component={Settings} />

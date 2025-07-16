@@ -1,0 +1,126 @@
+Recommended Approach: Enhanced Option A with Smart Caching
+Core Storage Strategy
+Store these fields in your database:
+
+Jira Key (ticket ID)
+Issue Type
+Summary
+Description
+Created Date
+Last Modified Date (from Jira)
+Last Synced Date (your system)
+Sync Status (synced/pending/error)
+Hash of the content (for change detection)
+
+Key Benefits
+
+Performance: List views and searches are fast without API calls
+Offline Capability: Users can work without Jira connection
+Change Detection: Compare Jira's modified date with your last sync
+Reduced API Calls: Only sync when needed, avoiding rate limits
+
+Implementation Details
+sql-- Example table structure
+CREATE TABLE jira_tickets (
+    id SERIAL PRIMARY KEY,
+    jira_key VARCHAR(50) UNIQUE NOT NULL,
+    issue_type VARCHAR(50),
+    summary TEXT,
+    description TEXT,
+    jira_created_at TIMESTAMP,
+    jira_updated_at TIMESTAMP,
+    last_synced_at TIMESTAMP,
+    content_hash VARCHAR(64), -- SHA-256 of concatenated fields
+    sync_status VARCHAR(20) DEFAULT 'synced',
+    is_deleted BOOLEAN DEFAULT FALSE
+);
+
+CREATE TABLE test_case_jira_links (
+    test_case_id INT,
+    jira_ticket_id INT,
+    linked_at TIMESTAMP DEFAULT NOW()
+);
+Sync Strategy
+
+Incremental Sync (recommended for regular updates):
+python# Pseudo-code
+def incremental_sync():
+    # Use JQL to fetch only recently updated tickets
+    jql = f"updated >= -{SYNC_INTERVAL_HOURS}h"
+    updated_tickets = jira.search_issues(jql)
+    
+    for ticket in updated_tickets:
+        update_or_create_ticket(ticket)
+
+Smart Change Detection:
+
+Calculate a hash of important fields (summary + description + type)
+Only update if hash changes (prevents unnecessary DB writes)
+Show visual indicators for changes:
+
+🆕 New ticket (created after last test case update)
+🔄 Updated ticket (modified after last test case update)
+⚠️ Significant change (hash mismatch)
+
+
+
+
+On-Demand Refresh:
+
+Provide a "Refresh" button for individual tickets
+Bulk refresh for selected tickets
+Auto-refresh when viewing detailed ticket info
+
+
+
+Optimization Tips
+
+Background Sync:
+
+Run incremental sync every 30-60 minutes
+Full sync daily during off-hours
+Queue system for sync jobs
+
+
+API Rate Limit Management:
+python# Implement rate limiting
+from ratelimit import limits, sleep_and_retry
+
+@sleep_and_retry
+@limits(calls=100, period=60)  # Jira Cloud typical limit
+def fetch_ticket(key):
+    return jira.issue(key)
+
+Partial Updates:
+
+For list views, only sync visible tickets
+Lazy-load full descriptions when needed
+
+
+Webhook Integration (if available):
+
+Set up Jira webhooks for real-time updates
+Reduces need for polling
+
+
+
+UI/UX Considerations
+javascript// Example React component showing sync status
+function JiraTicketBadge({ ticket }) {
+    const getStatusIcon = () => {
+        if (ticket.jira_updated_at > ticket.last_synced_at) {
+            return <RefreshIcon className="text-orange-500" title="Updates available" />;
+        }
+        if (ticket.jira_created_at > testCase.last_updated_at) {
+            return <NewIcon className="text-green-500" title="New ticket" />;
+        }
+        return <CheckIcon className="text-gray-500" title="Synced" />;
+    };
+    
+    return (
+        <div className="flex items-center gap-2">
+            <span>{ticket.jira_key}</span>
+            {getStatusIcon()}
+        </div>
+    );
+}

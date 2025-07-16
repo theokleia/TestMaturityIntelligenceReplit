@@ -482,3 +482,100 @@ export const insertGlobalSettingSchema = createInsertSchema(globalSettings)
 
 export type InsertGlobalSetting = z.infer<typeof insertGlobalSettingSchema>;
 export type GlobalSetting = typeof globalSettings.$inferSelect;
+
+// Jira ticket storage for syncing and caching
+export const jiraTickets = pgTable("jira_tickets", {
+  id: serial("id").primaryKey(),
+  jiraKey: varchar("jira_key", { length: 50 }).notNull().unique(),
+  projectId: integer("project_id").references(() => projects.id).notNull(),
+  issueType: varchar("issue_type", { length: 50 }),
+  summary: text("summary"),
+  description: text("description"),
+  priority: varchar("priority", { length: 20 }),
+  status: varchar("status", { length: 50 }),
+  assignee: varchar("assignee", { length: 100 }),
+  reporter: varchar("reporter", { length: 100 }),
+  labels: text("labels").array(),
+  components: text("components").array(),
+  jiraCreatedAt: timestamp("jira_created_at", { mode: 'string', withTimezone: true }),
+  jiraUpdatedAt: timestamp("jira_updated_at", { mode: 'string', withTimezone: true }),
+  lastSyncedAt: timestamp("last_synced_at", { mode: 'string', withTimezone: true }).defaultNow(),
+  contentHash: varchar("content_hash", { length: 64 }),
+  syncStatus: varchar("sync_status", { length: 20 }).default("synced"),
+  isDeleted: boolean("is_deleted").default(false),
+  createdAt: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: 'string', withTimezone: true }).defaultNow()
+});
+
+// Jira sync logs for tracking sync operations
+export const jiraSyncLogs = pgTable("jira_sync_logs", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").references(() => projects.id).notNull(),
+  syncType: varchar("sync_type", { length: 20 }).notNull(), // 'full', 'incremental', 'manual'
+  status: varchar("status", { length: 20 }).notNull(), // 'success', 'error', 'in_progress'
+  ticketsProcessed: integer("tickets_processed").default(0),
+  ticketsCreated: integer("tickets_created").default(0),
+  ticketsUpdated: integer("tickets_updated").default(0),
+  ticketsDeleted: integer("tickets_deleted").default(0),
+  errorMessage: text("error_message"),
+  startedAt: timestamp("started_at", { mode: 'string', withTimezone: true }).defaultNow(),
+  completedAt: timestamp("completed_at", { mode: 'string', withTimezone: true }),
+  duration: integer("duration") // in milliseconds
+});
+
+// Links between test cases and Jira tickets
+export const testCaseJiraLinks = pgTable("test_case_jira_links", {
+  id: serial("id").primaryKey(),
+  testCaseId: integer("test_case_id").references(() => testCases.id).notNull(),
+  jiraTicketId: integer("jira_ticket_id").references(() => jiraTickets.id).notNull(),
+  linkedAt: timestamp("linked_at", { mode: 'string', withTimezone: true }).defaultNow(),
+  linkType: varchar("link_type", { length: 20 }).default("covers") // 'covers', 'implements', 'tests'
+});
+
+// Relations for Jira tickets
+export const jiraTicketsRelations = relations(jiraTickets, ({ one, many }) => ({
+  project: one(projects, {
+    fields: [jiraTickets.projectId],
+    references: [projects.id],
+  }),
+  testCaseLinks: many(testCaseJiraLinks),
+}));
+
+// Relations for Jira sync logs
+export const jiraSyncLogsRelations = relations(jiraSyncLogs, ({ one }) => ({
+  project: one(projects, {
+    fields: [jiraSyncLogs.projectId],
+    references: [projects.id],
+  }),
+}));
+
+// Relations for test case Jira links
+export const testCaseJiraLinksRelations = relations(testCaseJiraLinks, ({ one }) => ({
+  testCase: one(testCases, {
+    fields: [testCaseJiraLinks.testCaseId],
+    references: [testCases.id],
+  }),
+  jiraTicket: one(jiraTickets, {
+    fields: [testCaseJiraLinks.jiraTicketId],
+    references: [jiraTickets.id],
+  }),
+}));
+
+// Schemas and types for Jira tables
+export const insertJiraTicketSchema = createInsertSchema(jiraTickets)
+  .omit({ id: true, createdAt: true, updatedAt: true });
+
+export const insertJiraSyncLogSchema = createInsertSchema(jiraSyncLogs)
+  .omit({ id: true });
+
+export const insertTestCaseJiraLinkSchema = createInsertSchema(testCaseJiraLinks)
+  .omit({ id: true, linkedAt: true });
+
+export type InsertJiraTicket = z.infer<typeof insertJiraTicketSchema>;
+export type JiraTicket = typeof jiraTickets.$inferSelect;
+
+export type InsertJiraSyncLog = z.infer<typeof insertJiraSyncLogSchema>;
+export type JiraSyncLog = typeof jiraSyncLogs.$inferSelect;
+
+export type InsertTestCaseJiraLink = z.infer<typeof insertTestCaseJiraLinkSchema>;
+export type TestCaseJiraLink = typeof testCaseJiraLinks.$inferSelect;
