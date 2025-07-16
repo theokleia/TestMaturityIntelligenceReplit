@@ -222,6 +222,29 @@ export default function JiraTickets() {
     return 'bg-purple-100 text-purple-800';
   };
 
+  const getIssueTypeColor = (issueType: string) => {
+    switch (issueType?.toLowerCase()) {
+      case 'bug':
+        return 'bg-red-100 text-red-800';
+      case 'story':
+      case 'user story':
+        return 'bg-green-100 text-green-800';
+      case 'task':
+        return 'bg-blue-100 text-blue-800';
+      case 'epic':
+        return 'bg-purple-100 text-purple-800';
+      case 'sub-task':
+      case 'subtask':
+        return 'bg-cyan-100 text-cyan-800';
+      case 'improvement':
+        return 'bg-indigo-100 text-indigo-800';
+      case 'new feature':
+        return 'bg-emerald-100 text-emerald-800';
+      default:
+        return 'bg-slate-100 text-slate-800';
+    }
+  };
+
   const getSyncStatusIcon = (ticket: JiraTicket) => {
     const isStale = ticket.jiraUpdatedAt > ticket.lastSyncedAt;
     
@@ -407,6 +430,11 @@ export default function JiraTickets() {
                       <Badge variant="outline" className="font-mono">
                         {ticket.jiraKey}
                       </Badge>
+                      {ticket.issueType && (
+                        <Badge className={getIssueTypeColor(ticket.issueType)}>
+                          {ticket.issueType}
+                        </Badge>
+                      )}
                       <Badge className={getPriorityColor(ticket.priority)}>
                         {ticket.priority}
                       </Badge>
@@ -426,9 +454,6 @@ export default function JiraTickets() {
                     )}
                     
                     <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                      {ticket.issueType && (
-                        <span>Type: {ticket.issueType}</span>
-                      )}
                       {ticket.assignee && (
                         <span>Assignee: {ticket.assignee}</span>
                       )}
