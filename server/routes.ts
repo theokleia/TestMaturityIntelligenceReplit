@@ -491,7 +491,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get project documents
-      const projectDocuments = await storage.getDocumentsByProject(projectId);
+      const projectDocuments = await storage.getDocuments({ projectId });
       
       // Get Jira tickets for the project
       let jiraTickets = [];
