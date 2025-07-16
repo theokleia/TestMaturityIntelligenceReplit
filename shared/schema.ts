@@ -120,6 +120,7 @@ export const testSuites = pgTable("test_suites", {
   status: varchar("status", { length: 30 }).default("active"), // active, archived
   priority: varchar("priority", { length: 20 }).default("medium"), // high, medium, low
   projectArea: varchar("project_area", { length: 100 }), // e.g., "authentication", "payment", "checkout"
+  coverage: text("coverage"), // Structured text describing what this suite covers (tickets, compliance, documentation sections)
   userId: integer("user_id").references(() => users.id),
   aiGenerated: boolean("ai_generated").default(false),
   tags: jsonb("tags").default([]),

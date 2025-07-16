@@ -14,7 +14,9 @@ import {
   Bot,
   FileText,
   Check,
-  X
+  X,
+  Tag,
+  GitBranch
 } from "lucide-react";
 
 interface ProposedSuite {
@@ -23,6 +25,7 @@ interface ProposedSuite {
   type: string;
   priority: string;
   projectArea: string;
+  coverage?: string;
 }
 
 interface AITestSuiteProposalsDialogProps {
@@ -81,6 +84,22 @@ export function AITestSuiteProposalsDialog({
                       <span>AI Generated</span>
                     </div>
                   </div>
+                  
+                  {suite.coverage && (
+                    <div className="mt-3 p-3 bg-slate-50 rounded-md border">
+                      <div className="flex items-center gap-1 mb-2">
+                        <GitBranch className="h-3 w-3 text-slate-600" />
+                        <span className="text-sm font-medium text-slate-700">Coverage Details</span>
+                      </div>
+                      <div className="text-xs text-slate-600 leading-relaxed">
+                        {suite.coverage.split(' | ').map((part, partIndex) => (
+                          <div key={partIndex} className="mb-1">
+                            <span className="font-medium">{part.split(': ')[0]}:</span> {part.split(': ')[1] || 'None specified'}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </ATMFCard>
             ))}

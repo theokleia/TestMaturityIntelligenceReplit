@@ -8,6 +8,7 @@ import {
   analyzeTestPatterns,
   generateTestStrategy,
   generateTestCases,
+  generateTestSuites,
   generateAssistantResponse,
   generateWhisperSuggestions,
   generateDocument,

@@ -73,6 +73,7 @@ import {
   X,
   ClipboardList,
   Check,
+  GitBranch,
   CheckCircle,
   Pencil
 } from "lucide-react";
@@ -151,6 +152,16 @@ interface ProposedTestCase {
   reasoning: string;
 }
 
+// Interface for proposed test suites from AI
+interface ProposedTestSuite {
+  name: string;
+  description: string;
+  type: string;
+  priority: string;
+  projectArea: string;
+  coverage?: string;
+}
+
 // Test Management page component
 export default function TestManagement() {
   const { toast } = useToast();
@@ -175,7 +186,7 @@ export default function TestManagement() {
   const [aiSuiteGenerateDialogOpen, setAiSuiteGenerateDialogOpen] = useState(false);
   const [aiSuiteProposalsOpen, setAiSuiteProposalsOpen] = useState(false);
   const [organizationType, setOrganizationType] = useState<string>("");
-  const [proposedSuites, setProposedSuites] = useState<any[]>([]);
+  const [proposedSuites, setProposedSuites] = useState<ProposedTestSuite[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [suiteGenerationStage, setSuiteGenerationStage] = useState("");
   
@@ -610,6 +621,7 @@ export default function TestManagement() {
             priority: suite.priority,
             type: suite.type,
             status: 'active',
+            coverage: suite.coverage || '',
             aiGenerated: true,
             projectId: selectedProject.id
           })
@@ -2392,6 +2404,22 @@ export default function TestManagement() {
                         <span>AI Generated</span>
                       </div>
                     </div>
+                    
+                    {suite.coverage && (
+                      <div className="mt-3 p-3 bg-slate-50 rounded-md border">
+                        <div className="flex items-center gap-1 mb-2">
+                          <GitBranch className="h-3 w-3 text-slate-600" />
+                          <span className="text-sm font-medium text-slate-700">Coverage Details</span>
+                        </div>
+                        <div className="text-xs text-slate-600 leading-relaxed">
+                          {suite.coverage.split(' | ').map((part, partIndex) => (
+                            <div key={partIndex} className="mb-1">
+                              <span className="font-medium">{part.split(': ')[0]}:</span> {part.split(': ')[1] || 'None specified'}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </ATMFCard>
               ))}

@@ -916,17 +916,35 @@ export async function generateTestSuites(
   description: string;
   type: string;
   priority: string;
+  coverage: string;
 }[]> {
   try {
     console.log(`Generating AI test suites for project ${project.id} - ${project.name} with organization: ${organizationType}`);
     
-    // Get project context
-    const projectType = getProjectTypeFromName(project.name);
-    const projectContext = PROJECT_CONTEXTS[projectType] || PROJECT_CONTEXTS.general;
-    
-    // Format project information
+    // Format Jira tickets into groups by organization type for better analysis
+    let jiraAnalysis = "No Jira tickets available.";
+    if (jiraTickets && jiraTickets.length > 0) {
+      // Group tickets by organization type
+      const ticketGroups = groupJiraTicketsByOrganization(jiraTickets, organizationType);
+      
+      jiraAnalysis = `
+JIRA TICKETS ANALYSIS (Primary Data Source - ${jiraTickets.length} tickets):
+${Object.entries(ticketGroups).map(([group, tickets]) => `
+${group.toUpperCase()} GROUP:
+${tickets.map(t => `- ${t.key}: ${t.fields.summary} (${t.fields.issuetype?.name || 'Unknown'} | ${t.fields.status?.name || 'Unknown'})`).join('\n')}
+`).join('\n')}
+
+COMPLIANCE REQUIREMENTS FROM TICKETS:
+${extractComplianceFromTickets(jiraTickets)}
+
+FEATURE AREAS IDENTIFIED:
+${extractFeatureAreasFromTickets(jiraTickets)}
+`;
+    }
+
+    // Format project information (supporting context)
     const projectInfo = `
-Project Details:
+PROJECT CONTEXT (Supporting Information):
 - Name: ${project.name}
 - Description: ${project.description}
 - Type: ${project.projectType}
@@ -937,60 +955,60 @@ Project Details:
 - Additional Context: ${project.additionalContext || 'None provided'}
 `;
 
-    // Format documents context
+    // Format documents context (supplementary information)
     let documentsContext = "No project documents available.";
     if (projectDocuments && projectDocuments.length > 0) {
-      documentsContext = `Project Documents (${projectDocuments.length} documents):
+      documentsContext = `
+KNOWLEDGE BASE DOCUMENTS (Supplementary Context - ${projectDocuments.length} documents):
 ${projectDocuments.map(doc => `
 - Title: ${doc.title}
 - Type: ${doc.tags?.join(', ') || 'Untagged'}
 - Description: ${doc.description}
-- Content Preview: ${doc.content?.substring(0, 300)}...`).join('\n')}`;
-    }
-
-    // Format Jira context
-    let jiraContext = "No Jira tickets available.";
-    if (jiraTickets && jiraTickets.length > 0) {
-      jiraContext = getJiraContextForAI(jiraTickets);
+- Key Sections: ${extractKeyDocumentSections(doc.content)}
+`).join('\n')}`;
     }
 
     const prompt = `
-You are an expert test analyst helping to design comprehensive test suites for the "${project.name}" project.
+You are an expert test analyst creating comprehensive test suites for the "${project.name}" project.
+
+INSTRUCTION: Analyze Jira tickets FIRST to ensure complete coverage, then group them by ${organizationType} as specified. Use project information and documents as supporting context for HOW to test, not WHAT to test.
+
+${jiraAnalysis}
 
 ${projectInfo}
 
 ${documentsContext}
 
-${jiraContext}
+TASK: Generate 6-8 test suites organized by ${organizationType} that:
 
-Organization Type: ${organizationType}
-
-Based on the provided project information, documents, and Jira tickets, generate 6-8 well-structured test suites organized by ${organizationType}.
+1. PRIMARY GOAL: Cover ALL Jira tickets by grouping them logically according to ${organizationType}
+2. SECONDARY GOAL: Add any additional test suites needed based on project context (regulations, quality focus, documents)
+3. Each suite should include detailed coverage information
 
 Requirements:
-1. Analyze the project type, industry area, and regulations to understand testing needs
-2. Consider the test strategy and quality focus areas
-3. Use documents and Jira tickets to identify specific features and functionality to test
-4. Organize test suites logically by ${organizationType}
-5. Ensure comprehensive coverage across different testing areas
+- Start with Jira tickets and group them by ${organizationType}
+- Ensure every ticket is assigned to at least one test suite
+- Add supplementary suites for compliance, performance, security as needed based on project context
+- Include specific coverage details for each suite
 
 For each test suite, provide:
-- name: Clear, descriptive name (e.g., "User Authentication ${organizationType === 'functions' ? 'Functions' : organizationType === 'components' ? 'Components' : 'Tests'}")
-- projectArea: High-level functional area (e.g., "Authentication", "Payment Processing", "User Management")
-- description: Detailed description of what this suite covers and why it's important
+- name: Clear, descriptive name indicating the ${organizationType} grouping
+- projectArea: High-level functional area
+- description: What this suite covers and why it's important
 - type: One of "functional", "integration", "performance", "security", "usability", "api"
-- priority: One of "high", "medium", "low" based on business criticality
+- priority: "high", "medium", "low" based on business criticality and ticket priorities
+- coverage: Structured text describing exactly what this suite covers:
+  * "JIRA_TICKETS: [ticket1, ticket2, ...] | COMPLIANCE: [requirement1, requirement2] | DOCUMENTS: [section1, section2]"
 
-Focus on creating practical, implementable test suites that align with the project's specific context, industry requirements, and identified risks.
-
-Respond with valid JSON array format only, no additional text:
+Respond with valid JSON array format only:
 [
   {
     "name": "Suite Name",
     "projectArea": "Area",
     "description": "Detailed description",
     "type": "functional",
-    "priority": "high"
+    "priority": "high",
+    "coverage": "JIRA_TICKETS: XAM-123, XAM-124 | COMPLIANCE: GDPR data processing | DOCUMENTS: User authentication section"
   }
 ]
 `;
@@ -998,12 +1016,12 @@ Respond with valid JSON array format only, no additional text:
     const response = await callOpenAI([
       { 
         role: "system", 
-        content: "You are a senior test architect with expertise in test design and strategy. You analyze project requirements and create comprehensive test suite recommendations that align with industry best practices and specific project needs. Always respond with valid JSON only." 
+        content: "You are a senior test architect specializing in Jira-driven test planning. Your primary responsibility is ensuring complete ticket coverage while organizing test suites logically. Always respond with valid JSON only." 
       },
       { role: "user", content: prompt }
     ], {
       temperature: 0.7,
-      max_tokens: 2000
+      max_tokens: 3000
     });
 
     const responseText = response.choices[0].message.content || "[]";
@@ -1018,7 +1036,7 @@ Respond with valid JSON array format only, no additional text:
       }
       
       const testSuites = JSON.parse(cleanedResponse);
-      console.log(`Generated ${testSuites.length} test suites for project ${project.name}`);
+      console.log(`Generated ${testSuites.length} test suites for project ${project.name} with coverage information`);
       return testSuites;
     } catch (parseError) {
       console.error("Error parsing AI response:", parseError);
@@ -1029,6 +1047,162 @@ Respond with valid JSON array format only, no additional text:
     console.error("Error generating test suites:", error);
     return [];
   }
+}
+
+// Helper function to group Jira tickets by organization type
+function groupJiraTicketsByOrganization(jiraTickets: any[], organizationType: string): Record<string, any[]> {
+  const groups: Record<string, any[]> = {};
+  
+  jiraTickets.forEach(ticket => {
+    let groupKey = 'Other';
+    
+    switch (organizationType) {
+      case 'functions':
+        // Group by business function/feature area
+        groupKey = extractBusinessFunction(ticket);
+        break;
+      case 'components':
+        // Group by system component
+        groupKey = extractSystemComponent(ticket);
+        break;
+      case 'modules':
+        // Group by technical module
+        groupKey = extractTechnicalModule(ticket);
+        break;
+      case 'test-types':
+        // Group by test type needed
+        groupKey = determineTestType(ticket);
+        break;
+      case 'environments':
+        // Group by environment/deployment context
+        groupKey = extractEnvironmentContext(ticket);
+        break;
+      case 'user-personas':
+        // Group by user type/persona
+        groupKey = extractUserPersona(ticket);
+        break;
+      default:
+        groupKey = 'General';
+    }
+    
+    if (!groups[groupKey]) {
+      groups[groupKey] = [];
+    }
+    groups[groupKey].push(ticket);
+  });
+  
+  return groups;
+}
+
+// Helper functions for ticket analysis
+function extractBusinessFunction(ticket: any): string {
+  const summary = ticket.fields?.summary?.toLowerCase() || '';
+  const description = ticket.fields?.description?.toLowerCase() || '';
+  
+  if (summary.includes('auth') || summary.includes('login') || summary.includes('signin')) return 'Authentication';
+  if (summary.includes('payment') || summary.includes('billing') || summary.includes('invoice')) return 'Financial';
+  if (summary.includes('user') || summary.includes('profile') || summary.includes('account')) return 'User Management';
+  if (summary.includes('report') || summary.includes('analytics') || summary.includes('dashboard')) return 'Reporting';
+  if (summary.includes('admin') || summary.includes('config') || summary.includes('setting')) return 'Administration';
+  if (summary.includes('api') || summary.includes('integration') || summary.includes('webhook')) return 'Integration';
+  
+  return 'General Features';
+}
+
+function extractSystemComponent(ticket: any): string {
+  const components = ticket.fields?.components?.map((c: any) => c.name).join(' ') || '';
+  const labels = ticket.fields?.labels?.join(' ') || '';
+  
+  if (components.includes('frontend') || labels.includes('ui')) return 'Frontend';
+  if (components.includes('backend') || labels.includes('api')) return 'Backend';
+  if (components.includes('database') || labels.includes('db')) return 'Database';
+  if (components.includes('auth') || labels.includes('security')) return 'Security';
+  
+  return 'Core System';
+}
+
+function extractTechnicalModule(ticket: any): string {
+  const summary = ticket.fields?.summary?.toLowerCase() || '';
+  
+  if (summary.includes('security') || summary.includes('encryption')) return 'Security Module';
+  if (summary.includes('performance') || summary.includes('optimization')) return 'Performance Module';
+  if (summary.includes('ui') || summary.includes('interface')) return 'UI Module';
+  if (summary.includes('data') || summary.includes('storage')) return 'Data Module';
+  
+  return 'Business Logic Module';
+}
+
+function determineTestType(ticket: any): string {
+  const issueType = ticket.fields?.issuetype?.name?.toLowerCase() || '';
+  const summary = ticket.fields?.summary?.toLowerCase() || '';
+  
+  if (summary.includes('performance') || summary.includes('load') || summary.includes('speed')) return 'Performance Testing';
+  if (summary.includes('security') || summary.includes('vulnerability')) return 'Security Testing';
+  if (summary.includes('integration') || summary.includes('api')) return 'Integration Testing';
+  if (summary.includes('ui') || summary.includes('usability')) return 'UI Testing';
+  if (issueType === 'bug') return 'Regression Testing';
+  
+  return 'Functional Testing';
+}
+
+function extractEnvironmentContext(ticket: any): string {
+  const labels = ticket.fields?.labels?.join(' ').toLowerCase() || '';
+  const summary = ticket.fields?.summary?.toLowerCase() || '';
+  
+  if (labels.includes('production') || summary.includes('prod')) return 'Production';
+  if (labels.includes('staging') || summary.includes('staging')) return 'Staging';
+  if (labels.includes('dev') || summary.includes('development')) return 'Development';
+  
+  return 'Multi-Environment';
+}
+
+function extractUserPersona(ticket: any): string {
+  const summary = ticket.fields?.summary?.toLowerCase() || '';
+  const description = ticket.fields?.description?.toLowerCase() || '';
+  
+  if (summary.includes('admin') || summary.includes('administrator')) return 'Admin Users';
+  if (summary.includes('customer') || summary.includes('client')) return 'Customer Users';
+  if (summary.includes('manager') || summary.includes('supervisor')) return 'Manager Users';
+  if (summary.includes('guest') || summary.includes('anonymous')) return 'Guest Users';
+  
+  return 'General Users';
+}
+
+function extractComplianceFromTickets(tickets: any[]): string {
+  const complianceItems = new Set<string>();
+  
+  tickets.forEach(ticket => {
+    const text = `${ticket.fields?.summary || ''} ${ticket.fields?.description || ''}`.toLowerCase();
+    
+    if (text.includes('gdpr') || text.includes('data protection')) complianceItems.add('GDPR compliance');
+    if (text.includes('security') || text.includes('encryption')) complianceItems.add('Security standards');
+    if (text.includes('audit') || text.includes('logging')) complianceItems.add('Audit requirements');
+    if (text.includes('access') || text.includes('permission')) complianceItems.add('Access control');
+  });
+  
+  return Array.from(complianceItems).join(', ') || 'None explicitly identified';
+}
+
+function extractFeatureAreasFromTickets(tickets: any[]): string {
+  const features = new Set<string>();
+  
+  tickets.forEach(ticket => {
+    const summary = ticket.fields?.summary || '';
+    features.add(summary.split(' ')[0]); // Take first word as feature indicator
+  });
+  
+  return Array.from(features).slice(0, 10).join(', '); // Limit to 10 features
+}
+
+function extractKeyDocumentSections(content: string): string {
+  if (!content) return 'No content available';
+  
+  // Extract headings or key phrases from document content
+  const lines = content.split('\n').slice(0, 5); // First 5 lines
+  return lines
+    .filter(line => line.trim().length > 0)
+    .map(line => line.substring(0, 50) + (line.length > 50 ? '...' : ''))
+    .join(', ');
 }
 
 /**

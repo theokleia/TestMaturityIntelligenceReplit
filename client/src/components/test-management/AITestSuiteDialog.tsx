@@ -42,7 +42,7 @@ export function AITestSuiteDialog({
             Generate AI Test Suites
           </DialogTitle>
           <DialogDescription>
-            Select how you'd like to organize your test suites, and AI will analyze your project to create comprehensive test coverage.
+            Select how you'd like to organize your test suites. AI will analyze Jira tickets first to ensure complete coverage, then supplement with project context.
           </DialogDescription>
         </DialogHeader>
         
@@ -68,11 +68,11 @@ export function AITestSuiteDialog({
           
           {organizationType && (
             <div className="bg-blue-50 p-3 rounded-md border border-blue-200">
-              <p className="text-sm text-blue-800 font-medium mb-1">AI Analysis will include:</p>
+              <p className="text-sm text-blue-800 font-medium mb-1">AI Analysis Priority:</p>
               <ul className="text-sm text-blue-700 space-y-1">
-                <li>• Project details and test strategy</li>
-                <li>• Documentation and knowledge base</li>
-                <li>• Jira tickets and requirements</li>
+                <li>• <strong>Primary:</strong> Jira tickets grouped by {organizationType === 'functions' ? 'business functions' : organizationType === 'components' ? 'system components' : organizationType === 'modules' ? 'technical modules' : organizationType === 'test-types' ? 'test types' : organizationType === 'environments' ? 'environments' : organizationType === 'user-personas' ? 'user personas' : organizationType === 'risk-areas' ? 'risk areas' : 'user workflows'}</li>
+                <li>• <strong>Secondary:</strong> Project strategy and compliance requirements</li>
+                <li>• <strong>Supplementary:</strong> Documentation and knowledge base</li>
                 <li>• Industry compliance needs</li>
               </ul>
             </div>
