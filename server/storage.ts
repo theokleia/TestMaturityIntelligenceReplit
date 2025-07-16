@@ -90,6 +90,7 @@ export interface IStorage {
   getTestSuite(id: number): Promise<TestSuite | undefined>;
   createTestSuite(testSuite: InsertTestSuite): Promise<TestSuite>;
   updateTestSuite(id: number, testSuite: Partial<InsertTestSuite>): Promise<TestSuite | undefined>;
+  deleteTestSuite(id: number): Promise<{ deletedSuite: boolean; deletedTestCases: number }>;
 
   // Test Cases
   getTestCases(filters?: {
@@ -594,6 +595,37 @@ export class DatabaseStorage implements IStorage {
       .where(eq(testSuites.id, id))
       .returning();
     return updatedTestSuite || undefined;
+  }
+
+  async deleteTestSuite(id: number): Promise<{ deletedSuite: boolean; deletedTestCases: number }> {
+    try {
+      // First, count the test cases that will be deleted
+      const relatedTestCases = await db
+        .select()
+        .from(testCases)
+        .where(eq(testCases.suiteId, id));
+      
+      const deletedTestCasesCount = relatedTestCases.length;
+      
+      // Delete all related test cases first (due to foreign key constraints)
+      if (deletedTestCasesCount > 0) {
+        await db.delete(testCases).where(eq(testCases.suiteId, id));
+      }
+      
+      // Then delete the test suite
+      const deleteResult = await db.delete(testSuites).where(eq(testSuites.id, id));
+      
+      return {
+        deletedSuite: true,
+        deletedTestCases: deletedTestCasesCount
+      };
+    } catch (error) {
+      console.error('Error deleting test suite:', error);
+      return {
+        deletedSuite: false,
+        deletedTestCases: 0
+      };
+    }
   }
 
   // Test Cases

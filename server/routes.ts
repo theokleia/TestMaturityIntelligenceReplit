@@ -728,7 +728,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Delete a test suite
+  // Get test case count for a test suite
+  app.get("/api/test-suites/:id/test-cases/count", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Check if test suite exists
+      const existingTestSuite = await storage.getTestSuite(id);
+      if (!existingTestSuite) {
+        return res.status(404).json({ message: "Test suite not found" });
+      }
+      
+      // Get test cases for this suite
+      const testCases = await storage.getTestCases({ suiteId: id });
+      
+      res.json({ count: testCases.length });
+    } catch (error) {
+      console.error("Error getting test case count:", error);
+      res.status(500).json({ message: "Failed to get test case count" });
+    }
+  });
+
+  // Delete a test suite and all its related test cases
   app.delete("/api/test-suites/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -739,11 +760,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Test suite not found" });
       }
       
-      // Delete the test suite by marking it as deleted
-      await storage.updateTestSuite(id, { status: "deleted" });
+      // Actually delete the test suite and related test cases
+      const deleteResult = await storage.deleteTestSuite(id);
       
-      // Return success with no content
-      res.status(204).end();
+      if (!deleteResult.deletedSuite) {
+        return res.status(500).json({ message: "Failed to delete test suite" });
+      }
+      
+      // Return success with deletion summary
+      res.json({ 
+        message: "Test suite deleted successfully",
+        deletedTestCases: deleteResult.deletedTestCases
+      });
     } catch (error) {
       console.error("Error deleting test suite:", error);
       res.status(500).json({ message: "Failed to delete test suite" });

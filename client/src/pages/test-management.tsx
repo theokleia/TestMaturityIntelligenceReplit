@@ -140,6 +140,7 @@ const generateTestCasesSchema = z.object({
 export default function TestManagement() {
   const { toast } = useToast();
   const [selectedSuite, setSelectedSuite] = useState<TestSuite | null>(null);
+  const [selectedSuiteTestCaseCount, setSelectedSuiteTestCaseCount] = useState<number>(0);
   const [searchTerm, setSearchTerm] = useState("");
   const { selectedProject } = useProject();
   const projectId = selectedProject?.id;
@@ -435,18 +436,40 @@ export default function TestManagement() {
   }
   
   // Handle deleting a test suite
-  function onDeleteTestSuite() {
+  async function onDeleteTestSuite() {
     if (!selectedSuite) return;
     
-    deleteSuite(selectedSuite.id);
-    
-    // Handle success
-    toast({
-      title: "Success",
-      description: "Test suite deleted successfully",
-    });
-    setDeleteSuiteConfirmOpen(false);
-    setSelectedSuite(null);
+    try {
+      const response = await fetch(`/api/test-suites/${selectedSuite.id}`, {
+        method: 'DELETE',
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        
+        // Show success message with deletion details
+        toast({
+          title: "Success",
+          description: `Test suite deleted successfully. ${result.deletedTestCases} test cases were also deleted.`,
+        });
+        
+        // Refresh the page to show updated list
+        window.location.reload();
+        
+        setDeleteSuiteConfirmOpen(false);
+        setSelectedSuite(null);
+        setSelectedSuiteTestCaseCount(0);
+      } else {
+        throw new Error('Failed to delete test suite');
+      }
+    } catch (error) {
+      console.error('Error deleting test suite:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete test suite",
+        variant: "destructive",
+      });
+    }
   }
 
   // Handle AI test suite generation
@@ -680,8 +703,21 @@ export default function TestManagement() {
                                         size="icon"
                                         variant="ghost"
                                         className="h-6 w-6 text-destructive hover:text-destructive"
-                                        onClick={(e) => {
+                                        onClick={async (e) => {
                                           e.stopPropagation();
+                                          // Fetch test case count before showing dialog
+                                          try {
+                                            const response = await fetch(`/api/test-suites/${suite.id}/test-cases/count`);
+                                            if (response.ok) {
+                                              const data = await response.json();
+                                              setSelectedSuiteTestCaseCount(data.count);
+                                            } else {
+                                              setSelectedSuiteTestCaseCount(0);
+                                            }
+                                          } catch (error) {
+                                            console.error('Error fetching test case count:', error);
+                                            setSelectedSuiteTestCaseCount(0);
+                                          }
                                           setDeleteSuiteConfirmOpen(true);
                                         }}
                                         title="Delete test suite"
@@ -1975,7 +2011,7 @@ export default function TestManagement() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Test Suite</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this test suite? This action cannot be undone and will make all test cases within this suite unavailable.
+              Are you sure you want to delete this test suite? This action cannot be undone and will permanently delete the test suite and all {selectedSuiteTestCaseCount} related test cases.
             </AlertDialogDescription>
           </AlertDialogHeader>
           
