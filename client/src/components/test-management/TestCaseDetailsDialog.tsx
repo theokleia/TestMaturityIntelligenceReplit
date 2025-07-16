@@ -6,7 +6,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { StatusBadge } from "@/components/ui/status-badge";
+import { StatusBadge } from "@/components/design-system/status-badge";
 import { TestCase } from "@/hooks/test-management";
 
 interface TestCaseDetailsDialogProps {

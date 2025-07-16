@@ -4,10 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Search, ExternalLink, Clock, CheckCircle, AlertCircle, XCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { RefreshCw, Search, ExternalLink, Clock, CheckCircle, AlertCircle, XCircle, FileText, Brain, Eye } from "lucide-react";
 import { useProject } from "@/context/ProjectContext";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { TestCaseDetailsDialog } from "@/components/test-management/TestCaseDetailsDialog";
+import { useTestCases, useTestSuites } from "@/hooks/test-management";
 
 interface JiraTicket {
   id: number;
@@ -50,6 +53,33 @@ interface SyncStats {
   lastSync?: string;
 }
 
+interface TestCase {
+  id: number;
+  title: string;
+  description: string;
+  jiraTicketIds?: string[];
+}
+
+interface TestSuite {
+  id: number;
+  name: string;
+  description: string;
+}
+
+interface AICoverageOption {
+  type: 'existing' | 'new';
+  suiteId?: number;
+  suiteName: string;
+  suiteDescription: string;
+  reasoning: string;
+}
+
+interface AICoverageProposal {
+  testCaseTitle: string;
+  testCaseDescription: string;
+  options: AICoverageOption[];
+}
+
 export default function JiraTickets() {
   const { selectedProject } = useProject();
   const { toast } = useToast();
@@ -62,6 +92,18 @@ export default function JiraTickets() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'connected' | 'error'>('unknown');
+  
+  // Test case related state
+  const [selectedTestCase, setSelectedTestCase] = useState<TestCase | null>(null);
+  const [testCaseDetailOpen, setTestCaseDetailOpen] = useState(false);
+  const [aiCoverageDialogOpen, setAiCoverageDialogOpen] = useState(false);
+  const [selectedTicketForCoverage, setSelectedTicketForCoverage] = useState<JiraTicket | null>(null);
+  const [coverageProposal, setCoverageProposal] = useState<AICoverageProposal | null>(null);
+  const [isGeneratingCoverage, setIsGeneratingCoverage] = useState(false);
+  
+  // Fetch test cases and suites
+  const { testCases = [] } = useTestCases({ projectId: selectedProject?.id });
+  const { testSuites = [] } = useTestSuites({ projectId: selectedProject?.id });
 
   // Calculate sync stats
   const syncStats: SyncStats = {
@@ -259,6 +301,181 @@ export default function JiraTickets() {
     }
   };
 
+  // Helper function to parse Jira description JSON to readable text
+  const parseJiraDescription = (description: string): string => {
+    if (!description) return '';
+    
+    try {
+      const parsed = JSON.parse(description);
+      if (parsed.type === 'doc' && parsed.content) {
+        return extractTextFromContent(parsed.content);
+      }
+    } catch {
+      // If it's not JSON, return as is
+      return description;
+    }
+    
+    return description;
+  };
+
+  const extractTextFromContent = (content: any[]): string => {
+    let text = '';
+    
+    for (const item of content) {
+      if (item.type === 'paragraph' && item.content) {
+        for (const textItem of item.content) {
+          if (textItem.type === 'text') {
+            text += textItem.text;
+          } else if (textItem.type === 'hardBreak') {
+            text += ' ';
+          }
+        }
+        text += ' ';
+      }
+    }
+    
+    return text.trim();
+  };
+
+  // Get test cases covering a specific Jira ticket
+  const getTestCasesForTicket = (jiraKey: string): TestCase[] => {
+    return testCases.filter(tc => 
+      tc.jiraTicketIds && tc.jiraTicketIds.includes(jiraKey)
+    );
+  };
+
+  // Handle AI coverage generation
+  const handleGenerateAICoverage = async (ticket: JiraTicket) => {
+    setSelectedTicketForCoverage(ticket);
+    setIsGeneratingCoverage(true);
+    setAiCoverageDialogOpen(true);
+    
+    try {
+      const response = await fetch('/api/ai/generate-jira-coverage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId: selectedProject?.id,
+          jiraKey: ticket.jiraKey,
+          summary: ticket.summary,
+          description: parseJiraDescription(ticket.description)
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setCoverageProposal(data.proposal);
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to generate AI coverage suggestions",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Error generating AI coverage:", error);
+      toast({
+        title: "Error", 
+        description: "Failed to generate AI coverage suggestions",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGeneratingCoverage(false);
+    }
+  };
+
+  // Handle creating test case in selected suite
+  const handleCreateTestCase = async (option: AICoverageOption) => {
+    if (!selectedProject || !selectedTicketForCoverage || !coverageProposal) return;
+    
+    try {
+      let suiteId = option.suiteId;
+      
+      // Create new suite if needed
+      if (option.type === 'new') {
+        const suiteResponse = await fetch('/api/test-suites', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: option.suiteName,
+            description: option.suiteDescription,
+            projectArea: 'General',
+            priority: 'medium',
+            type: 'functional',
+            status: 'active',
+            coverage: `JIRA_TICKETS: ${selectedTicketForCoverage.jiraKey}`,
+            aiGenerated: true,
+            projectId: selectedProject.id
+          })
+        });
+        
+        if (!suiteResponse.ok) {
+          throw new Error('Failed to create test suite');
+        }
+        
+        const newSuite = await suiteResponse.json();
+        suiteId = newSuite.id;
+      }
+      
+      // Create test case
+      const testCaseResponse = await fetch('/api/test-cases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: coverageProposal.testCaseTitle,
+          description: coverageProposal.testCaseDescription,
+          preconditions: 'System is accessible and preconditions are met',
+          steps: [],
+          expectedResults: 'Test validates the specified functionality',
+          priority: 'medium',
+          severity: 'normal',
+          status: 'draft',
+          suiteId: suiteId,
+          aiGenerated: true,
+          automatable: false,
+          automationStatus: 'not-automated',
+          testData: {},
+          projectId: selectedProject.id
+        })
+      });
+      
+      if (!testCaseResponse.ok) {
+        throw new Error('Failed to create test case');
+      }
+      
+      const newTestCase = await testCaseResponse.json();
+      
+      // Link to Jira ticket
+      await fetch('/api/test-case-jira-links', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          testCaseId: newTestCase.id,
+          jiraTicketKey: selectedTicketForCoverage.jiraKey,
+          projectId: selectedProject.id,
+          linkType: 'covers'
+        })
+      });
+      
+      toast({
+        title: "Success",
+        description: `Test case created in ${option.suiteName}`,
+      });
+      
+      setAiCoverageDialogOpen(false);
+      setCoverageProposal(null);
+      setSelectedTicketForCoverage(null);
+      
+    } catch (error) {
+      console.error("Error creating test case:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create test case",
+        variant: "destructive"
+      });
+    }
+  };
+
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
@@ -448,8 +665,10 @@ export default function JiraTickets() {
                     
                     {ticket.description && (
                       <p className="text-muted-foreground text-sm mb-3 line-clamp-2">
-                        {ticket.description.substring(0, 200)}
-                        {ticket.description.length > 200 && '...'}
+                        {(() => {
+                          const parsed = parseJiraDescription(ticket.description);
+                          return parsed.substring(0, 200) + (parsed.length > 200 ? '...' : '');
+                        })()}
                       </p>
                     )}
                     
@@ -480,6 +699,69 @@ export default function JiraTickets() {
                   </div>
                   
                   <div className="flex flex-col gap-2">
+                    {(() => {
+                      const coveringTestCases = getTestCasesForTicket(ticket.jiraKey);
+                      return (
+                        <div className="text-right">
+                          {coveringTestCases.length > 0 ? (
+                            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 mb-2">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm font-medium text-green-800 dark:text-green-200">
+                                  Test Coverage
+                                </span>
+                                <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
+                                  {coveringTestCases.length} test{coveringTestCases.length > 1 ? 's' : ''}
+                                </Badge>
+                              </div>
+                              <div className="space-y-1">
+                                {coveringTestCases.slice(0, 2).map((testCase) => (
+                                  <div
+                                    key={testCase.id}
+                                    className="flex items-center justify-between text-xs p-2 bg-white dark:bg-gray-800 rounded border hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                                    onClick={() => {
+                                      setSelectedTestCase(testCase);
+                                      setTestCaseDetailOpen(true);
+                                    }}
+                                    title={testCase.description}
+                                  >
+                                    <span className="truncate flex-1 text-gray-700 dark:text-gray-300">
+                                      {testCase.title}
+                                    </span>
+                                    <Eye className="h-3 w-3 ml-2 text-gray-500" />
+                                  </div>
+                                ))}
+                                {coveringTestCases.length > 2 && (
+                                  <div className="text-xs text-center text-gray-500 pt-1">
+                                    +{coveringTestCases.length - 2} more test{coveringTestCases.length - 2 > 1 ? 's' : ''}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 mb-2">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                                  No Test Coverage
+                                </span>
+                                <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">
+                                  0 tests
+                                </Badge>
+                              </div>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="w-full text-xs bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-700"
+                                onClick={() => handleGenerateAICoverage(ticket)}
+                              >
+                                <Brain className="h-3 w-3 mr-1" />
+                                AI Coverage
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                    
                     <Button variant="outline" size="sm" asChild>
                       <a 
                         href={`${selectedProject.jiraUrl}/browse/${ticket.jiraKey}`}
@@ -498,6 +780,95 @@ export default function JiraTickets() {
           ))
         )}
       </div>
+
+      {/* Test Case Details Dialog */}
+      <TestCaseDetailsDialog
+        isOpen={testCaseDetailOpen}
+        onOpenChange={setTestCaseDetailOpen}
+        testCase={selectedTestCase}
+        onUpdate={() => {
+          // Refresh test cases if needed
+        }}
+      />
+
+      {/* AI Coverage Dialog */}
+      <Dialog open={aiCoverageDialogOpen} onOpenChange={setAiCoverageDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>AI Test Coverage Analysis</DialogTitle>
+            <DialogDescription>
+              {selectedTicketForCoverage && (
+                <>Analyzing coverage options for <strong>{selectedTicketForCoverage.jiraKey}</strong>: {selectedTicketForCoverage.summary}</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            {isGeneratingCoverage ? (
+              <div className="flex flex-col items-center justify-center py-8 space-y-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <p className="text-sm text-muted-foreground">
+                  Analyzing existing test suites and generating coverage recommendations...
+                </p>
+              </div>
+            ) : coverageProposal ? (
+              <div className="space-y-6">
+                {/* Proposed Test Case */}
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                  <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-2">Proposed Test Case</h4>
+                  <div className="space-y-2">
+                    <div>
+                      <span className="text-sm font-medium">Title:</span>
+                      <p className="text-sm text-blue-700 dark:text-blue-300">{coverageProposal.testCaseTitle}</p>
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium">Description:</span>
+                      <p className="text-sm text-blue-700 dark:text-blue-300">{coverageProposal.testCaseDescription}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Coverage Options */}
+                <div className="space-y-4">
+                  <h4 className="font-medium">Choose where to create this test case:</h4>
+                  {coverageProposal.options.map((option, index) => (
+                    <div 
+                      key={index}
+                      className="border rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Badge variant={option.type === 'new' ? 'default' : 'outline'}>
+                              {option.type === 'new' ? 'New Suite' : 'Existing Suite'}
+                            </Badge>
+                            <h5 className="font-medium">{option.suiteName}</h5>
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-2">{option.suiteDescription}</p>
+                          <p className="text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded italic">
+                            {option.reasoning}
+                          </p>
+                        </div>
+                        <Button 
+                          size="sm" 
+                          onClick={() => handleCreateTestCase(option)}
+                          className="ml-4"
+                        >
+                          Create
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">Failed to generate coverage recommendations</p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -247,5 +247,80 @@ export function registerAIRoutes(app: Express) {
       res.status(500).json({ message: "Failed to generate document" });
     }
   });
+
+  // AI Jira Coverage Generation
+  app.post("/api/ai/generate-jira-coverage", async (req, res) => {
+    try {
+      const { projectId, jiraKey, summary, description } = req.body;
+      
+      if (!projectId || !jiraKey || !summary) {
+        return res.status(400).json({ 
+          message: "projectId, jiraKey, and summary are required" 
+        });
+      }
+      
+      // Get project details
+      const project = await storage.getProject(parseInt(projectId));
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      // Get existing test suites for context
+      const testSuites = await storage.getTestSuites({ projectId: parseInt(projectId) });
+      
+      // Generate test case title and description
+      const testCaseTitle = `Test Coverage for ${jiraKey}: ${summary}`;
+      const testCaseDescription = `Validate functionality and requirements for ${jiraKey}:\n\n${summary}\n\n${description || 'No additional description provided.'}`;
+      
+      // Generate suite options
+      const options = [];
+      
+      // Option 1: Create new functional suite
+      options.push({
+        type: 'new',
+        suiteName: `${jiraKey} Functional Tests`,
+        suiteDescription: `Dedicated test suite for validating ${jiraKey} functionality and acceptance criteria`,
+        reasoning: `Creates a focused test suite specifically for this feature, allowing comprehensive coverage of all aspects of ${jiraKey}`
+      });
+      
+      // Option 2: Use existing suite if any exist
+      if (testSuites.length > 0) {
+        const mostRelevantSuite = testSuites.find(suite => 
+          suite.name.toLowerCase().includes('functional') || 
+          suite.name.toLowerCase().includes('feature') ||
+          suite.type === 'functional'
+        ) || testSuites[0];
+        
+        options.push({
+          type: 'existing',
+          suiteId: mostRelevantSuite.id,
+          suiteName: mostRelevantSuite.name,
+          suiteDescription: mostRelevantSuite.description,
+          reasoning: `Adds this test case to the existing ${mostRelevantSuite.name} suite, maintaining consistency with current test organization`
+        });
+      }
+      
+      // Option 3: Create integration suite for complex features
+      if (summary.toLowerCase().includes('api') || summary.toLowerCase().includes('integration') || summary.toLowerCase().includes('system')) {
+        options.push({
+          type: 'new',
+          suiteName: `${jiraKey} Integration Tests`,
+          suiteDescription: `Integration test suite for ${jiraKey} covering API interactions and system integration points`,
+          reasoning: `Creates an integration-focused suite for testing complex interactions and system boundaries related to ${jiraKey}`
+        });
+      }
+      
+      const proposal = {
+        testCaseTitle,
+        testCaseDescription,
+        options
+      };
+      
+      res.json({ proposal });
+    } catch (error) {
+      console.error("Error generating Jira coverage:", error);
+      res.status(500).json({ message: "Failed to generate Jira coverage suggestions" });
+    }
+  });
 }
 
