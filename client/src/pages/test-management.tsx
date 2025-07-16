@@ -604,13 +604,13 @@ export default function TestManagement() {
       const data = await response.json();
       
       if (response.ok) {
-        setProposedSuites(data.proposedSuites);
+        setProposedSuites(data.testSuites || []);
         setAiSuiteGenerateDialogOpen(false);
         setAiSuiteProposalsOpen(true);
         
         toast({
           title: "AI Analysis Complete",
-          description: `Generated ${data.proposedSuites.length} test suite proposals`,
+          description: `Generated ${(data.testSuites || []).length} test suite proposals`,
         });
       } else {
         toast({
@@ -635,7 +635,7 @@ export default function TestManagement() {
 
   // Handle accepting proposed test suites
   async function handleAcceptProposedSuites() {
-    if (!selectedProject || proposedSuites.length === 0) return;
+    if (!selectedProject || !proposedSuites || proposedSuites.length === 0) return;
     
     try {
       const promises = proposedSuites.map(async (suite) => {
@@ -668,7 +668,7 @@ export default function TestManagement() {
       
       toast({
         title: "Success",
-        description: `Created ${proposedSuites.length} test suites successfully`,
+        description: `Created ${(proposedSuites || []).length} test suites successfully`,
       });
       
       setAiSuiteProposalsOpen(false);
@@ -2410,7 +2410,7 @@ export default function TestManagement() {
           
           <div className="py-4">
             <div className="grid gap-4">
-              {proposedSuites.map((suite, index) => (
+              {(proposedSuites || []).map((suite, index) => (
                 <ATMFCard key={index} className="p-4" neonEffect="blue">
                   <div className="space-y-3">
                     <div className="flex items-start justify-between">
@@ -2471,7 +2471,7 @@ export default function TestManagement() {
               className="flex items-center gap-2"
             >
               <Check className="h-4 w-4" />
-              <span>Accept All ({proposedSuites.length} suites)</span>
+              <span>Accept All ({(proposedSuites || []).length} suites)</span>
             </Button>
           </DialogFooter>
         </DialogContent>
