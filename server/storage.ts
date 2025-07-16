@@ -103,6 +103,7 @@ export interface IStorage {
     automatable?: boolean;
     projectId?: number;
   }): Promise<TestCase[]>;
+  getTestCasesBySuiteId(suiteId: number): Promise<TestCase[]>;
   getTestCase(id: number): Promise<TestCase | undefined>;
   createTestCase(testCase: InsertTestCase): Promise<TestCase>;
   updateTestCase(id: number, testCase: Partial<InsertTestCase>): Promise<TestCase | undefined>;
@@ -686,6 +687,14 @@ export class DatabaseStorage implements IStorage {
     return db
       .select()
       .from(testCases)
+      .orderBy(desc(testCases.createdAt));
+  }
+
+  async getTestCasesBySuiteId(suiteId: number): Promise<TestCase[]> {
+    return db
+      .select()
+      .from(testCases)
+      .where(eq(testCases.suiteId, suiteId))
       .orderBy(desc(testCases.createdAt));
   }
 
