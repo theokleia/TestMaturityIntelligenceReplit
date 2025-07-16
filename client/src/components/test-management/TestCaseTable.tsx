@@ -4,6 +4,7 @@ import { StatusBadge } from "@/components/design-system/status-badge";
 import { IconWrapper } from "@/components/design-system/icon-wrapper";
 import { Bot, Eye, FileText, Plus, Brain } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -92,8 +93,8 @@ export function TestCaseTable({
           <TableHead>Title</TableHead>
           <TableHead>Status</TableHead>
           <TableHead>Priority</TableHead>
-          <TableHead>Severity</TableHead>
-          <TableHead>Automation</TableHead>
+          <TableHead className="w-[80px]">Auto</TableHead>
+          <TableHead>Jira</TableHead>
           <TableHead>Source</TableHead>
         </TableRow>
       </TableHeader>
@@ -111,11 +112,35 @@ export function TestCaseTable({
             <TableCell>
               <StatusBadge status={testCase.priority} variant="priority" />
             </TableCell>
-            <TableCell>
-              <StatusBadge status={testCase.severity} variant="severity" />
+            <TableCell className="text-center">
+              <IconWrapper 
+                color={testCase.automatable ? "green" : "muted"} 
+                size="xs"
+              >
+                {testCase.automatable ? (
+                  <Bot className="h-4 w-4" />
+                ) : (
+                  <FileText className="h-4 w-4" />
+                )}
+              </IconWrapper>
             </TableCell>
             <TableCell>
-              <StatusBadge status={testCase.automationStatus} variant="automation" />
+              {testCase.jiraTicketIds && testCase.jiraTicketIds.length > 0 ? (
+                <div className="flex flex-wrap gap-1">
+                  {testCase.jiraTicketIds.slice(0, 2).map((ticketId: string) => (
+                    <Badge key={ticketId} variant="outline" className="text-xs">
+                      {ticketId}
+                    </Badge>
+                  ))}
+                  {testCase.jiraTicketIds.length > 2 && (
+                    <Badge variant="outline" className="text-xs">
+                      +{testCase.jiraTicketIds.length - 2}
+                    </Badge>
+                  )}
+                </div>
+              ) : (
+                <span className="text-text-muted text-xs">—</span>
+              )}
             </TableCell>
             <TableCell>
               <div className="flex items-center gap-2">

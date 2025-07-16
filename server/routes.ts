@@ -796,7 +796,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       const testCases = await storage.getTestCases(filters);
-      res.json(testCases);
+      
+      // Enhance test cases with Jira ticket information
+      const enhancedTestCases = await Promise.all(
+        testCases.map(async (testCase) => {
+          try {
+            const jiraLinks = await storage.getTestCaseJiraLinks(testCase.id);
+            const jiraTicketIds = jiraLinks.map(link => link.jiraTicketKey);
+            return {
+              ...testCase,
+              jiraTicketIds
+            };
+          } catch (error) {
+            console.error(`Error fetching Jira links for test case ${testCase.id}:`, error);
+            return {
+              ...testCase,
+              jiraTicketIds: []
+            };
+          }
+        })
+      );
+      
+      res.json(enhancedTestCases);
     } catch (error) {
       console.error("Error fetching test cases:", error);
       res.status(500).json({ message: "Failed to fetch test cases" });

@@ -64,4 +64,5 @@ export interface TestCase {
   createdAt: string;
   updatedAt: string;
   projectId?: number;
+  jiraTicketIds?: string[];  // Add Jira ticket IDs array
 }
