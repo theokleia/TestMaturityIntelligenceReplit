@@ -161,8 +161,13 @@ export class JiraService {
         const lastSync = await storage.getLastSuccessfulSync(project.id);
         if (lastSync) {
           const lastSyncDate = new Date(lastSync.completedAt!);
-          const formattedDate = lastSyncDate.toISOString().split('T')[0] + ' ' + 
-                               lastSyncDate.toTimeString().split(' ')[0];
+          // Format date for Jira API: 'yyyy-MM-dd HH:mm' (without seconds)
+          const year = lastSyncDate.getFullYear();
+          const month = String(lastSyncDate.getMonth() + 1).padStart(2, '0');
+          const day = String(lastSyncDate.getDate()).padStart(2, '0');
+          const hours = String(lastSyncDate.getHours()).padStart(2, '0');
+          const minutes = String(lastSyncDate.getMinutes()).padStart(2, '0');
+          const formattedDate = `${year}-${month}-${day} ${hours}:${minutes}`;
           jql += ` AND updated >= "${formattedDate}"`;
         }
       }
