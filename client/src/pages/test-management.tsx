@@ -83,6 +83,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 import { 
   useTestSuites, 
   useCreateTestSuite, 
@@ -166,6 +167,7 @@ interface ProposedTestSuite {
 // Test Management page component
 export default function TestManagement() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [selectedSuite, setSelectedSuite] = useState<TestSuite | null>(null);
   const [selectedSuiteTestCaseCount, setSelectedSuiteTestCaseCount] = useState<number>(0);
   const [searchTerm, setSearchTerm] = useState("");
@@ -526,14 +528,15 @@ export default function TestManagement() {
         setDeletionStage("success");
         setDeletedTestCasesCount(result.deletedTestCases);
         
-        // After showing success for 2 seconds, close modal and refresh
+        // After showing success for 2 seconds, close modal and refresh data
         setTimeout(() => {
           setDeletionModalOpen(false);
           setSelectedSuite(null);
           setSelectedSuiteTestCaseCount(0);
           
-          // Refresh the page to show updated list
-          window.location.reload();
+          // Invalidate and refetch data without page reload
+          queryClient.invalidateQueries({ queryKey: ["/api/test-suites"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/test-cases"] });
         }, 2000);
       } else {
         const errorText = await response.text();
@@ -672,8 +675,8 @@ export default function TestManagement() {
       setProposedSuites([]);
       setOrganizationType("");
       
-      // Refresh test suites data
-      window.location.reload();
+      // Refresh test suites data using cache invalidation
+      queryClient.invalidateQueries({ queryKey: ["/api/test-suites"] });
     } catch (error) {
       console.error("Error creating test suites:", error);
       toast({
