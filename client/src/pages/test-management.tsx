@@ -103,7 +103,6 @@ import { IconWrapper } from "@/components/design-system/icon-wrapper";
 import { PageContainer, PageHeader, PageContent } from "@/components/design-system/page-container";
 import { useProject } from "@/context/ProjectContext";
 import { AILoadingAnimation, CompactAILoader, AISuccessAnimation } from "@/components/ui/loading-animations";
-import { CoverageDisplay } from "@/components/test-management/CoverageDisplay";
 
 // Schema for creating a test suite
 const createTestSuiteSchema = z.object({
@@ -1037,16 +1036,12 @@ export default function TestManagement() {
                 />
                 <div className="p-4">
                   {selectedSuite ? (
-                    <div className="space-y-4">
-                      {/* Coverage Display */}
-                      <CoverageDisplay coverageText={selectedSuite.coverage} />
-                      
-                      {isLoadingTestCases ? (
-                        <div className="flex justify-center items-center h-24">
-                          <p>Loading test cases...</p>
-                        </div>
-                      ) : testCases && testCases.length > 0 ? (
-                        <Table>
+                    isLoadingTestCases ? (
+                      <div className="flex justify-center items-center h-24">
+                        <p>Loading test cases...</p>
+                      </div>
+                    ) : testCases && testCases.length > 0 ? (
+                      <Table>
                         <TableHeader>
                           <TableRow>
                             <TableHead>Title</TableHead>
@@ -1160,7 +1155,6 @@ export default function TestManagement() {
                         </div>
                       </div>
                     )
-                    </div>
                   ) : (
                     <div className="flex flex-col items-center justify-center h-40 text-center">
                       <IconWrapper color="muted" size="lg" className="mb-4">

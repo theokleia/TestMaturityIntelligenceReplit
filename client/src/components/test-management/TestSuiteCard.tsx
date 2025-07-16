@@ -2,7 +2,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { CompactCoverageDisplay } from "./CoverageDisplay";
 import { 
   FileText, 
   Calendar, 
@@ -24,7 +23,6 @@ interface TestSuite {
   status: string;
   priority: string;
   projectArea: string;
-  coverage?: string;
   userId: number | null;
   aiGenerated: boolean;
   tags: string[];
@@ -113,9 +111,6 @@ export function TestSuiteCard({
             )}
           </div>
         )}
-        
-        {/* Coverage Information */}
-        <CompactCoverageDisplay coverageText={suite.coverage} className="pt-2 border-t" />
         
         <div className="flex flex-wrap gap-2 pt-2">
           <Button
