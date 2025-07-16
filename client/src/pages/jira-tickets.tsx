@@ -59,8 +59,8 @@ export default function JiraTickets() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("");
-  const [priorityFilter, setPriorityFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'connected' | 'error'>('unknown');
 
   // Calculate sync stats
@@ -78,8 +78,8 @@ export default function JiraTickets() {
       ticket.jiraKey.toLowerCase().includes(searchQuery.toLowerCase()) ||
       ticket.summary.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesStatus = !statusFilter || ticket.status === statusFilter;
-    const matchesPriority = !priorityFilter || ticket.priority === priorityFilter;
+    const matchesStatus = statusFilter === "all" || ticket.status === statusFilter;
+    const matchesPriority = priorityFilter === "all" || ticket.priority === priorityFilter;
     
     return matchesSearch && matchesStatus && matchesPriority && !ticket.isDeleted;
   });
@@ -363,7 +363,7 @@ export default function JiraTickets() {
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Statuses</SelectItem>
+                <SelectItem value="all">All Statuses</SelectItem>
                 {uniqueStatuses.map(status => (
                   <SelectItem key={status} value={status}>{status}</SelectItem>
                 ))}
@@ -374,7 +374,7 @@ export default function JiraTickets() {
                 <SelectValue placeholder="Filter by priority" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Priorities</SelectItem>
+                <SelectItem value="all">All Priorities</SelectItem>
                 {uniquePriorities.map(priority => (
                   <SelectItem key={priority} value={priority}>{priority}</SelectItem>
                 ))}
