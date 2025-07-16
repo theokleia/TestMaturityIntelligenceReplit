@@ -104,6 +104,7 @@ import { IconWrapper } from "@/components/design-system/icon-wrapper";
 import { PageContainer, PageHeader, PageContent } from "@/components/design-system/page-container";
 import { useProject } from "@/context/ProjectContext";
 import { AILoadingAnimation, CompactAILoader, AISuccessAnimation } from "@/components/ui/loading-animations";
+import { JiraTicketsBadge } from "@/components/test-management/JiraTicketsBadge";
 
 // Schema for creating a test suite
 const createTestSuiteSchema = z.object({
@@ -1113,22 +1114,10 @@ export default function TestManagement() {
                                 </IconWrapper>
                               </TableCell>
                               <TableCell>
-                                {testCase.jiraTicketIds && testCase.jiraTicketIds.length > 0 ? (
-                                  <div className="flex flex-wrap gap-1">
-                                    {testCase.jiraTicketIds.slice(0, 2).map((ticketId: string) => (
-                                      <Badge key={ticketId} variant="outline" className="text-xs">
-                                        {ticketId}
-                                      </Badge>
-                                    ))}
-                                    {testCase.jiraTicketIds.length > 2 && (
-                                      <Badge variant="outline" className="text-xs">
-                                        +{testCase.jiraTicketIds.length - 2}
-                                      </Badge>
-                                    )}
-                                  </div>
-                                ) : (
-                                  <span className="text-text-muted text-xs">—</span>
-                                )}
+                                <JiraTicketsBadge 
+                                  jiraTicketIds={testCase.jiraTicketIds}
+                                  jiraTickets={testCase.jiraTickets}
+                                />
                               </TableCell>
                               <TableCell>
                                 <div className="flex items-center gap-2">
