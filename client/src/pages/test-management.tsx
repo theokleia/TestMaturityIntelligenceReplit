@@ -209,9 +209,10 @@ export default function TestManagement() {
   const [testCaseGenerationLoading, setTestCaseGenerationLoading] = useState(false);
   const [aiGenerationStage, setAiGenerationStage] = useState("");
   
-  // Debug selected project
+  // Debug selected project and suite
   console.log("TestManagement - selectedProject:", selectedProject);
   console.log("TestManagement - projectId:", projectId);
+  console.log("TestManagement - selectedSuite:", selectedSuite);
   
   // Fetch test suites
   const { testSuites: testSuitesData, isLoading: isLoadingTestSuites } = useTestSuites({
@@ -702,6 +703,9 @@ export default function TestManagement() {
 
   // Handle AI test coverage generation
   async function handleGenerateTestCoverage() {
+    console.log("handleGenerateTestCoverage - selectedProject:", selectedProject);
+    console.log("handleGenerateTestCoverage - selectedSuite:", selectedSuite);
+    
     if (!selectedProject || !selectedSuite) {
       toast({
         title: "Error",
@@ -920,7 +924,10 @@ export default function TestManagement() {
                             key={suite.id} 
                             className={`cursor-pointer transition-colors ${selectedSuite?.id === suite.id ? 'bg-primary/10 border-primary/50' : ''}`}
                             neonEffect={selectedSuite?.id === suite.id ? "blue" : "none"}
-                            onClick={() => setSelectedSuite(suite)}
+                            onClick={() => {
+                              console.log("Selecting suite:", suite);
+                              setSelectedSuite(suite);
+                            }}
                           >
                             <div className="p-4">
                               <div className="flex items-center justify-between mb-1">
