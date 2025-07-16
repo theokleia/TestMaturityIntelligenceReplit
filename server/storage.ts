@@ -150,6 +150,7 @@ export interface IStorage {
   
   // Jira Tickets
   getJiraTicketsByProject(projectId: number): Promise<JiraTicket[]>;
+  getJiraTickets(projectId: number): Promise<JiraTicket[]>; // Alias for getJiraTicketsByProject
   getJiraTicket(id: number): Promise<JiraTicket | undefined>;
   getJiraTicketByKey(jiraKey: string, projectId: number): Promise<JiraTicket | undefined>;
   createJiraTicket(ticket: InsertJiraTicket): Promise<JiraTicket>;
@@ -1529,6 +1530,11 @@ export class DatabaseStorage implements IStorage {
       .from(jiraTickets)
       .where(and(eq(jiraTickets.projectId, projectId), eq(jiraTickets.isDeleted, false)))
       .orderBy(desc(jiraTickets.jiraUpdatedAt));
+  }
+
+  // Alias for getJiraTicketsByProject
+  async getJiraTickets(projectId: number): Promise<JiraTicket[]> {
+    return this.getJiraTicketsByProject(projectId);
   }
 
   async getJiraTicket(id: number): Promise<JiraTicket | undefined> {
