@@ -177,6 +177,30 @@ export function registerTestManagementRoutes(app: Express) {
     }
   });
 
+  app.patch("/api/test-cases/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const testCaseData = insertTestCaseSchema.partial().parse(req.body);
+      const testCase = await storage.updateTestCase(id, testCaseData);
+      
+      if (!testCase) {
+        return res.status(404).json({ message: "Test case not found" });
+      }
+      
+      res.json(testCase);
+    } catch (error) {
+      console.error("Error updating test case:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ 
+          message: "Invalid test case data", 
+          errors: error.errors 
+        });
+      } else {
+        res.status(500).json({ message: "Failed to update test case" });
+      }
+    }
+  });
+
   app.delete("/api/test-cases/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
