@@ -209,7 +209,7 @@ export function registerTestManagementRoutes(app: Express) {
       
       // Fetch project context for AI analysis
       const documents = await storage.getDocuments({ projectId: testProjectId });
-      const jiraTickets = await storage.getJiraTickets(testProjectId);
+      const jiraTickets = await storage.getJiraTicketsByProject(testProjectId);
       const existingTestCases = await storage.getTestCases({ projectId: testProjectId });
       
       // Generate test coverage analysis
@@ -368,6 +368,52 @@ export function registerTestManagementRoutes(app: Express) {
     } catch (error) {
       console.error("Error creating test suites:", error);
       res.status(500).json({ message: "Failed to create test suites" });
+    }
+  });
+
+  // Test Cycles Routes (basic CRUD to prevent 404 errors)
+  app.get("/api/test-cycles", async (req, res) => {
+    try {
+      const projectId = req.query.projectId ? parseInt(req.query.projectId as string) : undefined;
+      const testCycles = await storage.getTestCycles({ projectId });
+      res.json(testCycles);
+    } catch (error) {
+      console.error("Error fetching test cycles:", error);
+      res.status(500).json({ message: "Failed to fetch test cycles" });
+    }
+  });
+
+  app.get("/api/test-cycles/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const testCycle = await storage.getTestCycle(id);
+      
+      if (!testCycle) {
+        return res.status(404).json({ message: "Test cycle not found" });
+      }
+      
+      res.json(testCycle);
+    } catch (error) {
+      console.error("Error fetching test cycle:", error);
+      res.status(500).json({ message: "Failed to fetch test cycle" });
+    }
+  });
+
+  app.post("/api/test-cycles", requireAuth, async (req, res) => {
+    try {
+      const testCycleData = insertTestCycleSchema.parse(req.body);
+      const testCycle = await storage.createTestCycle(testCycleData);
+      res.status(201).json(testCycle);
+    } catch (error) {
+      console.error("Error creating test cycle:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ 
+          message: "Invalid test cycle data", 
+          errors: error.errors 
+        });
+      } else {
+        res.status(500).json({ message: "Failed to create test cycle" });
+      }
     }
   });
 }

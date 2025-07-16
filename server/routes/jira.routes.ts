@@ -4,7 +4,88 @@ import { createJiraServiceFromProject } from "../jira-service";
 import { requireAuth } from "./auth.routes";
 
 export function registerJiraRoutes(app: Express) {
-  // Jira tickets routes
+  // Project-specific Jira tickets routes
+  app.get("/api/projects/:id/jira-tickets", async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      // Note: Filtering by status, issueType, searchTerm not implemented in storage yet
+      const tickets = await storage.getJiraTicketsByProject(projectId);
+      
+      res.json(tickets);
+    } catch (error) {
+      console.error("Error fetching Jira tickets:", error);
+      res.status(500).json({ message: "Failed to fetch Jira tickets" });
+    }
+  });
+
+  app.get("/api/projects/:id/jira-sync-logs", async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      
+      const logs = await storage.getJiraSyncLogs(projectId);
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching Jira sync logs:", error);
+      res.status(500).json({ message: "Failed to fetch Jira sync logs" });
+    }
+  });
+
+  app.post("/api/projects/:id/jira-test-connection", requireAuth, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      
+      // Get project details
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      // Create Jira service for this project
+      const jiraService = createJiraServiceFromProject(project);
+      if (!jiraService) {
+        return res.status(400).json({ 
+          message: "Jira configuration not found for this project" 
+        });
+      }
+      
+      // Test connection
+      const isConnected = await jiraService.testConnection();
+      res.json({ connected: isConnected });
+    } catch (error) {
+      console.error("Error testing Jira connection:", error);
+      res.status(500).json({ message: "Failed to test Jira connection" });
+    }
+  });
+
+  app.post("/api/projects/:id/jira-sync", requireAuth, async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      const { syncType = "incremental" } = req.body;
+      
+      // Get project details
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      // Create Jira service for this project
+      const jiraService = createJiraServiceFromProject(project);
+      if (!jiraService) {
+        return res.status(400).json({ 
+          message: "Jira configuration not found for this project" 
+        });
+      }
+      
+      // Perform sync
+      const result = await jiraService.syncTickets(project, syncType);
+      res.json(result);
+    } catch (error) {
+      console.error("Error syncing Jira tickets:", error);
+      res.status(500).json({ message: "Failed to sync Jira tickets" });
+    }
+  });
+
+  // Legacy Jira tickets routes (keeping for backward compatibility)
   app.get("/api/jira-tickets", async (req, res) => {
     try {
       const projectId = req.query.projectId ? parseInt(req.query.projectId as string) : undefined;
@@ -16,11 +97,7 @@ export function registerJiraRoutes(app: Express) {
         return res.status(400).json({ message: "projectId is required" });
       }
       
-      const tickets = await storage.getJiraTickets(projectId, {
-        status,
-        issueType,
-        searchTerm
-      });
+      const tickets = await storage.getJiraTicketsByProject(projectId);
       
       res.json(tickets);
     } catch (error) {
