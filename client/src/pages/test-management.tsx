@@ -38,6 +38,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { DeletionLoadingModal } from "@/components/ui/deletion-loading-modal";
 import {
   Form,
   FormControl,
@@ -181,6 +182,12 @@ export default function TestManagement() {
   const [editCaseDialogOpen, setEditCaseDialogOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [selectedTestCase, setSelectedTestCase] = useState<TestCase | null>(null);
+  
+  // Deletion loading modal state
+  const [deletionModalOpen, setDeletionModalOpen] = useState(false);
+  const [deletionStage, setDeletionStage] = useState<"deleting" | "success" | "error">("deleting");
+  const [deletionMessage, setDeletionMessage] = useState("");
+  const [deletedTestCasesCount, setDeletedTestCasesCount] = useState(0);
   
   // AI Test Suite Generation state
   const [aiSuiteGenerateDialogOpen, setAiSuiteGenerateDialogOpen] = useState(false);
@@ -502,6 +509,11 @@ export default function TestManagement() {
   async function onDeleteTestSuite() {
     if (!selectedSuite) return;
     
+    // Close confirmation dialog and show loading modal
+    setDeleteSuiteConfirmOpen(false);
+    setDeletionModalOpen(true);
+    setDeletionStage("deleting");
+    
     try {
       const response = await fetch(`/api/test-suites/${selectedSuite.id}`, {
         method: 'DELETE',
@@ -510,28 +522,43 @@ export default function TestManagement() {
       if (response.ok) {
         const result = await response.json();
         
-        // Show success message with deletion details
-        toast({
-          title: "Success",
-          description: `Test suite deleted successfully. ${result.deletedTestCases} test cases were also deleted.`,
-        });
+        // Show success stage
+        setDeletionStage("success");
+        setDeletedTestCasesCount(result.deletedTestCases);
         
-        // Refresh the page to show updated list
-        window.location.reload();
-        
-        setDeleteSuiteConfirmOpen(false);
-        setSelectedSuite(null);
-        setSelectedSuiteTestCaseCount(0);
+        // After showing success for 2 seconds, close modal and refresh
+        setTimeout(() => {
+          setDeletionModalOpen(false);
+          setSelectedSuite(null);
+          setSelectedSuiteTestCaseCount(0);
+          
+          // Refresh the page to show updated list
+          window.location.reload();
+        }, 2000);
       } else {
-        throw new Error('Failed to delete test suite');
+        const errorText = await response.text();
+        console.error('Delete failed:', errorText);
+        
+        // Show error stage
+        setDeletionStage("error");
+        setDeletionMessage("Failed to delete test suite. Please try again.");
+        
+        // After showing error for 3 seconds, close modal
+        setTimeout(() => {
+          setDeletionModalOpen(false);
+        }, 3000);
       }
     } catch (error) {
       console.error('Error deleting test suite:', error);
-      toast({
-        title: "Error",
-        description: "Failed to delete test suite",
-        variant: "destructive",
-      });
+      
+      // Show error stage
+      setDeletionStage("error");
+      setDeletionMessage("Network error occurred. Please check your connection and try again.");
+      
+      // After showing error for 3 seconds, close modal
+      setTimeout(() => {
+        setDeletionModalOpen(false);
+      }, 3000);
     }
   }
 
@@ -2645,6 +2672,17 @@ export default function TestManagement() {
           />
         </DialogContent>
       </Dialog>
+
+      {/* Deletion Loading Modal */}
+      <DeletionLoadingModal
+        open={deletionModalOpen}
+        onOpenChange={setDeletionModalOpen}
+        itemName={selectedSuite?.name || ""}
+        itemType="test suite"
+        stage={deletionStage}
+        message={deletionMessage}
+        deletedCount={deletedTestCasesCount}
+      />
     </AppLayout>
   );
 }
