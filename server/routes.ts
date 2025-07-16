@@ -1184,7 +1184,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           severity: "normal",
           status: "draft",
           suiteId: suiteId,
-          userId: 1, // Default to admin user  
+          userId: null, // AI-generated test cases don't have a specific user  
           aiGenerated: true,
           automatable: false,
           automationStatus: "not-automated",
