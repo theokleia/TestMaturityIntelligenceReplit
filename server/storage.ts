@@ -683,19 +683,80 @@ export class DatabaseStorage implements IStorage {
       }
     }
     
-    // Apply conditions if any, otherwise return all records
+    // Get base test cases
+    let baseTestCases;
     if (conditions.length > 0) {
-      return db
+      baseTestCases = await db
         .select()
         .from(testCases)
         .where(and(...conditions))
         .orderBy(desc(testCases.createdAt));
+    } else {
+      baseTestCases = await db
+        .select()
+        .from(testCases)
+        .orderBy(desc(testCases.createdAt));
     }
     
-    return db
-      .select()
-      .from(testCases)
-      .orderBy(desc(testCases.createdAt));
+    // Enhance test cases with Jira ticket information
+    const enhancedTestCases = await Promise.all(
+      baseTestCases.map(async (testCase) => {
+        try {
+          const jiraTicketResults = await db
+            .select({
+              jiraKey: jiraTickets.jiraKey,
+              summary: jiraTickets.summary
+            })
+            .from(testCaseJiraLinks)
+            .innerJoin(jiraTickets, eq(testCaseJiraLinks.jiraTicketId, jiraTickets.id))
+            .where(eq(testCaseJiraLinks.testCaseId, testCase.id));
+          
+          const jiraTicketsData = jiraTicketResults.map(result => ({
+            key: result.jiraKey,
+            summary: result.summary || 'No summary'
+          }));
+          
+          const jiraTicketIds = jiraTicketsData.map(ticket => ticket.key);
+          
+          return {
+            ...testCase,
+            jiraTickets: jiraTicketsData,
+            jiraTicketIds
+          };
+        } catch (error) {
+          console.error(`Error fetching Jira tickets for test case ${testCase.id}:`, error);
+          return {
+            ...testCase,
+            jiraTickets: [],
+            jiraTicketIds: []
+          };
+        }
+      })
+    );
+    
+    return enhancedTestCases;
+  }
+
+  // Helper method to get Jira tickets for a test case
+  async getJiraTicketsForTestCase(testCaseId: number): Promise<Array<{key: string, summary: string}>> {
+    try {
+      const jiraTicketResults = await db
+        .select({
+          jiraKey: jiraTickets.jiraKey,
+          summary: jiraTickets.summary
+        })
+        .from(testCaseJiraLinks)
+        .innerJoin(jiraTickets, eq(testCaseJiraLinks.jiraTicketId, jiraTickets.id))
+        .where(eq(testCaseJiraLinks.testCaseId, testCaseId));
+      
+      return jiraTicketResults.map(result => ({
+        key: result.jiraKey,
+        summary: result.summary || 'No summary'
+      }));
+    } catch (error) {
+      console.error(`Error fetching Jira tickets for test case ${testCaseId}:`, error);
+      return [];
+    }
   }
 
   async getTestCasesBySuiteId(suiteId: number): Promise<TestCase[]> {
