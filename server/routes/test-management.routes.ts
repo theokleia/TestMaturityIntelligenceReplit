@@ -90,11 +90,15 @@ export function registerTestManagementRoutes(app: Express) {
       const id = parseInt(req.params.id);
       const result = await storage.deleteTestSuite(id);
       
-      if (!result) {
+      if (!result.deletedSuite) {
         return res.status(404).json({ message: "Test suite not found" });
       }
       
-      res.status(204).send();
+      res.json({
+        message: "Test suite deleted successfully",
+        deletedSuite: true,
+        deletedTestCases: result.deletedTestCases
+      });
     } catch (error) {
       console.error("Error deleting test suite:", error);
       res.status(500).json({ message: "Failed to delete test suite" });
@@ -185,6 +189,18 @@ export function registerTestManagementRoutes(app: Express) {
     } catch (error) {
       console.error("Error deleting test case:", error);
       res.status(500).json({ message: "Failed to delete test case" });
+    }
+  });
+
+  // Test suite test cases count endpoint
+  app.get("/api/test-suites/:id/test-cases/count", async (req, res) => {
+    try {
+      const suiteId = parseInt(req.params.id);
+      const testCases = await storage.getTestCases({ suiteId });
+      res.json({ count: testCases.length });
+    } catch (error) {
+      console.error("Error fetching test cases count:", error);
+      res.status(500).json({ message: "Failed to fetch test cases count" });
     }
   });
 
@@ -375,6 +391,9 @@ export function registerTestManagementRoutes(app: Express) {
   app.get("/api/test-cycles", async (req, res) => {
     try {
       const projectId = req.query.projectId ? parseInt(req.query.projectId as string) : undefined;
+      if (projectId && isNaN(projectId)) {
+        return res.status(400).json({ message: "Invalid projectId parameter" });
+      }
       const testCycles = await storage.getTestCycles({ projectId });
       res.json(testCycles);
     } catch (error) {
