@@ -375,6 +375,15 @@ export function getJiraContextForAI(issues: JiraIssue[]): string {
   // Extract key details from issues to enhance AI prompt
   const issuesSummary = issues.map(issue => {
     try {
+      // Check if issue and required fields exist
+      if (!issue || !issue.key || !issue.fields) {
+        console.error(`Invalid issue data:`, issue);
+        return `
+Issue: Unknown
+Error: Invalid issue data structure
+---`;
+      }
+      
       // Get all the issue information including relationships
       return `
 Issue: ${issue.key}
@@ -385,9 +394,9 @@ Priority: ${issue.fields.priority?.name || 'Not set'}
 ${getParentInfo(issue)}Description: ${safelyExtractDescription(issue.fields.description)}
 ${getSubtasksInfo(issue)}${getLinkedIssuesInfo(issue)}---`;
     } catch (error) {
-      console.error(`Error formatting issue ${issue.key}:`, error);
+      console.error(`Error formatting issue ${issue?.key || 'undefined'}:`, error);
       return `
-Issue: ${issue.key}
+Issue: ${issue?.key || 'Unknown'}
 Error: Could not process this issue's data
 ---`;
     }

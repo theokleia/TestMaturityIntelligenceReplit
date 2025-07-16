@@ -828,7 +828,15 @@ Respond with valid JSON array format only, no additional text:
     const responseText = response.choices[0].message.content || "[]";
     
     try {
-      const testSuites = JSON.parse(responseText);
+      // Clean the response to remove markdown code blocks if present
+      let cleanedResponse = responseText.trim();
+      if (cleanedResponse.startsWith('```json')) {
+        cleanedResponse = cleanedResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (cleanedResponse.startsWith('```')) {
+        cleanedResponse = cleanedResponse.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+      
+      const testSuites = JSON.parse(cleanedResponse);
       console.log(`Generated ${testSuites.length} test suites for project ${project.name}`);
       return testSuites;
     } catch (parseError) {
