@@ -473,6 +473,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Generate AI test suites
+  app.post("/api/ai/generate-test-suites", requireAuth, async (req, res) => {
+    try {
+      const { projectId, organizationType } = req.body;
+      
+      if (!projectId || !organizationType) {
+        return res.status(400).json({ 
+          message: "projectId and organizationType are required" 
+        });
+      }
+      
+      // Get project
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      // Get project documents
+      const projectDocuments = await storage.getDocumentsByProject(projectId);
+      
+      // Get Jira tickets for the project
+      let jiraTickets = [];
+      try {
+        jiraTickets = await storage.getJiraTicketsByProject(projectId);
+      } catch (error) {
+        console.log("No Jira tickets found for project:", error);
+      }
+      
+      // Generate test suites using AI
+      const { generateTestSuites } = await import('./openai-service');
+      const proposedSuites = await generateTestSuites(
+        project,
+        organizationType,
+        projectDocuments,
+        jiraTickets
+      );
+      
+      res.json({ 
+        proposedSuites,
+        projectId,
+        organizationType
+      });
+    } catch (error) {
+      console.error("Error generating AI test suites:", error);
+      res.status(500).json({ message: "Failed to generate AI test suites" });
+    }
+  });
+
   // Assessment Templates API endpoints
   app.get("/api/assessment-templates", async (req, res) => {
     try {

@@ -155,6 +155,13 @@ export default function TestManagement() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [selectedTestCase, setSelectedTestCase] = useState<TestCase | null>(null);
   
+  // AI Test Suite Generation state
+  const [aiSuiteGenerateDialogOpen, setAiSuiteGenerateDialogOpen] = useState(false);
+  const [aiSuiteProposalsOpen, setAiSuiteProposalsOpen] = useState(false);
+  const [organizationType, setOrganizationType] = useState<string>("");
+  const [proposedSuites, setProposedSuites] = useState<any[]>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
+  
   // Debug selected project
   console.log("TestManagement - selectedProject:", selectedProject);
   console.log("TestManagement - projectId:", projectId);
@@ -441,6 +448,118 @@ export default function TestManagement() {
     setDeleteSuiteConfirmOpen(false);
     setSelectedSuite(null);
   }
+
+  // Handle AI test suite generation
+  async function handleGenerateAiSuites() {
+    if (!selectedProject || !organizationType) return;
+    
+    setIsGenerating(true);
+    try {
+      const response = await fetch('/api/ai/generate-test-suites', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          projectId: selectedProject.id,
+          organizationType
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        setProposedSuites(data.proposedSuites);
+        setAiSuiteGenerateDialogOpen(false);
+        setAiSuiteProposalsOpen(true);
+        
+        toast({
+          title: "AI Analysis Complete",
+          description: `Generated ${data.proposedSuites.length} test suite proposals`,
+        });
+      } else {
+        toast({
+          title: "Generation Failed",
+          description: data.message || "Failed to generate test suites",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Error generating AI test suites:", error);
+      toast({
+        title: "Generation Failed",
+        description: "Failed to generate test suites",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  }
+
+  // Handle accepting proposed test suites
+  async function handleAcceptProposedSuites() {
+    if (!selectedProject || proposedSuites.length === 0) return;
+    
+    try {
+      const promises = proposedSuites.map(async (suite) => {
+        const response = await fetch('/api/test-suites', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            name: suite.name,
+            description: suite.description,
+            projectArea: suite.projectArea,
+            priority: suite.priority,
+            type: suite.type,
+            status: 'active',
+            aiGenerated: true,
+            projectId: selectedProject.id
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to create suite: ${suite.name}`);
+        }
+        
+        return response.json();
+      });
+      
+      await Promise.all(promises);
+      
+      toast({
+        title: "Success",
+        description: `Created ${proposedSuites.length} test suites successfully`,
+      });
+      
+      setAiSuiteProposalsOpen(false);
+      setProposedSuites([]);
+      setOrganizationType("");
+      
+      // Refresh test suites data
+      window.location.reload();
+    } catch (error) {
+      console.error("Error creating test suites:", error);
+      toast({
+        title: "Creation Failed",
+        description: "Failed to create some test suites",
+        variant: "destructive"
+      });
+    }
+  }
+
+  // Handle declining proposed test suites
+  function handleDeclineProposedSuites() {
+    setAiSuiteProposalsOpen(false);
+    setProposedSuites([]);
+    setOrganizationType("");
+    
+    toast({
+      title: "Proposals Declined",
+      description: "Test suite proposals have been discarded",
+    });
+  }
   
   // Reset edit form when selected test case changes
   useEffect(() => {
@@ -481,10 +600,20 @@ export default function TestManagement() {
           title="Test Management"
           description="Create, organize, and manage test suites and test cases"
           actions={
-            <Button className="flex items-center space-x-2" onClick={() => setNewSuiteDialogOpen(true)}>
-              <FolderPlus className="w-4 h-4" />
-              <span>New Test Suite</span>
-            </Button>
+            <div className="flex items-center space-x-2">
+              <Button 
+                variant="outline" 
+                className="flex items-center space-x-2" 
+                onClick={() => setAiSuiteGenerateDialogOpen(true)}
+              >
+                <Brain className="w-4 h-4" />
+                <span>AI Test Suites</span>
+              </Button>
+              <Button className="flex items-center space-x-2" onClick={() => setNewSuiteDialogOpen(true)}>
+                <FolderPlus className="w-4 h-4" />
+                <span>New Test Suite</span>
+              </Button>
+            </div>
           }
         />
         
@@ -1878,6 +2007,147 @@ export default function TestManagement() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* AI Test Suite Generation Dialog */}
+      <Dialog open={aiSuiteGenerateDialogOpen} onOpenChange={setAiSuiteGenerateDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Brain className="h-5 w-5" />
+              Generate AI Test Suites
+            </DialogTitle>
+            <DialogDescription>
+              Select how you'd like to organize your test suites, and AI will analyze your project to create comprehensive test coverage.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="text-sm font-medium mb-3 block">Organization Type</label>
+              <Select value={organizationType} onValueChange={setOrganizationType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose organization method" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="functions">Business Functions</SelectItem>
+                  <SelectItem value="components">System Components</SelectItem>
+                  <SelectItem value="modules">Technical Modules</SelectItem>
+                  <SelectItem value="test-types">Test Types</SelectItem>
+                  <SelectItem value="environments">Environments</SelectItem>
+                  <SelectItem value="user-personas">User Personas</SelectItem>
+                  <SelectItem value="risk-areas">Risk Areas</SelectItem>
+                  <SelectItem value="workflows">User Workflows</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {organizationType && (
+              <div className="bg-blue-50 p-3 rounded-md border border-blue-200">
+                <p className="text-sm text-blue-800 font-medium mb-1">AI Analysis will include:</p>
+                <ul className="text-sm text-blue-700 space-y-1">
+                  <li>• Project details and test strategy</li>
+                  <li>• Documentation and knowledge base</li>
+                  <li>• Jira tickets and requirements</li>
+                  <li>• Industry compliance needs</li>
+                </ul>
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              type="button" 
+              variant="secondary" 
+              onClick={() => setAiSuiteGenerateDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleGenerateAiSuites}
+              disabled={!organizationType || isGenerating}
+              className="flex items-center gap-2"
+            >
+              {isGenerating ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Analyzing...</span>
+                </>
+              ) : (
+                <>
+                  <Brain className="h-4 w-4" />
+                  <span>Generate Test Suites</span>
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* AI Test Suite Proposals Dialog */}
+      <Dialog open={aiSuiteProposalsOpen} onOpenChange={setAiSuiteProposalsOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Bot className="h-5 w-5" />
+              AI Test Suite Proposals
+            </DialogTitle>
+            <DialogDescription>
+              Review the AI-generated test suites organized by {organizationType}. You can accept all proposals or decline to return to the main view.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <div className="grid gap-4">
+              {proposedSuites.map((suite, index) => (
+                <ATMFCard key={index} className="p-4" neonEffect="blue">
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-medium text-lg">{suite.name}</h3>
+                        <p className="text-sm text-text-muted mt-1">{suite.description}</p>
+                      </div>
+                      <div className="flex items-center gap-2 ml-4">
+                        <StatusBadge status={suite.priority} variant="priority" />
+                        <Badge variant="outline">{suite.type}</Badge>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-4 text-sm text-text-muted">
+                      <div className="flex items-center gap-1">
+                        <FileText className="h-3 w-3" />
+                        <span>{suite.projectArea}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Bot className="h-3 w-3" />
+                        <span>AI Generated</span>
+                      </div>
+                    </div>
+                  </div>
+                </ATMFCard>
+              ))}
+            </div>
+          </div>
+          
+          <DialogFooter className="flex items-center gap-2">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={handleDeclineProposedSuites}
+              className="flex items-center gap-2"
+            >
+              <X className="h-4 w-4" />
+              <span>Decline All</span>
+            </Button>
+            <Button 
+              onClick={handleAcceptProposedSuites}
+              className="flex items-center gap-2"
+            >
+              <Check className="h-4 w-4" />
+              <span>Accept All ({proposedSuites.length} suites)</span>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }

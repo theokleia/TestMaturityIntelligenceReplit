@@ -722,6 +722,127 @@ export async function generateTestStrategy(
 }
 
 /**
+ * Generate AI-powered test suite recommendations based on project context
+ */
+export async function generateTestSuites(
+  project: Project,
+  organizationType: string,
+  projectDocuments: any[],
+  jiraTickets: any[]
+): Promise<{
+  name: string;
+  projectArea: string;
+  description: string;
+  type: string;
+  priority: string;
+}[]> {
+  try {
+    console.log(`Generating AI test suites for project ${project.id} - ${project.name} with organization: ${organizationType}`);
+    
+    // Get project context
+    const projectType = getProjectTypeFromName(project.name);
+    const projectContext = PROJECT_CONTEXTS[projectType] || PROJECT_CONTEXTS.general;
+    
+    // Format project information
+    const projectInfo = `
+Project Details:
+- Name: ${project.name}
+- Description: ${project.description}
+- Type: ${project.projectType}
+- Industry: ${project.industryArea}
+- Regulations: ${project.regulations}
+- Quality Focus: ${project.qualityFocus || 'Not specified'}
+- Test Strategy: ${project.testStrategy || 'Standard testing approach'}
+- Additional Context: ${project.additionalContext || 'None provided'}
+`;
+
+    // Format documents context
+    let documentsContext = "No project documents available.";
+    if (projectDocuments && projectDocuments.length > 0) {
+      documentsContext = `Project Documents (${projectDocuments.length} documents):
+${projectDocuments.map(doc => `
+- Title: ${doc.title}
+- Type: ${doc.tags?.join(', ') || 'Untagged'}
+- Description: ${doc.description}
+- Content Preview: ${doc.content?.substring(0, 300)}...`).join('\n')}`;
+    }
+
+    // Format Jira context
+    let jiraContext = "No Jira tickets available.";
+    if (jiraTickets && jiraTickets.length > 0) {
+      jiraContext = getJiraContextForAI(jiraTickets);
+    }
+
+    const prompt = `
+You are an expert test analyst helping to design comprehensive test suites for the "${project.name}" project.
+
+${projectInfo}
+
+${documentsContext}
+
+${jiraContext}
+
+Organization Type: ${organizationType}
+
+Based on the provided project information, documents, and Jira tickets, generate 6-8 well-structured test suites organized by ${organizationType}.
+
+Requirements:
+1. Analyze the project type, industry area, and regulations to understand testing needs
+2. Consider the test strategy and quality focus areas
+3. Use documents and Jira tickets to identify specific features and functionality to test
+4. Organize test suites logically by ${organizationType}
+5. Ensure comprehensive coverage across different testing areas
+
+For each test suite, provide:
+- name: Clear, descriptive name (e.g., "User Authentication ${organizationType === 'functions' ? 'Functions' : organizationType === 'components' ? 'Components' : 'Tests'}")
+- projectArea: High-level functional area (e.g., "Authentication", "Payment Processing", "User Management")
+- description: Detailed description of what this suite covers and why it's important
+- type: One of "functional", "integration", "performance", "security", "usability", "api"
+- priority: One of "high", "medium", "low" based on business criticality
+
+Focus on creating practical, implementable test suites that align with the project's specific context, industry requirements, and identified risks.
+
+Respond with valid JSON array format only, no additional text:
+[
+  {
+    "name": "Suite Name",
+    "projectArea": "Area",
+    "description": "Detailed description",
+    "type": "functional",
+    "priority": "high"
+  }
+]
+`;
+
+    const response = await callOpenAI([
+      { 
+        role: "system", 
+        content: "You are a senior test architect with expertise in test design and strategy. You analyze project requirements and create comprehensive test suite recommendations that align with industry best practices and specific project needs. Always respond with valid JSON only." 
+      },
+      { role: "user", content: prompt }
+    ], {
+      temperature: 0.7,
+      max_tokens: 2000
+    });
+
+    const responseText = response.choices[0].message.content || "[]";
+    
+    try {
+      const testSuites = JSON.parse(responseText);
+      console.log(`Generated ${testSuites.length} test suites for project ${project.name}`);
+      return testSuites;
+    } catch (parseError) {
+      console.error("Error parsing AI response:", parseError);
+      console.error("Raw response:", responseText);
+      return [];
+    }
+  } catch (error) {
+    console.error("Error generating test suites:", error);
+    return [];
+  }
+}
+
+/**
  * Generate project-specific assistant responses based on user queries
  */
 export async function generateAssistantResponse(
