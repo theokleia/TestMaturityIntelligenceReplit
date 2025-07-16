@@ -1037,22 +1037,22 @@ export default function TestManagement() {
                 />
                 <div className="p-4">
                   {selectedSuite?.coverage && (
-                    <div className="mb-4 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                    <div className="mb-4 p-3 bg-blue-50/50 dark:bg-blue-950/30 rounded-lg border border-blue-200/50 dark:border-blue-800/50">
                       <div className="flex items-center gap-2 mb-2">
-                        <Layers className="h-4 w-4 text-purple-600" />
-                        <span className="font-medium text-purple-700 dark:text-purple-300">Test Coverage</span>
+                        <Layers className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        <span className="font-medium text-blue-700 dark:text-blue-300">Test Coverage</span>
                       </div>
                       <div className="space-y-2 text-sm">
                         {selectedSuite.coverage.split(' | ').map((section, index) => {
                           const [type, items] = section.split(': ');
                           return (
                             <div key={index} className="flex items-start gap-2">
-                              <span className="text-purple-600 dark:text-purple-400 font-medium min-w-[100px]">
+                              <span className="text-blue-600 dark:text-blue-400 font-medium min-w-[100px]">
                                 {type.replace('JIRA_TICKETS', 'Jira Tickets')
                                      .replace('DOCUMENTS', 'Documents')
                                      .replace('COMPLIANCE', 'Compliance')}:
                               </span>
-                              <span className="text-purple-700 dark:text-purple-300">{items}</span>
+                              <span className="text-blue-700 dark:text-blue-300">{items}</span>
                             </div>
                           );
                         })}
