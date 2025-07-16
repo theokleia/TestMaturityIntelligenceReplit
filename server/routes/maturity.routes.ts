@@ -14,7 +14,7 @@ export function registerMaturityRoutes(app: Express) {
   // Maturity Framework CRUD
   app.get("/api/dimensions", async (req, res) => {
     try {
-      const dimensions = await storage.getDimensions();
+      const dimensions = await storage.getMaturityDimensions();
       res.json(dimensions);
     } catch (error) {
       console.error("Error fetching dimensions:", error);
@@ -25,7 +25,7 @@ export function registerMaturityRoutes(app: Express) {
   app.get("/api/levels", async (req, res) => {
     try {
       const dimensionId = req.query.dimensionId ? parseInt(req.query.dimensionId as string) : undefined;
-      const levels = await storage.getLevels(dimensionId);
+      const levels = await storage.getMaturityLevels(dimensionId);
       res.json(levels);
     } catch (error) {
       console.error("Error fetching levels:", error);
@@ -36,7 +36,7 @@ export function registerMaturityRoutes(app: Express) {
   app.post("/api/levels", requireAuth, async (req, res) => {
     try {
       const levelData = insertMaturityLevelSchema.parse(req.body);
-      const level = await storage.createLevel(levelData);
+      const level = await storage.createMaturityLevel(levelData);
       res.status(201).json(level);
     } catch (error) {
       console.error("Error creating level:", error);
@@ -55,7 +55,7 @@ export function registerMaturityRoutes(app: Express) {
     try {
       const id = parseInt(req.params.id);
       const levelData = insertMaturityLevelSchema.partial().parse(req.body);
-      const level = await storage.updateLevel(id, levelData);
+      const level = await storage.updateMaturityLevel(id, levelData);
       
       if (!level) {
         return res.status(404).json({ message: "Level not found" });
@@ -75,28 +75,29 @@ export function registerMaturityRoutes(app: Express) {
     }
   });
 
-  app.delete("/api/levels/:id", requireAuth, async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const result = await storage.deleteLevel(id);
-      
-      if (!result) {
-        return res.status(404).json({ message: "Level not found" });
-      }
-      
-      res.status(204).send();
-    } catch (error) {
-      console.error("Error deleting level:", error);
-      res.status(500).json({ message: "Failed to delete level" });
-    }
-  });
+  // DELETE endpoint temporarily disabled - no deleteLevel method in storage
+  // app.delete("/api/levels/:id", requireAuth, async (req, res) => {
+  //   try {
+  //     const id = parseInt(req.params.id);
+  //     const result = await storage.deleteLevel(id);
+  //     
+  //     if (!result) {
+  //       return res.status(404).json({ message: "Level not found" });
+  //     }
+  //     
+  //     res.status(204).send();
+  //   } catch (error) {
+  //     console.error("Error deleting level:", error);
+  //     res.status(500).json({ message: "Failed to delete level" });
+  //   }
+  // });
 
   // Metrics CRUD
   app.get("/api/metrics", async (req, res) => {
     try {
       const dimensionId = req.query.dimensionId ? parseInt(req.query.dimensionId as string) : undefined;
       const projectId = req.query.projectId ? parseInt(req.query.projectId as string) : undefined;
-      const metrics = await storage.getMetrics({ dimensionId, projectId });
+      const metrics = await storage.getMetrics(dimensionId, projectId);
       res.json(metrics);
     } catch (error) {
       console.error("Error fetching metrics:", error);
@@ -146,28 +147,29 @@ export function registerMaturityRoutes(app: Express) {
     }
   });
 
-  app.delete("/api/metrics/:id", requireAuth, async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const result = await storage.deleteMetric(id);
-      
-      if (!result) {
-        return res.status(404).json({ message: "Metric not found" });
-      }
-      
-      res.status(204).send();
-    } catch (error) {
-      console.error("Error deleting metric:", error);
-      res.status(500).json({ message: "Failed to delete metric" });
-    }
-  });
+  // DELETE endpoint temporarily disabled - no deleteMetric method in storage
+  // app.delete("/api/metrics/:id", requireAuth, async (req, res) => {
+  //   try {
+  //     const id = parseInt(req.params.id);
+  //     const result = await storage.deleteMetric(id);
+  //     
+  //     if (!result) {
+  //       return res.status(404).json({ message: "Metric not found" });
+  //     }
+  //     
+  //     res.status(204).send();
+  //   } catch (error) {
+  //     console.error("Error deleting metric:", error);
+  //     res.status(500).json({ message: "Failed to delete metric" });
+  //   }
+  // });
 
   // Recommendations CRUD
   app.get("/api/recommendations", async (req, res) => {
     try {
       const projectId = req.query.projectId ? parseInt(req.query.projectId as string) : undefined;
       const dimensionId = req.query.dimensionId ? parseInt(req.query.dimensionId as string) : undefined;
-      const recommendations = await storage.getRecommendations({ projectId, dimensionId });
+      const recommendations = await storage.getRecommendations(dimensionId, undefined, projectId);
       res.json(recommendations);
     } catch (error) {
       console.error("Error fetching recommendations:", error);
@@ -217,21 +219,22 @@ export function registerMaturityRoutes(app: Express) {
     }
   });
 
-  app.delete("/api/recommendations/:id", requireAuth, async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const result = await storage.deleteRecommendation(id);
-      
-      if (!result) {
-        return res.status(404).json({ message: "Recommendation not found" });
-      }
-      
-      res.status(204).send();
-    } catch (error) {
-      console.error("Error deleting recommendation:", error);
-      res.status(500).json({ message: "Failed to delete recommendation" });
-    }
-  });
+  // DELETE endpoint temporarily disabled - no deleteRecommendation method in storage
+  // app.delete("/api/recommendations/:id", requireAuth, async (req, res) => {
+  //   try {
+  //     const id = parseInt(req.params.id);
+  //     const result = await storage.deleteRecommendation(id);
+  //     
+  //     if (!result) {
+  //       return res.status(404).json({ message: "Recommendation not found" });
+  //     }
+  //     
+  //     res.status(204).send();
+  //   } catch (error) {
+  //     console.error("Error deleting recommendation:", error);
+  //     res.status(500).json({ message: "Failed to delete recommendation" });
+  //   }
+  // });
 
   // Assessment Templates CRUD
   app.get("/api/assessment-templates", async (req, res) => {
@@ -317,19 +320,20 @@ export function registerMaturityRoutes(app: Express) {
     }
   });
 
-  app.delete("/api/assessments/:id", requireAuth, async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const result = await storage.deleteAssessment(id);
-      
-      if (!result) {
-        return res.status(404).json({ message: "Assessment not found" });
-      }
-      
-      res.status(204).send();
-    } catch (error) {
-      console.error("Error deleting assessment:", error);
-      res.status(500).json({ message: "Failed to delete assessment" });
-    }
-  });
+  // DELETE endpoint temporarily disabled - no deleteAssessment method in storage
+  // app.delete("/api/assessments/:id", requireAuth, async (req, res) => {
+  //   try {
+  //     const id = parseInt(req.params.id);
+  //     const result = await storage.deleteAssessment(id);
+  //     
+  //     if (!result) {
+  //       return res.status(404).json({ message: "Assessment not found" });
+  //     }
+  //     
+  //     res.status(204).send();
+  //   } catch (error) {
+  //     console.error("Error deleting assessment:", error);
+  //     res.status(500).json({ message: "Failed to delete assessment" });
+  //   }
+  // });
 }
