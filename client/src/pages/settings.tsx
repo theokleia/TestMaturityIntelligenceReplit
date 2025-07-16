@@ -68,6 +68,7 @@ interface ProjectSettings {
   regulations: string;
   additionalContext: string;
   qualityFocus: string;
+  testStrategy: string;
   // Integration settings
   jiraUrl: string;
   jiraProjectId: string;
@@ -109,6 +110,31 @@ const PREDEFINED_TAGS: DocumentTag[] = [
   { id: 'guidelines', name: 'Guidelines', category: 'purpose' },
 ];
 
+const defaultTestStrategy = `# Analytical Risk-Based Testing Approach
+
+This project follows an analytical, risk-based testing strategy that prioritizes testing efforts based on system criticality and potential impact. Testing activities focus primarily on high-risk, high-value functionalities while optimizing resource allocation through data-driven analysis.
+
+## Key Principles:
+
+- **Risk Prioritization**: Concentrate testing on critical business functions, security-sensitive areas, and components with high failure impact
+- **Data-Driven Decisions**: Use system behavior analysis, historical defect data, and usage patterns to guide test coverage
+- **Coverage Optimization**: Balance thorough testing of critical paths with efficient coverage of standard functionality
+- **Analytical Focus**: Identify system vulnerabilities, integration points, and edge cases through systematic analysis
+
+## Testing Priorities:
+
+1. **Critical Business Functions**: Core workflows that directly impact users and business operations
+2. **High-Risk Areas**: Security, data integrity, performance bottlenecks, and integration points
+3. **User-Facing Features**: Interface elements, user workflows, and accessibility requirements
+4. **System Boundaries**: External integrations, APIs, and data exchange points
+
+## Focus Areas:
+
+- **Verification Focus**: Ensure technical correctness, requirement compliance, and system reliability through systematic validation of implementation against specifications.
+- **Validation Focus**: Confirm that the solution meets real-world user needs and business objectives through practical scenario testing and user acceptance validation.
+
+This approach ensures comprehensive coverage while maintaining efficiency by allocating testing resources where they provide maximum value and risk mitigation.`;
+
 const defaultSettings: ProjectSettings = {
   language: "English",
   // Project details defaults
@@ -117,6 +143,7 @@ const defaultSettings: ProjectSettings = {
   regulations: "",
   additionalContext: "",
   qualityFocus: "",
+  testStrategy: defaultTestStrategy,
   // Integration settings
   jiraUrl: "",
   jiraProjectId: "",
@@ -253,6 +280,7 @@ export default function ProjectSettings() {
         regulations: selectedProject.regulations || '',
         additionalContext: selectedProject.additionalContext || '',
         qualityFocus: selectedProject.qualityFocus || '',
+        testStrategy: selectedProject.testStrategy || defaultTestStrategy,
         // Integration settings
         githubRepo: selectedProject.githubRepo || '',
         githubToken: selectedProject.githubToken ? '••••••••••••••••' : '',
@@ -715,6 +743,7 @@ export default function ProjectSettings() {
         updatePayload.regulations = settings.regulations;
         updatePayload.additionalContext = settings.additionalContext;
         updatePayload.qualityFocus = settings.qualityFocus;
+        updatePayload.testStrategy = settings.testStrategy;
         
         // Add Jira URL if provided
         if (settings.jiraUrl) {
@@ -1589,6 +1618,36 @@ export default function ProjectSettings() {
     </ATMFCard>
   );
 
+  // Test Strategy content
+  const testStrategyContent = (
+    <ATMFCard>
+      <ATMFCardHeader>
+        <h3 className="text-lg font-medium flex items-center">
+          <CheckSquare className="h-5 w-5 mr-2 text-blue-400" />
+          Test Strategy
+        </h3>
+        <p className="text-sm text-atmf-muted mt-2">
+          Define the testing approach and strategy that AI generators will use as context when creating test cases, strategies, and recommendations.
+        </p>
+      </ATMFCardHeader>
+      <ATMFCardBody className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="testStrategy">Testing Strategy & Approach</Label>
+          <Textarea
+            id="testStrategy"
+            value={settings.testStrategy}
+            onChange={(e) => handleChange("testStrategy", e.target.value)}
+            className="bg-atmf-main border-white/10 focus:border-white/20 min-h-[400px] font-mono text-sm"
+            placeholder="Enter your testing strategy and approach..."
+          />
+          <p className="text-xs text-atmf-muted">
+            This strategy will be used by AI generators to provide contextually relevant test recommendations and patterns.
+          </p>
+        </div>
+      </ATMFCardBody>
+    </ATMFCard>
+  );
+
   // Configure the tabs for the TabView component
   const tabs = [
     {
@@ -1610,6 +1669,16 @@ export default function ProjectSettings() {
         </div>
       ),
       content: projectContextContent
+    },
+    {
+      id: "test-strategy",
+      label: (
+        <div className="flex items-center gap-2">
+          <CheckSquare className="h-4 w-4" />
+          <span>Test Strategy</span>
+        </div>
+      ),
+      content: testStrategyContent
     },
     {
       id: "integrations",

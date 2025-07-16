@@ -24,6 +24,7 @@ export const projects = pgTable("projects", {
   regulations: text("regulations"), // Applicable regulations (HIPAA, SOX, GDPR, etc.)
   additionalContext: text("additional_context"), // Detailed text about intended use, users, and business context
   qualityFocus: text("quality_focus"), // Areas of quality focus (security, performance, usability)
+  testStrategy: text("test_strategy"), // Testing approach and strategy for AI generators
   // Integration settings
   jiraProjectId: varchar("jira_project_id", { length: 10 }),
   jiraUrl: text("jira_url"), // Added jiraUrl field to store the Jira base URL

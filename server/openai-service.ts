@@ -560,6 +560,11 @@ export async function generateTestCases(
   jiraInfo?: {
     jiraProjectId?: string;
     jiraJql?: string;
+  },
+  project?: {
+    testStrategy?: string;
+    projectType?: string;
+    qualityFocus?: string;
   }
 ): Promise<{
   testCases: Array<{
@@ -585,12 +590,26 @@ export async function generateTestCases(
       }
     }
 
+    // Build project context string if available
+    let projectContext = '';
+    if (project) {
+      if (project.testStrategy) {
+        projectContext += `\nProject Testing Strategy:\n${project.testStrategy}`;
+      }
+      if (project.projectType) {
+        projectContext += `\nProject Type: ${project.projectType}`;
+      }
+      if (project.qualityFocus) {
+        projectContext += `\nQuality Focus: ${project.qualityFocus}`;
+      }
+    }
+
     const prompt = `
       Generate detailed test cases for the following feature:
       
       Feature: ${feature}
       Requirements: ${requirements}
-      Complexity: ${complexity}${jiraContext}
+      Complexity: ${complexity}${jiraContext}${projectContext}
       
       Provide 3 detailed test cases, each with:
       1. Title
@@ -607,6 +626,7 @@ export async function generateTestCases(
       expectedResults, priority, severity, automatable.
       
       Make the test cases specific and detailed, with clear preconditions and steps that would be actionable for a tester.
+      ${project?.testStrategy ? 'Ensure the test cases align with the project testing strategy and principles provided above.' : ''}
       ${jiraInfo?.jiraJql ? 'Incorporate specific details from Jira issues matching the JQL query to make the test cases more relevant and aligned with actual project requirements.' : ''}
     `;
 
@@ -1389,6 +1409,7 @@ export async function generateDocument(
           ${project.industryArea ? `Industry: ${project.industryArea}` : ''}
           ${project.regulations ? `Applicable regulations: ${project.regulations}` : ''}
           ${project.additionalContext ? `Additional context: ${project.additionalContext}` : ''}
+          ${project.testStrategy ? `Testing strategy: ${project.testStrategy}` : ''}
           
           ${jiraIssues.length > 0 ? `Please analyze these Jira issues to extract requirements: 
           ${jiraIssues.slice(0, 20).map(i => `* ${i.key}: ${i.fields.summary}`).join('\n')}` : ''}
@@ -1414,6 +1435,7 @@ export async function generateDocument(
           ${project.projectType ? `Project type: ${project.projectType}` : ''}
           ${project.industryArea ? `Industry: ${project.industryArea}` : ''}
           ${project.qualityFocus ? `Quality focus: ${project.qualityFocus}` : ''}
+          ${project.testStrategy ? `Testing strategy: ${project.testStrategy}` : ''}
           
           ${jiraIssues.length > 0 ? `Please analyze these Jira issues as a basis for requirements: 
           ${jiraIssues.slice(0, 20).map(i => `* ${i.key}: ${i.fields.summary}${i.fields.description ? ' - ' + i.fields.description.substring(0, 100) + '...' : ''}`).join('\n')}` : ''}
@@ -1436,6 +1458,7 @@ export async function generateDocument(
           prompt = `Create a comprehensive Software Design Document (SDDS) for the project "${project.name}".
           ${project.description ? `Project description: ${project.description}` : ''}
           ${project.projectType ? `Project type: ${project.projectType}` : ''}
+          ${project.testStrategy ? `Testing strategy: ${project.testStrategy}` : ''}
           
           ${githubData ? `Based on the GitHub repository ${githubData.repoName}, please analyze:
           - Repository structure: ${JSON.stringify(githubData.files?.slice(0, 15).map((f: { name: string; type: string; path: string }) => ({ name: f.name, type: f.type, path: f.path })) || [])}
@@ -1487,6 +1510,7 @@ export async function generateDocument(
           ${project.description ? `Project description: ${project.description}` : ''}
           ${project.projectType ? `Project type: ${project.projectType}` : ''}
           ${project.qualityFocus ? `Quality focus: ${project.qualityFocus}` : ''}
+          ${project.testStrategy ? `Testing strategy: ${project.testStrategy}` : ''}
           
           ${jiraIssues.length > 0 ? `Key features to test (from Jira): 
           ${jiraIssues.slice(0, 10).map(i => `* ${i.key}: ${i.fields.summary}`).join('\n')}` : ''}

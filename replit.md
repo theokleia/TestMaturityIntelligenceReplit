@@ -35,6 +35,15 @@ ATMosFera is an advanced AI-powered test management and documentation platform b
 
 ## Recent Changes
 
+### 2025-07-16: Test Strategy Field Implementation
+- Added testStrategy field to projects database schema
+- Implemented Test Strategy tab in project settings with rich text editor
+- Updated AI generation functions to include testStrategy context in prompts
+- Set default analytical risk-based testing strategy for all projects
+- Enhanced generateTestCases function to use project testing strategy
+- Updated document generation (PRD, SRS, SDDS, Test Plan) to include testing strategy context
+- All AI-powered features now consider project-specific testing strategy when generating recommendations
+
 ### 2025-01-15: Comprehensive Documentation Creation
 - Created complete database schema documentation with restoration guide
 - Developed detailed Product Requirements Document (PRD) with market analysis and success metrics
