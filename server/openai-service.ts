@@ -759,72 +759,137 @@ ${existingTestCases.map(tc => `- ${tc.title}: ${tc.description} (Priority: ${tc.
 
       ## MANDATORY Coverage Requirements:
       ${requiredJiraTickets.length > 0 ? `
-      **CRITICAL: The following Jira tickets MUST be covered by test cases. Every ticket requires at least one test case:**
+      **CRITICAL: The following Jira tickets MUST be covered by comprehensive test cases. Analyze each ticket's full content to generate complete test coverage:**
       ${requiredTickets.map(ticket => {
         const description = ticket.fields?.description;
-        const descriptionText = typeof description === 'string' ? description.substring(0, 200) : 'No description';
-        return `- ${ticket.key}: ${ticket.fields?.summary} (Status: ${ticket.fields?.status?.name}) - ${descriptionText}`;
-      }).join('\n')}
+        const descriptionText = typeof description === 'string' ? description : 'No description';
+        const priority = ticket.fields?.priority?.name || 'Unknown';
+        const components = ticket.fields?.components?.map(c => c.name).join(', ') || 'None';
+        const labels = ticket.fields?.labels?.join(', ') || 'None';
+        const issueType = ticket.fields?.issuetype?.name || 'Unknown';
+        
+        return `### ${ticket.key}: ${ticket.fields?.summary}
+        - Type: ${issueType}
+        - Priority: ${priority}
+        - Status: ${ticket.fields?.status?.name}
+        - Components: ${components}
+        - Labels: ${labels}
+        - Description: ${descriptionText}
+        - Assignee: ${ticket.fields?.assignee?.displayName || 'Unassigned'}
+        - Reporter: ${ticket.fields?.reporter?.displayName || 'Unknown'}
+        - Created: ${ticket.fields?.created}
+        - Updated: ${ticket.fields?.updated}
+        `;
+      }).join('\n\n')}
       ` : 'No mandatory Jira tickets specified in coverage field.'}
 
       ## Required Documentation Coverage:
       ${requiredDocuments.length > 0 ? `
-      **Required Documents to Cover:**
+      **Required Documents to Cover (analyze full content for test requirements):**
       ${requiredDocuments.map(doc => `- ${doc}`).join('\n')}
       ` : 'No mandatory documents specified in coverage field.'}
 
       ## Additional Relevant Documentation:
-      ${relevantDocs.map(doc => `- ${doc.title}: ${doc.content?.substring(0, 500)}...`).join('\n')}
+      ${relevantDocs.map(doc => `### ${doc.title}
+      - Type: ${doc.type}
+      - Tags: ${doc.tags?.join(', ') || 'None'}
+      - Content: ${doc.content?.substring(0, 1000)}...`).join('\n\n')}
 
-      ## Additional Relevant Jira Tickets (Optional):
-      ${additionalTickets.map(ticket => {
+      ## Additional Relevant Jira Tickets (Optional Coverage):
+      ${additionalTickets.length > 0 ? additionalTickets.map(ticket => {
         const description = ticket.fields?.description;
-        const descriptionText = typeof description === 'string' ? description.substring(0, 200) : 'No description';
-        return `- ${ticket.key}: ${ticket.fields?.summary} (Status: ${ticket.fields?.status?.name}) - ${descriptionText}`;
-      }).join('\n')}
+        const descriptionText = typeof description === 'string' ? description.substring(0, 300) : 'No description';
+        return `### ${ticket.key}: ${ticket.fields?.summary}
+        - Type: ${ticket.fields?.issuetype?.name || 'Unknown'}
+        - Status: ${ticket.fields?.status?.name}
+        - Description: ${descriptionText}`;
+      }).join('\n\n') : 'No additional relevant tickets found.'}
 
       ## Task:
       ${existingTestCases.length > 0 
-        ? `Analyze the existing test cases and identify coverage gaps. Generate additional test cases to ensure ALL mandatory Jira tickets are covered.`
-        : `Generate test cases that provide comprehensive coverage for this test suite.`
+        ? `Analyze the existing test cases and identify coverage gaps. Generate comprehensive test cases to ensure ALL mandatory Jira tickets receive complete coverage.`
+        : `Generate comprehensive test cases that provide thorough coverage for this test suite based on the full content analysis.`
       }
 
       ## CRITICAL REQUIREMENTS:
-      1. **Mandatory Jira Coverage**: EVERY ticket in the required list (${requiredJiraTickets.join(', ')}) MUST have at least one test case
-      2. **No Uncovered Tickets**: There cannot be any required Jira tickets without test coverage
-      3. **Risk-Based Testing**: Prioritize high-risk, high-impact scenarios  
-      4. **Coverage Gaps**: ${existingTestCases.length > 0 ? 'Identify what existing test cases miss' : 'Ensure comprehensive coverage'}
-      5. **Compliance**: Ensure regulatory requirements (${project.regulations}) are covered
-      6. **Traceability**: Link test cases to relevant Jira tickets for complete traceability
+      1. **Mandatory Jira Coverage**: EVERY ticket in the required list (${requiredJiraTickets.join(', ')}) MUST have comprehensive test coverage
+      2. **Deep Content Analysis**: Analyze the full description, acceptance criteria, and requirements in each Jira ticket
+      3. **Complete User Flows**: Generate test cases covering all user workflows, edge cases, and error scenarios mentioned in tickets
+      4. **Functional & Non-Functional**: Include both functional tests (user actions) and non-functional tests (performance, security, compliance)
+      5. **Risk-Based Prioritization**: Prioritize test cases based on business impact and technical risk
+      6. **Regulatory Compliance**: Ensure ${project.regulations} requirements are thoroughly tested
+      7. **Integration Testing**: Cover integration points and data flow between components
+      8. **Negative Testing**: Include error handling, validation, and boundary condition tests
+      9. **User Experience**: Cover accessibility, usability, and user interaction scenarios
+      10. **Data Privacy**: Include GDPR compliance and data protection testing where applicable
+
+      ## Test Case Generation Strategy:
+      For each required Jira ticket, generate:
+      - **Happy Path Tests**: Main user workflows and success scenarios
+      - **Edge Case Tests**: Boundary conditions and unusual inputs
+      - **Error Handling Tests**: Invalid inputs, system failures, and error recovery
+      - **Integration Tests**: Data flow between components and external systems
+      - **Performance Tests**: Response times, load handling, and scalability
+      - **Security Tests**: Authentication, authorization, and data protection
+      - **Compliance Tests**: Regulatory requirements and audit trails
+      - **User Experience Tests**: Accessibility, usability, and responsive design
+
+      ## Analysis Approach:
+      1. Parse each Jira ticket's full description for functional requirements
+      2. Identify all user stories, acceptance criteria, and business rules
+      3. Map requirements to specific test scenarios
+      4. Consider the project's testing strategy: ${project.testStrategy || 'risk-based approach'}
+      5. Generate test cases that validate both positive and negative scenarios
+      6. Ensure traceability between test cases and specific ticket requirements
 
       Return a JSON object with this structure:
       {
         "proposedTestCases": [
           {
-            "title": "Clear, specific test case title (max 80 chars)",
-            "description": "Detailed description of what this test validates (1-2 sentences)",
-            "priority": "high|medium|low based on business impact and risk",
-            "jiraTicketIds": ["Array of relevant Jira ticket keys"],
+            "title": "Clear, specific test case title focusing on the exact functionality tested",
+            "description": "Detailed description of what this test validates, including specific user actions, expected behaviors, and validation points",
+            "priority": "high|medium|low based on business impact, technical risk, and regulatory requirements",
+            "jiraTicketIds": ["Array of relevant Jira ticket keys that this test case addresses"],
             "jiraTickets": [{"key": "TICKET-123", "summary": "Shortened summary of the ticket (max 50 chars)"}],
-            "reasoning": "Brief explanation of why this test case is important (1 sentence)"
+            "reasoning": "Detailed explanation of why this test case is critical, what risks it mitigates, and how it aligns with the project's testing strategy",
+            "testType": "functional|performance|security|compliance|integration|usability",
+            "testCategory": "happy-path|edge-case|error-handling|boundary-condition|negative-testing"
           }
         ],
         "analysis": {
-          "existingCoverage": "${existingTestCases.length > 0 ? 'Summary of what existing test cases cover' : 'No existing coverage - starting fresh'}",
-          "gaps": ["Array of coverage gaps identified"],
-          "recommendation": "Overall recommendation about the test coverage"
+          "existingCoverage": "${existingTestCases.length > 0 ? 'Detailed analysis of what existing test cases cover and their effectiveness' : 'No existing coverage - comprehensive test suite needed'}",
+          "gaps": ["Detailed array of specific coverage gaps identified with impact assessment"],
+          "recommendation": "Comprehensive recommendation about the test coverage strategy, including prioritization rationale and additional considerations",
+          "jiraTicketCoverage": {
+            "requiredTickets": ["List of required Jira tickets that must be covered"],
+            "coveredTickets": ["List of tickets that will be covered by proposed test cases"],
+            "uncoveredTickets": ["List of any tickets that still need additional coverage"]
+          }
         }
       }
+
+      ## Important Instructions:
+      - Generate 8-15 comprehensive test cases for complete coverage
+      - Each required Jira ticket should have multiple test cases covering different aspects
+      - Include both functional and non-functional test cases
+      - Prioritize test cases based on business risk and regulatory requirements
+      - Ensure test cases are detailed enough to be actionable for testers
+      - Consider the full user journey and system interactions
 
       Return ONLY valid JSON with no markdown formatting, code blocks, or additional text.
     `;
 
+    console.log(`Generating test coverage for test suite: ${testSuite.name}`);
+    console.log(`Required Jira tickets: ${requiredJiraTickets.join(', ')}`);
+    console.log(`Required documents: ${requiredDocuments.join(', ')}`);
+    console.log(`Found ${requiredTickets.length} required tickets, ${additionalTickets.length} additional tickets`);
+    
     const response = await callOpenAI([
-      { role: "system", content: "You are an expert QA analyst specializing in comprehensive test coverage analysis and risk-based testing strategies." },
+      { role: "system", content: "You are an expert QA analyst specializing in comprehensive test coverage analysis and risk-based testing strategies. You excel at analyzing detailed Jira ticket content and generating thorough test cases that cover functional, non-functional, and compliance requirements." },
       { role: "user", content: prompt }
     ], {
-      temperature: 0.6,
-      max_tokens: 2500
+      temperature: 0.7,
+      max_tokens: 4000
     });
 
     let content = response.choices[0].message.content || '{"proposedTestCases": [], "analysis": {"existingCoverage": "", "gaps": [], "recommendation": ""}}';
@@ -851,7 +916,9 @@ ${existingTestCases.map(tc => `- ${tc.title}: ${tc.description} (Priority: ${tc.
       
       return {
         ...testCase,
-        jiraTickets
+        jiraTickets,
+        testType: testCase.testType || 'functional',
+        testCategory: testCase.testCategory || 'happy-path'
       };
     }) || [];
 
@@ -911,6 +978,13 @@ ${existingTestCases.map(tc => `- ${tc.title}: ${tc.description} (Priority: ${tc.
       analysisGaps.push(`Missing coverage for required Jira tickets: ${uncoveredTickets.join(', ')}`);
     }
 
+    // Log coverage analysis results
+    console.log(`Generated ${finalTestCases.length} test cases for ${requiredJiraTickets.length} required tickets`);
+    console.log(`Covered tickets: ${Array.from(coveredTickets).join(', ')}`);
+    if (uncoveredTickets.length > 0) {
+      console.log(`Uncovered tickets: ${uncoveredTickets.join(', ')}`);
+    }
+
     // Ensure proper structure
     return {
       proposedTestCases: finalTestCases,
@@ -919,7 +993,12 @@ ${existingTestCases.map(tc => `- ${tc.title}: ${tc.description} (Priority: ${tc.
         gaps: analysisGaps,
         recommendation: uncoveredTickets.length > 0 
           ? `Generated additional test cases to ensure ALL required Jira tickets (${requiredJiraTickets.join(', ')}) are covered. ${result.analysis?.recommendation || ''}`
-          : result.analysis?.recommendation || "All required Jira tickets are covered"
+          : result.analysis?.recommendation || "All required Jira tickets are covered",
+        jiraTicketCoverage: {
+          requiredTickets: requiredJiraTickets,
+          coveredTickets: Array.from(coveredTickets),
+          uncoveredTickets: uncoveredTickets
+        }
       },
       jiraTicketsContext: relevantTickets.map(ticket => ({
         key: ticket.key,
