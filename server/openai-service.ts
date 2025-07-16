@@ -654,6 +654,154 @@ export async function generateTestCases(
 }
 
 /**
+ * Generate AI Test Steps - analyze test case context and generate preconditions, steps, and expected results
+ */
+export async function generateTestSteps(
+  project: Project,
+  testCase: {
+    title: string;
+    description: string;
+    preconditions?: string;
+    expectedResults?: string;
+    jiraTicketIds?: string[];
+  },
+  includeDocuments: boolean = true,
+  includeJira: boolean = true
+): Promise<{
+  preconditions: string;
+  steps: Array<{ step: string; expected: string }>;
+  expectedResults: string;
+  updatedDescription?: string;
+}> {
+  try {
+    console.log(`Generating test steps for test case: ${testCase.title}`);
+    
+    // Get project context
+    const projectContext = `
+PROJECT: ${project.name} (${project.projectType})
+INDUSTRY: ${project.industryArea}
+REGULATIONS: ${project.regulations}
+TESTING STRATEGY: ${project.testStrategy || 'Standard testing approach'}
+`;
+    
+    // Fetch related Jira tickets if specified
+    let jiraContext = "";
+    if (includeJira && testCase.jiraTicketIds && testCase.jiraTicketIds.length > 0) {
+      try {
+        const jiraTickets = await storage.getJiraTickets(project.id);
+        const relevantTickets = jiraTickets.filter(ticket => 
+          testCase.jiraTicketIds!.includes(ticket.jiraKey || ticket.key)
+        );
+        
+        if (relevantTickets.length > 0) {
+          jiraContext = `
+RELATED JIRA TICKETS:
+${relevantTickets.map(ticket => `
+- ${ticket.jiraKey || ticket.key}: ${ticket.summary}
+  Priority: ${ticket.priority}
+  Status: ${ticket.status}
+  Description: ${ticket.description || 'No description'}
+  Labels: ${ticket.labels?.join(', ') || 'None'}
+`).join('\n')}`;
+        }
+      } catch (error) {
+        console.warn("Error fetching Jira tickets for test steps generation:", error);
+      }
+    }
+    
+    // Get knowledge base context
+    let knowledgeBaseContext = "";
+    if (includeDocuments) {
+      try {
+        const allDocuments = await storage.getDocuments(project.id);
+        const relevantDocs = allDocuments.filter(doc => 
+          doc.title.toLowerCase().includes(testCase.title.toLowerCase().split(' ').slice(0, 2).join(' ')) ||
+          doc.content.toLowerCase().includes(testCase.title.toLowerCase().split(' ').slice(0, 2).join(' '))
+        );
+        
+        if (relevantDocs.length > 0) {
+          knowledgeBaseContext = `
+RELEVANT KNOWLEDGE BASE DOCUMENTS:
+${relevantDocs.map(doc => `
+**${doc.title}** (${doc.category}):
+${doc.content.substring(0, 800)}...
+`).join('\n\n')}`;
+        }
+      } catch (error) {
+        console.warn("Error fetching documents for test steps generation:", error);
+      }
+    }
+
+    const prompt = `You are an expert test engineer specializing in creating comprehensive test cases. Generate detailed test steps for the following test case based on the provided context.
+
+**PROJECT CONTEXT:**
+${projectContext}
+
+**TEST CASE INFORMATION:**
+- Title: ${testCase.title}
+- Description: ${testCase.description}
+- Current Preconditions: ${testCase.preconditions || 'None provided'}
+- Current Expected Results: ${testCase.expectedResults || 'None provided'}
+
+${jiraContext}
+
+${knowledgeBaseContext}
+
+**INSTRUCTIONS:**
+1. **Analyze** the test case title, description, and all provided context
+2. **Generate comprehensive preconditions** that ensure the test environment is properly set up
+3. **Create detailed test steps** that are:
+   - Clear and actionable
+   - Logically sequenced
+   - Include specific actions to perform
+   - Cover all necessary test scenarios based on the context
+4. **Provide expected results** for each step that are:
+   - Specific and measurable
+   - Aligned with the test case objective
+   - Technically accurate
+5. **Update the overall expected results** to better reflect the complete test objective based on context
+6. **Optionally improve the description** if needed for clarity
+
+**RESPONSE FORMAT:**
+Provide your response as a JSON object with the following structure:
+{
+  "preconditions": "Detailed preconditions as a string",
+  "steps": [
+    {"step": "Step 1 action", "expected": "Expected result for step 1"},
+    {"step": "Step 2 action", "expected": "Expected result for step 2"}
+  ],
+  "expectedResults": "Overall expected results for the entire test case",
+  "updatedDescription": "Improved description if needed (optional)"
+}
+
+Focus on creating test steps that are practical, executable, and aligned with the project's testing strategy and technical context.`;
+
+    const response = await callOpenAI(
+      [{ role: "user", content: prompt }],
+      { 
+        max_tokens: 2000,
+        temperature: 0.3,
+        response_format: { type: "json_object" }
+      }
+    );
+
+    const result = JSON.parse(response.choices[0].message.content || "{}");
+    console.log("Generated test steps:", result);
+    
+    return {
+      preconditions: result.preconditions || testCase.preconditions || "",
+      steps: result.steps || [],
+      expectedResults: result.expectedResults || testCase.expectedResults || "",
+      updatedDescription: result.updatedDescription || testCase.description
+    };
+    
+  } catch (error) {
+    console.error("Error generating test steps:", error);
+    throw new Error("Failed to generate test steps. Please try again.");
+  }
+}
+
+/**
  * Generate AI Test Coverage - analyze project context and propose test cases for a test suite
  */
 export async function generateTestCoverage(

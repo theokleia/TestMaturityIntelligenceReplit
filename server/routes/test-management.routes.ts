@@ -10,7 +10,8 @@ import {
 } from "@shared/schema";
 import { 
   generateTestCases,
-  generateTestCoverage
+  generateTestCoverage,
+  generateTestSteps
 } from "../openai-service";
 import { requireAuth } from "./auth.routes";
 
@@ -433,6 +434,36 @@ export function registerTestManagementRoutes(app: Express) {
       } else {
         res.status(500).json({ message: "Failed to create test cycle" });
       }
+    }
+  });
+
+  // AI Test Steps Generation
+  app.post("/api/ai/generate-test-steps", async (req, res) => {
+    try {
+      const { projectId, testCase, includeDocuments = true, includeJira = true } = req.body;
+      
+      if (!projectId || !testCase) {
+        return res.status(400).json({ 
+          message: "projectId and testCase are required" 
+        });
+      }
+
+      // Get project details
+      const project = await storage.getProject(parseInt(projectId));
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      // Generate test steps
+      const result = await generateTestSteps(project, testCase, includeDocuments, includeJira);
+      
+      res.json({
+        message: "Test steps generated successfully",
+        ...result
+      });
+    } catch (error) {
+      console.error("Error generating test steps:", error);
+      res.status(500).json({ message: "Failed to generate test steps" });
     }
   });
 }

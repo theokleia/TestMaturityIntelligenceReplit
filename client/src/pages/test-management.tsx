@@ -211,6 +211,9 @@ export default function TestManagement() {
   const [testCaseGenerationLoading, setTestCaseGenerationLoading] = useState(false);
   const [aiGenerationStage, setAiGenerationStage] = useState("");
   
+  // AI Test Steps Generation state
+  const [generatingTestSteps, setGeneratingTestSteps] = useState(false);
+  
   // Debug selected project and suite
   console.log("TestManagement - selectedProject:", selectedProject);
   console.log("TestManagement - projectId:", projectId);
@@ -815,6 +818,77 @@ export default function TestManagement() {
       clearInterval(stageInterval);
       setIsGeneratingCoverage(false);
       setCoverageLoadingStage("");
+    }
+  }
+
+  // Handle AI test steps generation
+  async function handleGenerateTestSteps() {
+    if (!selectedProject || !selectedTestCase) {
+      toast({
+        title: "Error",
+        description: "Please select a test case",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setGeneratingTestSteps(true);
+    
+    try {
+      const response = await fetch("/api/ai/generate-test-steps", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId: selectedProject.id,
+          testCase: selectedTestCase,
+          includeDocuments: true,
+          includeJira: true
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Update the test case with the generated steps
+        if (data.steps || data.preconditions || data.expectedResults) {
+          // Update form with generated data
+          if (data.steps) {
+            editCaseForm.setValue("steps", data.steps);
+          }
+          if (data.preconditions) {
+            editCaseForm.setValue("preconditions", data.preconditions);
+          }
+          if (data.expectedResults) {
+            editCaseForm.setValue("expectedResults", data.expectedResults);
+          }
+          
+          // Close detail dialog and open edit dialog
+          setTestCaseDetailOpen(false);
+          setEditCaseDialogOpen(true);
+          
+          toast({
+            title: "Test Steps Generated",
+            description: "AI-generated test steps have been added to the test case. Review and save changes.",
+          });
+        } else {
+          toast({
+            title: "Generation Complete",
+            description: "Test steps analysis completed. No new steps were generated.",
+          });
+        }
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to generate test steps");
+      }
+    } catch (error) {
+      console.error("Error generating AI test steps:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to generate test steps",
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingTestSteps(false);
     }
   }
 
@@ -1869,6 +1943,16 @@ export default function TestManagement() {
 
             {/* Action Buttons */}
             <div className="flex justify-end space-x-3 pt-4 border-t border-atmf-main/50">
+              <Button 
+                variant="outline" 
+                onClick={handleGenerateTestSteps}
+                className="flex items-center gap-2"
+                disabled={generatingTestSteps}
+              >
+                <Brain className="h-4 w-4" />
+                <span>{generatingTestSteps ? "Generating..." : "AI Test Steps"}</span>
+              </Button>
+              
               <Button 
                 variant="outline" 
                 onClick={() => {
