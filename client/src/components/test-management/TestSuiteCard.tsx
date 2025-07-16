@@ -12,7 +12,10 @@ import {
   Brain, 
   Bot,
   Trash2,
-  Eye
+  Eye,
+  GitBranch,
+  BookOpen,
+  Shield
 } from "lucide-react";
 
 interface TestSuite {
@@ -23,6 +26,7 @@ interface TestSuite {
   status: string;
   priority: string;
   projectArea: string;
+  coverage?: string;
   userId: number | null;
   aiGenerated: boolean;
   tags: string[];
@@ -40,6 +44,35 @@ interface TestSuiteCardProps {
   onGenerateCoverage: (suite: TestSuite) => void;
   onExportSuite: (suite: TestSuite) => void;
   onImportToSuite: (suite: TestSuite) => void;
+}
+
+function parseCoverage(coverage?: string) {
+  if (!coverage) return null;
+  
+  const sections: { type: string; items: string[]; icon: any }[] = [];
+  const parts = coverage.split(' | ');
+  
+  parts.forEach(part => {
+    const trimmed = part.trim();
+    if (trimmed.startsWith('JIRA_TICKETS:')) {
+      const tickets = trimmed.replace('JIRA_TICKETS:', '').trim().split(',').map(t => t.trim()).filter(t => t);
+      if (tickets.length > 0) {
+        sections.push({ type: 'Jira Tickets', items: tickets, icon: GitBranch });
+      }
+    } else if (trimmed.startsWith('DOCUMENTS:')) {
+      const docs = trimmed.replace('DOCUMENTS:', '').trim().split(',').map(d => d.trim()).filter(d => d);
+      if (docs.length > 0) {
+        sections.push({ type: 'Documents', items: docs, icon: BookOpen });
+      }
+    } else if (trimmed.startsWith('COMPLIANCE:')) {
+      const compliance = trimmed.replace('COMPLIANCE:', '').trim().split(',').map(c => c.trim()).filter(c => c);
+      if (compliance.length > 0) {
+        sections.push({ type: 'Compliance', items: compliance, icon: Shield });
+      }
+    }
+  });
+  
+  return sections;
 }
 
 export function TestSuiteCard({
@@ -109,6 +142,35 @@ export function TestSuiteCard({
                 +{suite.tags.length - 3} more
               </Badge>
             )}
+          </div>
+        )}
+        
+        {/* Coverage Information */}
+        {suite.coverage && (
+          <div className="border-t pt-3 mt-3">
+            <div className="space-y-2">
+              <h4 className="text-xs font-medium text-text-muted uppercase tracking-wide">Coverage</h4>
+              {parseCoverage(suite.coverage)?.map((section, index) => (
+                <div key={index} className="flex items-start gap-2">
+                  <section.icon className="h-3 w-3 text-slate-500 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium text-slate-700">{section.type}</div>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {section.items.slice(0, 3).map((item, itemIndex) => (
+                        <Badge key={itemIndex} variant="outline" className="text-xs px-1.5 py-0.5 h-auto">
+                          {item}
+                        </Badge>
+                      ))}
+                      {section.items.length > 3 && (
+                        <Badge variant="secondary" className="text-xs px-1.5 py-0.5 h-auto">
+                          +{section.items.length - 3} more
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
         
