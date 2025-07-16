@@ -73,6 +73,7 @@ import {
   X,
   ClipboardList,
   Check,
+  CheckCircle,
   Pencil
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/app-layout";
@@ -166,6 +167,7 @@ export default function TestManagement() {
   // AI Test Coverage state
   const [aiCoverageDialogOpen, setAiCoverageDialogOpen] = useState(false);
   const [proposedTestCases, setProposedTestCases] = useState<any[]>([]);
+  const [coverageAnalysis, setCoverageAnalysis] = useState<any>(null);
   const [isGeneratingCoverage, setIsGeneratingCoverage] = useState(false);
   
   // Debug selected project
@@ -614,12 +616,21 @@ export default function TestManagement() {
       if (response.ok) {
         const data = await response.json();
         setProposedTestCases(data.proposedTestCases || []);
+        setCoverageAnalysis(data.analysis || null);
         setAiCoverageDialogOpen(false);
         
-        toast({
-          title: "Success",
-          description: `Generated ${data.proposedTestCases?.length || 0} test cases for coverage analysis`,
-        });
+        // Show different messages based on whether new test cases were proposed
+        if (data.proposedTestCases?.length > 0) {
+          toast({
+            title: "Coverage Analysis Complete",
+            description: `Found ${data.proposedTestCases.length} recommended test cases to improve coverage`,
+          });
+        } else {
+          toast({
+            title: "Coverage Analysis Complete", 
+            description: data.analysis?.recommendation || "Coverage analysis completed - review recommendations",
+          });
+        }
       } else {
         const errorData = await response.json();
         throw new Error(errorData.message || "Failed to generate test coverage");
@@ -680,6 +691,7 @@ export default function TestManagement() {
   // Handle declining proposed test cases
   function handleDeclineTestCases() {
     setProposedTestCases([]);
+    setCoverageAnalysis(null);
     
     toast({
       title: "Proposals Declined",
@@ -2291,66 +2303,138 @@ export default function TestManagement() {
       </Dialog>
 
       {/* AI Test Coverage Proposals Dialog */}
-      <Dialog open={proposedTestCases.length > 0} onOpenChange={() => setProposedTestCases([])}>
+      <Dialog open={proposedTestCases.length > 0 || coverageAnalysis} onOpenChange={() => {
+        setProposedTestCases([]);
+        setCoverageAnalysis(null);
+      }}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>AI Test Coverage Analysis</DialogTitle>
             <DialogDescription>
-              Review the proposed test cases for "{selectedSuite?.name}". These test cases are designed to provide comprehensive coverage based on project context, documentation, and Jira tickets.
+              Coverage analysis for "{selectedSuite?.name}" based on existing test cases, project context, documentation, and Jira tickets.
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4">
-            {proposedTestCases.map((testCase, index) => (
-              <ATMFCard key={index} neonEffect="blue">
+          {/* Coverage Analysis Summary */}
+          {coverageAnalysis && (
+            <div className="mb-6">
+              <ATMFCard neonEffect="green">
                 <div className="p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <h4 className="font-medium text-lg">{testCase.title}</h4>
-                      <p className="text-text-muted mt-1">{testCase.description}</p>
-                    </div>
-                    <StatusBadge status={testCase.priority} variant="priority" />
-                  </div>
+                  <h4 className="font-medium text-lg mb-3 flex items-center gap-2">
+                    <Brain className="h-4 w-4 text-primary" />
+                    Coverage Analysis Summary
+                  </h4>
                   
-                  <div className="flex items-center gap-4 text-sm">
-                    <div className="flex items-center gap-1">
-                      <Brain className="h-3 w-3 text-primary" />
-                      <span className="text-text-muted">{testCase.reasoning}</span>
+                  <div className="space-y-3">
+                    <div>
+                      <h5 className="font-medium text-sm text-text-muted mb-1">Existing Coverage</h5>
+                      <p className="text-sm">{coverageAnalysis.existingCoverage}</p>
+                    </div>
+                    
+                    {coverageAnalysis.gaps && coverageAnalysis.gaps.length > 0 && (
+                      <div>
+                        <h5 className="font-medium text-sm text-text-muted mb-1">Coverage Gaps Identified</h5>
+                        <ul className="text-sm space-y-1">
+                          {coverageAnalysis.gaps.map((gap: string, index: number) => (
+                            <li key={index} className="flex items-start gap-2">
+                              <span className="text-yellow-500 mt-1">•</span>
+                              <span>{gap}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    
+                    <div>
+                      <h5 className="font-medium text-sm text-text-muted mb-1">Recommendation</h5>
+                      <p className="text-sm">{coverageAnalysis.recommendation}</p>
                     </div>
                   </div>
-                  
-                  {testCase.jiraTicketIds && testCase.jiraTicketIds.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-1">
-                      {testCase.jiraTicketIds.map((ticketId: string) => (
-                        <Badge key={ticketId} variant="outline" className="text-xs">
-                          {ticketId}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
                 </div>
               </ATMFCard>
-            ))}
-          </div>
+            </div>
+          )}
           
-          <DialogFooter className="flex items-center gap-2">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={handleDeclineTestCases}
-              className="flex items-center gap-2"
-            >
-              <X className="h-4 w-4" />
-              <span>Decline All</span>
-            </Button>
-            <Button 
-              onClick={handleAcceptTestCases}
-              className="flex items-center gap-2"
-            >
-              <Check className="h-4 w-4" />
-              <span>Accept All ({proposedTestCases.length} test cases)</span>
-            </Button>
-          </DialogFooter>
+          {/* Show proposed test cases or no additional coverage needed message */}
+          {proposedTestCases.length > 0 ? (
+            <div>
+              <h4 className="font-medium text-lg mb-3">Proposed Additional Test Cases</h4>
+              <div className="space-y-4">
+                {proposedTestCases.map((testCase, index) => (
+                  <ATMFCard key={index} neonEffect="blue">
+                    <div className="p-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <h4 className="font-medium text-lg">{testCase.title}</h4>
+                          <p className="text-text-muted mt-1">{testCase.description}</p>
+                        </div>
+                        <StatusBadge status={testCase.priority} variant="priority" />
+                      </div>
+                      
+                      <div className="flex items-center gap-4 text-sm">
+                        <div className="flex items-center gap-1">
+                          <Brain className="h-3 w-3 text-primary" />
+                          <span className="text-text-muted">{testCase.reasoning}</span>
+                        </div>
+                      </div>
+                      
+                      {testCase.jiraTicketIds && testCase.jiraTicketIds.length > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-1">
+                          {testCase.jiraTicketIds.map((ticketId: string) => (
+                            <Badge key={ticketId} variant="outline" className="text-xs">
+                              {ticketId}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </ATMFCard>
+                ))}
+              </div>
+              
+              <DialogFooter className="flex items-center gap-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={handleDeclineTestCases}
+                  className="flex items-center gap-2"
+                >
+                  <X className="h-4 w-4" />
+                  <span>Decline All</span>
+                </Button>
+                <Button 
+                  onClick={handleAcceptTestCases}
+                  className="flex items-center gap-2"
+                >
+                  <Check className="h-4 w-4" />
+                  <span>Accept All ({proposedTestCases.length} test cases)</span>
+                </Button>
+              </DialogFooter>
+            </div>
+          ) : coverageAnalysis ? (
+            <div className="text-center py-8">
+              <IconWrapper color="green" size="lg" className="mb-4 mx-auto">
+                <CheckCircle className="h-6 w-6" />
+              </IconWrapper>
+              <h4 className="font-medium text-lg mb-2">Coverage Analysis Complete</h4>
+              <p className="text-text-muted">
+                {coverageAnalysis.recommendation || "Review the analysis above for detailed coverage insights."}
+              </p>
+              
+              <DialogFooter className="flex justify-center mt-6">
+                <Button 
+                  onClick={() => {
+                    setProposedTestCases([]);
+                    setCoverageAnalysis(null);
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  <Check className="h-4 w-4" />
+                  <span>Close Analysis</span>
+                </Button>
+              </DialogFooter>
+            </div>
+          ) : null}
         </DialogContent>
       </Dialog>
     </AppLayout>

@@ -1113,6 +1113,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get project documents
       const documents = await storage.getDocuments(testProjectId);
       
+      // Get existing test cases in this suite
+      const existingTestCases = await storage.getTestCasesBySuiteId(suiteId);
+      
       // Get Jira tickets if available
       let jiraTickets = [];
       if (project.jiraUrl && project.jiraApiKey) {
@@ -1128,7 +1131,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Generate test coverage using AI
-      const proposedTestCases = await generateTestCoverage(
+      const coverageResult = await generateTestCoverage(
         project,
         {
           name: testSuite.name,
@@ -1136,15 +1139,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           projectArea: testSuite.projectArea || ""
         },
         documents,
-        jiraTickets
+        jiraTickets,
+        existingTestCases
       );
       
       res.json({
-        message: "Test coverage generated successfully",
-        proposedTestCases,
+        message: "Test coverage analysis completed",
+        proposedTestCases: coverageResult.proposedTestCases,
+        analysis: coverageResult.analysis,
         context: {
           documentsCount: documents.length,
-          jiraTicketsCount: jiraTickets.length
+          jiraTicketsCount: jiraTickets.length,
+          existingTestCasesCount: existingTestCases.length
         }
       });
     } catch (error) {

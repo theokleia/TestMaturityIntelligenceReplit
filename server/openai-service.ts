@@ -660,14 +660,22 @@ export async function generateTestCoverage(
   project: Project,
   testSuite: { name: string; description: string; projectArea: string },
   documents: any[],
-  jiraTickets: any[]
-): Promise<Array<{
-  title: string;
-  description: string;
-  priority: "high" | "medium" | "low";
-  jiraTicketIds: string[];
-  reasoning: string;
-}>> {
+  jiraTickets: any[],
+  existingTestCases: any[] = []
+): Promise<{
+  proposedTestCases: Array<{
+    title: string;
+    description: string;
+    priority: "high" | "medium" | "low";
+    jiraTicketIds: string[];
+    reasoning: string;
+  }>;
+  analysis: {
+    existingCoverage: string;
+    gaps: string[];
+    recommendation: string;
+  };
+}> {
   try {
     // Filter relevant documents
     const relevantDocs = documents.filter(doc => 
@@ -692,8 +700,13 @@ export async function generateTestCoverage(
       )
     );
 
+    const existingTestCasesContext = existingTestCases.length > 0 
+      ? `## Existing Test Cases in Suite:
+${existingTestCases.map(tc => `- ${tc.title}: ${tc.description} (Priority: ${tc.priority})`).join('\n')}`
+      : "## Existing Test Cases: None (this is a new test suite)";
+
     const prompt = `
-      As an expert QA analyst, analyze the following context and generate a comprehensive test coverage plan for the test suite "${testSuite.name}".
+      As an expert QA analyst, analyze the following context and provide a comprehensive test coverage analysis for the test suite "${testSuite.name}".
 
       ## Project Context:
       - Name: ${project.name}
@@ -711,6 +724,8 @@ export async function generateTestCoverage(
       ## Test Strategy:
       ${project.testStrategy || 'Standard risk-based testing approach'}
 
+      ${existingTestCasesContext}
+
       ## Relevant Documentation:
       ${relevantDocs.map(doc => `- ${doc.title}: ${doc.content?.substring(0, 500)}...`).join('\n')}
 
@@ -718,22 +733,37 @@ export async function generateTestCoverage(
       ${relevantTickets.map(ticket => `- ${ticket.key}: ${ticket.fields?.summary} (Status: ${ticket.fields?.status?.name})`).join('\n')}
 
       ## Task:
-      Based on this comprehensive context, generate 5-8 test cases that provide optimal coverage for this test suite. Consider:
+      ${existingTestCases.length > 0 
+        ? `Analyze the existing test cases and identify coverage gaps. Generate additional test cases only for areas not already covered.`
+        : `Generate 5-8 test cases that provide optimal coverage for this new test suite.`
+      }
 
+      Consider:
       1. **Business Requirements**: Test critical business logic and user workflows
-      2. **Risk-Based Testing**: Prioritize high-risk, high-impact scenarios
-      3. **Compliance**: Ensure regulatory requirements (${project.regulations}) are covered
-      4. **Jira Ticket Coverage**: Link test cases to relevant Jira tickets for traceability
-      5. **Quality Focus**: Align with project's quality objectives (${project.qualityFocus})
+      2. **Risk-Based Testing**: Prioritize high-risk, high-impact scenarios  
+      3. **Coverage Gaps**: ${existingTestCases.length > 0 ? 'Identify what existing test cases miss' : 'Ensure comprehensive coverage'}
+      4. **Compliance**: Ensure regulatory requirements (${project.regulations}) are covered
+      5. **Jira Ticket Coverage**: Link test cases to relevant Jira tickets for traceability
 
-      For each test case, provide:
-      - title: Clear, specific test case title (max 80 chars)
-      - description: Detailed description of what this test validates (1-2 sentences)
-      - priority: high/medium/low based on business impact and risk
-      - jiraTicketIds: Array of relevant Jira ticket keys that this test case covers
-      - reasoning: Brief explanation of why this test case is important (1 sentence)
+      Return a JSON object with this structure:
+      {
+        "proposedTestCases": [
+          {
+            "title": "Clear, specific test case title (max 80 chars)",
+            "description": "Detailed description of what this test validates (1-2 sentences)",
+            "priority": "high|medium|low based on business impact and risk",
+            "jiraTicketIds": ["Array of relevant Jira ticket keys"],
+            "reasoning": "Brief explanation of why this test case is important (1 sentence)"
+          }
+        ],
+        "analysis": {
+          "existingCoverage": "${existingTestCases.length > 0 ? 'Summary of what existing test cases cover' : 'No existing coverage - starting fresh'}",
+          "gaps": ["Array of coverage gaps identified"],
+          "recommendation": "Overall recommendation about the test coverage"
+        }
+      }
 
-      Return ONLY a valid JSON array with no markdown formatting, code blocks, or additional text.
+      Return ONLY valid JSON with no markdown formatting, code blocks, or additional text.
     `;
 
     const response = await callOpenAI([
@@ -744,16 +774,32 @@ export async function generateTestCoverage(
       max_tokens: 2500
     });
 
-    let content = response.choices[0].message.content || "[]";
+    let content = response.choices[0].message.content || '{"proposedTestCases": [], "analysis": {"existingCoverage": "", "gaps": [], "recommendation": ""}}';
     
     // Clean up markdown formatting if present
     content = content.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
     
     const result = JSON.parse(content);
-    return Array.isArray(result) ? result : [];
+    
+    // Ensure proper structure
+    return {
+      proposedTestCases: Array.isArray(result.proposedTestCases) ? result.proposedTestCases : [],
+      analysis: result.analysis || {
+        existingCoverage: existingTestCases.length > 0 ? "Existing test cases provide partial coverage" : "No existing coverage",
+        gaps: ["Unable to analyze coverage gaps"],
+        recommendation: "Manual review recommended"
+      }
+    };
   } catch (error) {
     console.error("Error generating test coverage:", error);
-    return [];
+    return {
+      proposedTestCases: [],
+      analysis: {
+        existingCoverage: existingTestCases.length > 0 ? "Existing test cases provide partial coverage" : "No existing coverage",
+        gaps: ["Error analyzing coverage gaps"],
+        recommendation: "Manual review recommended due to analysis error"
+      }
+    };
   }
 }
 
