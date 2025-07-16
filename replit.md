@@ -35,6 +35,17 @@ ATMosFera is an advanced AI-powered test management and documentation platform b
 
 ## Recent Changes
 
+### 2025-07-16: Jira Tickets Page Enhancement with Intelligent Coverage System
+- **Comprehensive Coverage Detection**: Enhanced logic to check both test cases and test suite coverage fields for complete coverage analysis
+- **Smart Badge System**: Implemented three-color badge system replacing large boxes:
+  - Green badge: Shows count of actual test cases covering the ticket
+  - Yellow badge: Indicates ticket is planned (listed in test suite coverage field)
+  - Red badge: No coverage exists (neither test cases nor suite planning)
+- **Intelligent UI Logic**: AI Coverage button only appears for uncovered tickets (red badges)
+- **Readable Descriptions**: Fixed raw JSON display by parsing Atlassian Document Format to readable text
+- **Interactive Test Case Links**: Clickable test case links in coverage display for direct access to test details
+- **System-Consistent Styling**: Dark blue AI Coverage button matching design system standards
+
 ### 2025-07-16: Comprehensive Codebase Refactoring and Modularization
 - **Frontend Component Refactoring**: Broke down massive test-management.tsx (2,621 lines) into 15 focused components
   - AITestCoverageDialog: Handles test coverage analysis and proposals display

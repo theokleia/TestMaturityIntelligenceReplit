@@ -344,6 +344,27 @@ export default function JiraTickets() {
     );
   };
 
+  // Check if a Jira ticket is covered by any test suite's coverage field
+  const isTicketInSuiteCoverage = (jiraKey: string): boolean => {
+    return testSuites.some(suite => 
+      suite.coverage && suite.coverage.toLowerCase().includes(jiraKey.toLowerCase())
+    );
+  };
+
+  // Get coverage status for a ticket
+  const getCoverageStatus = (jiraKey: string): 'covered' | 'planned' | 'uncovered' => {
+    const testCaseCoverage = getTestCasesForTicket(jiraKey);
+    const suiteCoverage = isTicketInSuiteCoverage(jiraKey);
+    
+    if (testCaseCoverage.length > 0) {
+      return 'covered';
+    } else if (suiteCoverage) {
+      return 'planned';
+    } else {
+      return 'uncovered';
+    }
+  };
+
   // Handle AI coverage generation
   const handleGenerateAICoverage = async (ticket: JiraTicket) => {
     setSelectedTicketForCoverage(ticket);
@@ -700,63 +721,67 @@ export default function JiraTickets() {
                   
                   <div className="flex flex-col gap-2">
                     {(() => {
+                      const coverageStatus = getCoverageStatus(ticket.jiraKey);
                       const coveringTestCases = getTestCasesForTicket(ticket.jiraKey);
+                      
                       return (
                         <div className="text-right">
-                          {coveringTestCases.length > 0 ? (
-                            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 mb-2">
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm font-medium text-green-800 dark:text-green-200">
-                                  Test Coverage
-                                </span>
-                                <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
-                                  {coveringTestCases.length} test{coveringTestCases.length > 1 ? 's' : ''}
-                                </Badge>
-                              </div>
-                              <div className="space-y-1">
-                                {coveringTestCases.slice(0, 2).map((testCase) => (
-                                  <div
-                                    key={testCase.id}
-                                    className="flex items-center justify-between text-xs p-2 bg-white dark:bg-gray-800 rounded border hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
-                                    onClick={() => {
-                                      setSelectedTestCase(testCase);
-                                      setTestCaseDetailOpen(true);
-                                    }}
-                                    title={testCase.description}
-                                  >
-                                    <span className="truncate flex-1 text-gray-700 dark:text-gray-300">
-                                      {testCase.title}
-                                    </span>
-                                    <Eye className="h-3 w-3 ml-2 text-gray-500" />
-                                  </div>
-                                ))}
-                                {coveringTestCases.length > 2 && (
-                                  <div className="text-xs text-center text-gray-500 pt-1">
-                                    +{coveringTestCases.length - 2} more test{coveringTestCases.length - 2 > 1 ? 's' : ''}
-                                  </div>
-                                )}
-                              </div>
+                          {/* Coverage Badge */}
+                          <div className="flex items-center justify-end mb-2">
+                            {coverageStatus === 'covered' && (
+                              <Badge className="bg-green-100 text-green-800 border-green-300 hover:bg-green-200">
+                                {coveringTestCases.length} test{coveringTestCases.length > 1 ? 's' : ''}
+                              </Badge>
+                            )}
+                            {coverageStatus === 'planned' && (
+                              <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300 hover:bg-yellow-200">
+                                planned
+                              </Badge>
+                            )}
+                            {coverageStatus === 'uncovered' && (
+                              <Badge className="bg-red-100 text-red-800 border-red-300 hover:bg-red-200">
+                                no coverage
+                              </Badge>
+                            )}
+                          </div>
+
+                          {/* Test Case Links (only show if covered) */}
+                          {coverageStatus === 'covered' && coveringTestCases.length > 0 && (
+                            <div className="space-y-1 mb-2">
+                              {coveringTestCases.slice(0, 2).map((testCase) => (
+                                <div
+                                  key={testCase.id}
+                                  className="flex items-center justify-between text-xs p-2 bg-gray-50 dark:bg-gray-800 rounded border hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                                  onClick={() => {
+                                    setSelectedTestCase(testCase);
+                                    setTestCaseDetailOpen(true);
+                                  }}
+                                  title={testCase.description}
+                                >
+                                  <span className="truncate flex-1 text-gray-700 dark:text-gray-300">
+                                    {testCase.title}
+                                  </span>
+                                  <Eye className="h-3 w-3 ml-2 text-gray-500" />
+                                </div>
+                              ))}
+                              {coveringTestCases.length > 2 && (
+                                <div className="text-xs text-center text-gray-500 pt-1">
+                                  +{coveringTestCases.length - 2} more
+                                </div>
+                              )}
                             </div>
-                          ) : (
-                            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 mb-2">
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                                  No Test Coverage
-                                </span>
-                                <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">
-                                  0 tests
-                                </Badge>
-                              </div>
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                className="w-full text-xs bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-700"
-                                onClick={() => handleGenerateAICoverage(ticket)}
-                              >
-                                <Brain className="h-3 w-3 mr-1" />
-                                AI Coverage
-                              </Button>
-                            </div>
+                          )}
+
+                          {/* AI Coverage Button (only show if uncovered) */}
+                          {coverageStatus === 'uncovered' && (
+                            <Button 
+                              size="sm" 
+                              className="w-full text-xs bg-blue-900 hover:bg-blue-800 text-white border-blue-900"
+                              onClick={() => handleGenerateAICoverage(ticket)}
+                            >
+                              <Brain className="h-3 w-3 mr-1" />
+                              AI Coverage
+                            </Button>
                           )}
                         </div>
                       );
