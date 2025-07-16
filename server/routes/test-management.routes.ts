@@ -394,7 +394,7 @@ export function registerTestManagementRoutes(app: Express) {
       if (projectId && isNaN(projectId)) {
         return res.status(400).json({ message: "Invalid projectId parameter" });
       }
-      const testCycles = await storage.getTestCycles({ projectId });
+      const testCycles = await storage.getTestCycles(projectId);
       res.json(testCycles);
     } catch (error) {
       console.error("Error fetching test cycles:", error);

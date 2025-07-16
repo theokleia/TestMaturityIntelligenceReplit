@@ -599,34 +599,41 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteTestSuite(id: number): Promise<{ deletedSuite: boolean; deletedTestCases: number }> {
-    try {
-      // First, count the test cases that will be deleted
-      const relatedTestCases = await db
-        .select()
-        .from(testCases)
-        .where(eq(testCases.suiteId, id));
-      
-      const deletedTestCasesCount = relatedTestCases.length;
-      
-      // Delete all related test cases first (due to foreign key constraints)
-      if (deletedTestCasesCount > 0) {
-        await db.delete(testCases).where(eq(testCases.suiteId, id));
+    return await db.transaction(async (tx) => {
+      try {
+        // First, count the test cases that will be deleted
+        const relatedTestCases = await tx
+          .select()
+          .from(testCases)
+          .where(eq(testCases.suiteId, id));
+        
+        const deletedTestCasesCount = relatedTestCases.length;
+        
+        // Delete Jira links for all test cases in this suite first (to handle foreign key constraints)
+        if (deletedTestCasesCount > 0) {
+          for (const testCase of relatedTestCases) {
+            await tx.delete(testCaseJiraLinks).where(eq(testCaseJiraLinks.testCaseId, testCase.id));
+          }
+          
+          // Then delete all related test cases
+          await tx.delete(testCases).where(eq(testCases.suiteId, id));
+        }
+        
+        // Finally delete the test suite
+        const deleteResult = await tx.delete(testSuites).where(eq(testSuites.id, id));
+        
+        return {
+          deletedSuite: true,
+          deletedTestCases: deletedTestCasesCount
+        };
+      } catch (error) {
+        console.error('Error deleting test suite:', error);
+        return {
+          deletedSuite: false,
+          deletedTestCases: 0
+        };
       }
-      
-      // Then delete the test suite
-      const deleteResult = await db.delete(testSuites).where(eq(testSuites.id, id));
-      
-      return {
-        deletedSuite: true,
-        deletedTestCases: deletedTestCasesCount
-      };
-    } catch (error) {
-      console.error('Error deleting test suite:', error);
-      return {
-        deletedSuite: false,
-        deletedTestCases: 0
-      };
-    }
+    });
   }
 
   // Test Cases
