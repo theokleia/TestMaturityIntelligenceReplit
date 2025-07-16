@@ -658,7 +658,7 @@ export async function generateTestCases(
  */
 export async function generateTestCoverage(
   project: Project,
-  testSuite: { name: string; description: string; projectArea: string },
+  testSuite: { name: string; description: string; projectArea: string; coverage?: string },
   documents: any[],
   jiraTickets: any[],
   existingTestCases: any[] = []
@@ -677,26 +677,57 @@ export async function generateTestCoverage(
   };
 }> {
   try {
+    // Extract required Jira tickets from coverage field
+    const requiredJiraTickets = [];
+    const requiredDocuments = [];
+    
+    if (testSuite.coverage) {
+      const coverageParts = testSuite.coverage.split(' | ');
+      for (const part of coverageParts) {
+        if (part.startsWith('JIRA_TICKETS:')) {
+          const ticketIds = part.replace('JIRA_TICKETS:', '').trim().split(',').map(t => t.trim());
+          requiredJiraTickets.push(...ticketIds);
+        } else if (part.startsWith('DOCUMENTS:')) {
+          const docNames = part.replace('DOCUMENTS:', '').trim();
+          requiredDocuments.push(docNames);
+        }
+      }
+    }
+
+    // Get all required Jira tickets (these MUST be covered)
+    const requiredTickets = jiraTickets.filter(ticket => 
+      requiredJiraTickets.includes(ticket.key)
+    );
+
+    // Get additional relevant tickets (these MAY be covered if relevant)
+    const additionalTickets = jiraTickets.filter(ticket => 
+      !requiredJiraTickets.includes(ticket.key) && (
+        ticket.fields?.summary?.toLowerCase().includes(testSuite.projectArea.toLowerCase()) ||
+        ticket.fields?.summary?.toLowerCase().includes(testSuite.name.toLowerCase()) ||
+        ticket.fields?.components?.some((comp: any) => 
+          testSuite.projectArea.toLowerCase().includes(comp.name.toLowerCase())
+        ) ||
+        ticket.fields?.labels?.some((label: string) => 
+          testSuite.projectArea.toLowerCase().includes(label.toLowerCase())
+        )
+      )
+    );
+
+    // Combine required and additional tickets, prioritizing required ones
+    const relevantTickets = [...requiredTickets, ...additionalTickets];
+
     // Filter relevant documents
     const relevantDocs = documents.filter(doc => 
+      requiredDocuments.some(reqDoc => 
+        doc.title?.toLowerCase().includes(reqDoc.toLowerCase()) ||
+        doc.content?.toLowerCase().includes(reqDoc.toLowerCase())
+      ) ||
       doc.type === 'requirement' || 
       doc.type === 'specification' ||
       doc.type === 'test_plan' ||
       doc.tags?.some((tag: string) => 
         testSuite.projectArea.toLowerCase().includes(tag.toLowerCase()) ||
         testSuite.name.toLowerCase().includes(tag.toLowerCase())
-      )
-    );
-
-    // Filter relevant Jira tickets
-    const relevantTickets = jiraTickets.filter(ticket => 
-      ticket.fields?.summary?.toLowerCase().includes(testSuite.projectArea.toLowerCase()) ||
-      ticket.fields?.summary?.toLowerCase().includes(testSuite.name.toLowerCase()) ||
-      ticket.fields?.components?.some((comp: any) => 
-        testSuite.projectArea.toLowerCase().includes(comp.name.toLowerCase())
-      ) ||
-      ticket.fields?.labels?.some((label: string) => 
-        testSuite.projectArea.toLowerCase().includes(label.toLowerCase())
       )
     );
 
@@ -726,11 +757,27 @@ ${existingTestCases.map(tc => `- ${tc.title}: ${tc.description} (Priority: ${tc.
 
       ${existingTestCasesContext}
 
-      ## Relevant Documentation:
+      ## MANDATORY Coverage Requirements:
+      ${requiredJiraTickets.length > 0 ? `
+      **CRITICAL: The following Jira tickets MUST be covered by test cases. Every ticket requires at least one test case:**
+      ${requiredTickets.map(ticket => {
+        const description = ticket.fields?.description;
+        const descriptionText = typeof description === 'string' ? description.substring(0, 200) : 'No description';
+        return `- ${ticket.key}: ${ticket.fields?.summary} (Status: ${ticket.fields?.status?.name}) - ${descriptionText}`;
+      }).join('\n')}
+      ` : 'No mandatory Jira tickets specified in coverage field.'}
+
+      ## Required Documentation Coverage:
+      ${requiredDocuments.length > 0 ? `
+      **Required Documents to Cover:**
+      ${requiredDocuments.map(doc => `- ${doc}`).join('\n')}
+      ` : 'No mandatory documents specified in coverage field.'}
+
+      ## Additional Relevant Documentation:
       ${relevantDocs.map(doc => `- ${doc.title}: ${doc.content?.substring(0, 500)}...`).join('\n')}
 
-      ## Related Jira Tickets:
-      ${relevantTickets.map(ticket => {
+      ## Additional Relevant Jira Tickets (Optional):
+      ${additionalTickets.map(ticket => {
         const description = ticket.fields?.description;
         const descriptionText = typeof description === 'string' ? description.substring(0, 200) : 'No description';
         return `- ${ticket.key}: ${ticket.fields?.summary} (Status: ${ticket.fields?.status?.name}) - ${descriptionText}`;
@@ -738,16 +785,17 @@ ${existingTestCases.map(tc => `- ${tc.title}: ${tc.description} (Priority: ${tc.
 
       ## Task:
       ${existingTestCases.length > 0 
-        ? `Analyze the existing test cases and identify coverage gaps. Generate additional test cases only for areas not already covered.`
-        : `Generate 5-8 test cases that provide optimal coverage for this new test suite.`
+        ? `Analyze the existing test cases and identify coverage gaps. Generate additional test cases to ensure ALL mandatory Jira tickets are covered.`
+        : `Generate test cases that provide comprehensive coverage for this test suite.`
       }
 
-      Consider:
-      1. **Business Requirements**: Test critical business logic and user workflows
-      2. **Risk-Based Testing**: Prioritize high-risk, high-impact scenarios  
-      3. **Coverage Gaps**: ${existingTestCases.length > 0 ? 'Identify what existing test cases miss' : 'Ensure comprehensive coverage'}
-      4. **Compliance**: Ensure regulatory requirements (${project.regulations}) are covered
-      5. **Jira Ticket Coverage**: Link test cases to relevant Jira tickets for traceability
+      ## CRITICAL REQUIREMENTS:
+      1. **Mandatory Jira Coverage**: EVERY ticket in the required list (${requiredJiraTickets.join(', ')}) MUST have at least one test case
+      2. **No Uncovered Tickets**: There cannot be any required Jira tickets without test coverage
+      3. **Risk-Based Testing**: Prioritize high-risk, high-impact scenarios  
+      4. **Coverage Gaps**: ${existingTestCases.length > 0 ? 'Identify what existing test cases miss' : 'Ensure comprehensive coverage'}
+      5. **Compliance**: Ensure regulatory requirements (${project.regulations}) are covered
+      6. **Traceability**: Link test cases to relevant Jira tickets for complete traceability
 
       Return a JSON object with this structure:
       {
@@ -807,13 +855,71 @@ ${existingTestCases.map(tc => `- ${tc.title}: ${tc.description} (Priority: ${tc.
       };
     }) || [];
 
+    // Validate that ALL required Jira tickets are covered
+    const coveredTickets = new Set();
+    enhancedTestCases.forEach(testCase => {
+      testCase.jiraTicketIds?.forEach(ticketId => {
+        if (requiredJiraTickets.includes(ticketId)) {
+          coveredTickets.add(ticketId);
+        }
+      });
+    });
+
+    // Check existing test cases for coverage of required tickets
+    existingTestCases.forEach(testCase => {
+      if (testCase.jiraTicketIds && Array.isArray(testCase.jiraTicketIds)) {
+        testCase.jiraTicketIds.forEach(ticketId => {
+          if (requiredJiraTickets.includes(ticketId)) {
+            coveredTickets.add(ticketId);
+          }
+        });
+      }
+    });
+
+    const uncoveredTickets = requiredJiraTickets.filter(ticketId => !coveredTickets.has(ticketId));
+    
+    // Generate additional test cases for uncovered required tickets
+    const additionalTestCases = [];
+    if (uncoveredTickets.length > 0) {
+      for (const ticketId of uncoveredTickets) {
+        const ticket = requiredTickets.find(t => t.key === ticketId);
+        if (ticket) {
+          const summary = ticket.fields?.summary || 'No summary';
+          const shortSummary = typeof summary === 'string' ? summary.substring(0, 50) : 'No summary';
+          
+          additionalTestCases.push({
+            title: `Test ${ticketId}: ${shortSummary}`,
+            description: `Verify functionality and requirements specified in ${ticketId}`,
+            priority: "high" as const,
+            jiraTicketIds: [ticketId],
+            jiraTickets: [{
+              key: ticketId,
+              summary: shortSummary
+            }],
+            reasoning: `Required to ensure coverage of mandatory ticket ${ticketId}`
+          });
+        }
+      }
+    }
+
+    // Combine original and additional test cases
+    const finalTestCases = [...enhancedTestCases, ...additionalTestCases];
+
+    // Update analysis to reflect coverage status
+    const analysisGaps = result.analysis?.gaps || [];
+    if (uncoveredTickets.length > 0) {
+      analysisGaps.push(`Missing coverage for required Jira tickets: ${uncoveredTickets.join(', ')}`);
+    }
+
     // Ensure proper structure
     return {
-      proposedTestCases: enhancedTestCases,
-      analysis: result.analysis || {
-        existingCoverage: existingTestCases.length > 0 ? "Existing test cases provide partial coverage" : "No existing coverage",
-        gaps: ["Unable to analyze coverage gaps"],
-        recommendation: "Manual review recommended"
+      proposedTestCases: finalTestCases,
+      analysis: {
+        existingCoverage: result.analysis?.existingCoverage || (existingTestCases.length > 0 ? "Existing test cases provide partial coverage" : "No existing coverage"),
+        gaps: analysisGaps,
+        recommendation: uncoveredTickets.length > 0 
+          ? `Generated additional test cases to ensure ALL required Jira tickets (${requiredJiraTickets.join(', ')}) are covered. ${result.analysis?.recommendation || ''}`
+          : result.analysis?.recommendation || "All required Jira tickets are covered"
       },
       jiraTicketsContext: relevantTickets.map(ticket => ({
         key: ticket.key,
