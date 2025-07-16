@@ -920,6 +920,7 @@ export async function generateTestSuites(
 }[]> {
   try {
     console.log(`Generating AI test suites for project ${project.id} - ${project.name} with organization: ${organizationType}`);
+    console.log(`Jira tickets data:`, jiraTickets?.length > 0 ? jiraTickets.slice(0, 2) : 'No tickets');
     
     // Format Jira tickets into groups by organization type for better analysis
     let jiraAnalysis = "No Jira tickets available.";
@@ -931,7 +932,7 @@ export async function generateTestSuites(
 JIRA TICKETS ANALYSIS (Primary Data Source - ${jiraTickets.length} tickets):
 ${Object.entries(ticketGroups).map(([group, tickets]) => `
 ${group.toUpperCase()} GROUP:
-${tickets.map(t => `- ${t.key}: ${t.fields.summary} (${t.fields.issuetype?.name || 'Unknown'} | ${t.fields.status?.name || 'Unknown'})`).join('\n')}
+${tickets.map(t => `- ${t.key || t.jiraKey}: ${t.fields?.summary || t.summary || 'No summary'} (${t.fields?.issuetype?.name || t.issueType || 'Unknown'} | ${t.fields?.status?.name || t.status || 'Unknown'})`).join('\n')}
 `).join('\n')}
 
 COMPLIANCE REQUIREMENTS FROM TICKETS:
@@ -981,7 +982,8 @@ ${documentsContext}
 
 TASK: Generate 6-8 test suites organized by ${organizationType} that:
 
-1. PRIMARY GOAL: Cover ALL Jira tickets by grouping them logically according to ${organizationType}
+${jiraTickets && jiraTickets.length > 0 
+  ? `1. PRIMARY GOAL: Cover ALL Jira tickets by grouping them logically according to ${organizationType}
 2. SECONDARY GOAL: Add any additional test suites needed based on project context (regulations, quality focus, documents)
 3. Each suite should include detailed coverage information
 
@@ -989,7 +991,16 @@ Requirements:
 - Start with Jira tickets and group them by ${organizationType}
 - Ensure every ticket is assigned to at least one test suite
 - Add supplementary suites for compliance, performance, security as needed based on project context
-- Include specific coverage details for each suite
+- Include specific coverage details for each suite`
+  : `1. PRIMARY GOAL: Create comprehensive test suites based on project context, regulations, and quality focus
+2. SECONDARY GOAL: Use project information to design test suites by ${organizationType}
+3. Each suite should include detailed coverage information
+
+Requirements (No Jira tickets available):
+- Create test suites based on project type (${project.projectType}) and industry area (${project.industryArea})
+- Focus on regulations (${project.regulations}) and quality requirements
+- Organize suites by ${organizationType}
+- Include compliance, performance, security suites as needed`}
 
 For each test suite, provide:
 - name: Clear, descriptive name indicating the ${organizationType} grouping
