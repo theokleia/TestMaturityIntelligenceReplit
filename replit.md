@@ -35,7 +35,23 @@ ATMosFera is an advanced AI-powered test management and documentation platform b
 
 ## Recent Changes
 
-### 2025-07-16: Enhanced AI Loading Animations and Jira Link Fix
+### 2025-07-16: Major Component Refactoring and Code Organization
+- **Refactored Large Files**: Broke down massive test-management.tsx (2,621 lines) into smaller, reusable components
+- **Created Modular Components**: 
+  - AITestCoverageDialog: Handles test coverage analysis and proposals display
+  - AITestSuiteDialog: Manages AI test suite generation input
+  - AITestSuiteProposalsDialog: Shows and handles AI-generated test suite proposals
+  - TestSuiteHeader: Consolidated search, filters, and action buttons
+  - TestSuiteCard: Individual test suite display with actions
+  - TestSuiteGrid: Grid layout for test suite cards
+  - CreateTestSuiteDialog: Form for creating new test suites
+  - CreateTestCaseDialog: Form for creating new test cases
+  - TestCaseDetailsDialog: Detailed view of test case information
+- **Improved Maintainability**: Each component now has single responsibility and clear interfaces
+- **Clean Architecture**: Separated UI components from business logic and state management
+- **Enhanced Reusability**: Components can now be easily reused across different parts of the application
+
+### 2025-07-16: Enhanced AI Loading Animations and Jira Link Fix  
 - Implemented playful loading animations for all AI test generation features
 - Added floating icons, pulsing dots, progress rings, and staged progress messages
 - Enhanced AI Test Coverage, Test Case Generation, and Test Suite Generation with interactive loading states
