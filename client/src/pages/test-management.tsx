@@ -163,6 +163,11 @@ export default function TestManagement() {
   const [proposedSuites, setProposedSuites] = useState<any[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   
+  // AI Test Coverage state
+  const [aiCoverageDialogOpen, setAiCoverageDialogOpen] = useState(false);
+  const [proposedTestCases, setProposedTestCases] = useState<any[]>([]);
+  const [isGeneratingCoverage, setIsGeneratingCoverage] = useState(false);
+  
   // Debug selected project
   console.log("TestManagement - selectedProject:", selectedProject);
   console.log("TestManagement - projectId:", projectId);
@@ -583,6 +588,104 @@ export default function TestManagement() {
       description: "Test suite proposals have been discarded",
     });
   }
+
+  // Handle AI test coverage generation
+  async function handleGenerateTestCoverage() {
+    if (!selectedProject || !selectedSuite) {
+      toast({
+        title: "Error",
+        description: "Please select a test suite",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsGeneratingCoverage(true);
+    
+    try {
+      const response = await fetch(`/api/test-suites/${selectedSuite.id}/generate-coverage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId: selectedProject.id
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setProposedTestCases(data.proposedTestCases || []);
+        setAiCoverageDialogOpen(false);
+        
+        toast({
+          title: "Success",
+          description: `Generated ${data.proposedTestCases?.length || 0} test cases for coverage analysis`,
+        });
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to generate test coverage");
+      }
+    } catch (error) {
+      console.error("Error generating AI test coverage:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to generate test coverage",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingCoverage(false);
+    }
+  }
+
+  // Handle accepting proposed test cases
+  async function handleAcceptTestCases() {
+    if (!selectedSuite || !proposedTestCases.length) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/test-suites/${selectedSuite.id}/accept-coverage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          proposedTestCases,
+          projectId: selectedProject?.id
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        toast({
+          title: "Success",
+          description: `Created ${data.count} test cases from AI coverage analysis`,
+        });
+        
+        // Reset state and refresh
+        setProposedTestCases([]);
+        window.location.reload();
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to create test cases");
+      }
+    } catch (error) {
+      console.error("Error accepting test coverage:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create test cases",
+        variant: "destructive",
+      });
+    }
+  }
+
+  // Handle declining proposed test cases
+  function handleDeclineTestCases() {
+    setProposedTestCases([]);
+    
+    toast({
+      title: "Proposals Declined",
+      description: "Test case proposals have been discarded",
+    });
+  }
   
   // Reset edit form when selected test case changes
   useEffect(() => {
@@ -877,11 +980,12 @@ export default function TestManagement() {
                           </Button>
                           <Button 
                             variant="outline" 
-                            onClick={() => setAiGenerateDialogOpen(true)}
+                            onClick={handleGenerateTestCoverage}
+                            disabled={isGeneratingCoverage}
                             className="flex items-center gap-2"
                           >
                             <Brain className="h-4 w-4" />
-                            <span>Generate with AI</span>
+                            <span>{isGeneratingCoverage ? "Analyzing..." : "AI Test Coverage"}</span>
                           </Button>
                         </div>
                       </div>
@@ -2180,6 +2284,70 @@ export default function TestManagement() {
             >
               <Check className="h-4 w-4" />
               <span>Accept All ({proposedSuites.length} suites)</span>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* AI Test Coverage Proposals Dialog */}
+      <Dialog open={proposedTestCases.length > 0} onOpenChange={() => setProposedTestCases([])}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>AI Test Coverage Analysis</DialogTitle>
+            <DialogDescription>
+              Review the proposed test cases for "{selectedSuite?.name}". These test cases are designed to provide comprehensive coverage based on project context, documentation, and Jira tickets.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {proposedTestCases.map((testCase, index) => (
+              <ATMFCard key={index} neonEffect="blue">
+                <div className="p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <h4 className="font-medium text-lg">{testCase.title}</h4>
+                      <p className="text-text-muted mt-1">{testCase.description}</p>
+                    </div>
+                    <StatusBadge status={testCase.priority} variant="priority" />
+                  </div>
+                  
+                  <div className="flex items-center gap-4 text-sm">
+                    <div className="flex items-center gap-1">
+                      <Brain className="h-3 w-3 text-primary" />
+                      <span className="text-text-muted">{testCase.reasoning}</span>
+                    </div>
+                  </div>
+                  
+                  {testCase.jiraTicketIds && testCase.jiraTicketIds.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-1">
+                      {testCase.jiraTicketIds.map((ticketId: string) => (
+                        <Badge key={ticketId} variant="outline" className="text-xs">
+                          {ticketId}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </ATMFCard>
+            ))}
+          </div>
+          
+          <DialogFooter className="flex items-center gap-2">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={handleDeclineTestCases}
+              className="flex items-center gap-2"
+            >
+              <X className="h-4 w-4" />
+              <span>Decline All</span>
+            </Button>
+            <Button 
+              onClick={handleAcceptTestCases}
+              className="flex items-center gap-2"
+            >
+              <Check className="h-4 w-4" />
+              <span>Accept All ({proposedTestCases.length} test cases)</span>
             </Button>
           </DialogFooter>
         </DialogContent>

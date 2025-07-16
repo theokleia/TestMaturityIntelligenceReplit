@@ -24,11 +24,13 @@ import {
   analyzeTestPatterns,
   generateTestStrategy,
   generateTestCases,
+  generateTestCoverage,
   generateAssistantResponse,
   generateWhisperSuggestions,
   generateDocument,
   analyzeDocumentContent
 } from "./openai-service";
+import { createJiraServiceFromProject } from "./jira-service";
 import { handleWhisperSuggestions } from "./api/handle-whisper-suggestions";
 import { handleDocumentAnalysis } from "./api/handle-document-analysis";
 import { setupAuth } from "./auth";
@@ -1082,6 +1084,139 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error generating test cases:", error);
       res.status(500).json({ message: "Failed to generate test cases" });
+    }
+  });
+
+  // AI Test Coverage Generation endpoint
+  app.post("/api/test-suites/:suiteId/generate-coverage", async (req, res) => {
+    try {
+      const suiteId = parseInt(req.params.suiteId);
+      const { projectId } = req.body;
+      
+      // Get the test suite
+      const testSuite = await storage.getTestSuite(suiteId);
+      if (!testSuite) {
+        return res.status(404).json({ message: "Test suite not found" });
+      }
+      
+      // Get the project
+      const testProjectId = projectId || testSuite.projectId;
+      if (!testProjectId) {
+        return res.status(400).json({ message: "Project ID is required" });
+      }
+      
+      const project = await storage.getProject(testProjectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      // Get project documents
+      const documents = await storage.getDocuments(testProjectId);
+      
+      // Get Jira tickets if available
+      let jiraTickets = [];
+      if (project.jiraUrl && project.jiraApiKey) {
+        try {
+          const jiraService = createJiraServiceFromProject(project);
+          if (jiraService) {
+            const jql = project.jiraJql || `project = "${project.jiraProjectId || project.name}"`;
+            jiraTickets = await jiraService.fetchIssues(jql, 50);
+          }
+        } catch (error) {
+          console.error("Error fetching Jira tickets for test coverage:", error);
+        }
+      }
+      
+      // Generate test coverage using AI
+      const proposedTestCases = await generateTestCoverage(
+        project,
+        {
+          name: testSuite.name,
+          description: testSuite.description || "",
+          projectArea: testSuite.projectArea || ""
+        },
+        documents,
+        jiraTickets
+      );
+      
+      res.json({
+        message: "Test coverage generated successfully",
+        proposedTestCases,
+        context: {
+          documentsCount: documents.length,
+          jiraTicketsCount: jiraTickets.length
+        }
+      });
+    } catch (error) {
+      console.error("Error generating test coverage:", error);
+      res.status(500).json({ message: "Failed to generate test coverage" });
+    }
+  });
+
+  // Accept proposed test cases from AI coverage generation
+  app.post("/api/test-suites/:suiteId/accept-coverage", async (req, res) => {
+    try {
+      const suiteId = parseInt(req.params.suiteId);
+      const { proposedTestCases, projectId } = req.body;
+      
+      if (!proposedTestCases || !Array.isArray(proposedTestCases)) {
+        return res.status(400).json({ message: "proposedTestCases array is required" });
+      }
+      
+      // Get the test suite
+      const testSuite = await storage.getTestSuite(suiteId);
+      if (!testSuite) {
+        return res.status(404).json({ message: "Test suite not found" });
+      }
+      
+      const testProjectId = projectId || testSuite.projectId;
+      const createdTestCases = [];
+      
+      // Create test cases from the accepted proposals
+      for (const proposal of proposedTestCases) {
+        const newTestCase = await storage.createTestCase({
+          title: proposal.title,
+          description: proposal.description,
+          preconditions: "System is accessible and preconditions are met",
+          steps: [],
+          expectedResults: "Test validates the specified functionality",
+          priority: proposal.priority,
+          severity: "normal",
+          status: "draft",
+          suiteId: suiteId,
+          userId: 1, // Default to admin user  
+          aiGenerated: true,
+          automatable: false,
+          automationStatus: "not-automated",
+          projectId: testProjectId
+        });
+        
+        createdTestCases.push(newTestCase);
+        
+        // Create Jira links if provided
+        if (proposal.jiraTicketIds && proposal.jiraTicketIds.length > 0) {
+          for (const ticketId of proposal.jiraTicketIds) {
+            try {
+              await storage.createTestCaseJiraLink({
+                testCaseId: newTestCase.id,
+                jiraTicketKey: ticketId,
+                projectId: testProjectId
+              });
+            } catch (error) {
+              console.error(`Error creating Jira link for ticket ${ticketId}:`, error);
+            }
+          }
+        }
+      }
+      
+      res.status(201).json({
+        message: "Test cases created successfully from AI coverage",
+        testCases: createdTestCases,
+        count: createdTestCases.length
+      });
+    } catch (error) {
+      console.error("Error accepting test coverage:", error);
+      res.status(500).json({ message: "Failed to create test cases from coverage" });
     }
   });
 

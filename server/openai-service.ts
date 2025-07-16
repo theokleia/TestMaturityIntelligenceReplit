@@ -654,6 +654,105 @@ export async function generateTestCases(
 }
 
 /**
+ * Generate AI Test Coverage - analyze project context and propose test cases for a test suite
+ */
+export async function generateTestCoverage(
+  project: Project,
+  testSuite: { name: string; description: string; projectArea: string },
+  documents: any[],
+  jiraTickets: any[]
+): Promise<Array<{
+  title: string;
+  description: string;
+  priority: "high" | "medium" | "low";
+  jiraTicketIds: string[];
+  reasoning: string;
+}>> {
+  try {
+    // Filter relevant documents
+    const relevantDocs = documents.filter(doc => 
+      doc.type === 'requirement' || 
+      doc.type === 'specification' ||
+      doc.type === 'test_plan' ||
+      doc.tags?.some((tag: string) => 
+        testSuite.projectArea.toLowerCase().includes(tag.toLowerCase()) ||
+        testSuite.name.toLowerCase().includes(tag.toLowerCase())
+      )
+    );
+
+    // Filter relevant Jira tickets
+    const relevantTickets = jiraTickets.filter(ticket => 
+      ticket.fields?.summary?.toLowerCase().includes(testSuite.projectArea.toLowerCase()) ||
+      ticket.fields?.summary?.toLowerCase().includes(testSuite.name.toLowerCase()) ||
+      ticket.fields?.components?.some((comp: any) => 
+        testSuite.projectArea.toLowerCase().includes(comp.name.toLowerCase())
+      ) ||
+      ticket.fields?.labels?.some((label: string) => 
+        testSuite.projectArea.toLowerCase().includes(label.toLowerCase())
+      )
+    );
+
+    const prompt = `
+      As an expert QA analyst, analyze the following context and generate a comprehensive test coverage plan for the test suite "${testSuite.name}".
+
+      ## Project Context:
+      - Name: ${project.name}
+      - Description: ${project.description}
+      - Industry: ${project.industryArea}
+      - Type: ${project.projectType}
+      - Regulations: ${project.regulations}
+      - Quality Focus: ${project.qualityFocus}
+
+      ## Test Suite Context:
+      - Name: ${testSuite.name}
+      - Description: ${testSuite.description}
+      - Project Area: ${testSuite.projectArea}
+
+      ## Test Strategy:
+      ${project.testStrategy || 'Standard risk-based testing approach'}
+
+      ## Relevant Documentation:
+      ${relevantDocs.map(doc => `- ${doc.title}: ${doc.content?.substring(0, 500)}...`).join('\n')}
+
+      ## Related Jira Tickets:
+      ${relevantTickets.map(ticket => `- ${ticket.key}: ${ticket.fields?.summary} (Status: ${ticket.fields?.status?.name})`).join('\n')}
+
+      ## Task:
+      Based on this comprehensive context, generate 5-8 test cases that provide optimal coverage for this test suite. Consider:
+
+      1. **Business Requirements**: Test critical business logic and user workflows
+      2. **Risk-Based Testing**: Prioritize high-risk, high-impact scenarios
+      3. **Compliance**: Ensure regulatory requirements (${project.regulations}) are covered
+      4. **Jira Ticket Coverage**: Link test cases to relevant Jira tickets for traceability
+      5. **Quality Focus**: Align with project's quality objectives (${project.qualityFocus})
+
+      For each test case, provide:
+      - title: Clear, specific test case title (max 80 chars)
+      - description: Detailed description of what this test validates (1-2 sentences)
+      - priority: high/medium/low based on business impact and risk
+      - jiraTicketIds: Array of relevant Jira ticket keys that this test case covers
+      - reasoning: Brief explanation of why this test case is important (1 sentence)
+
+      Return ONLY a JSON array with no additional text or formatting.
+    `;
+
+    const response = await callOpenAI([
+      { role: "system", content: "You are an expert QA analyst specializing in comprehensive test coverage analysis and risk-based testing strategies." },
+      { role: "user", content: prompt }
+    ], {
+      temperature: 0.6,
+      max_tokens: 2500
+    });
+
+    const result = JSON.parse(response.choices[0].message.content || "[]");
+    return Array.isArray(result) ? result : [];
+  } catch (error) {
+    console.error("Error generating test coverage:", error);
+    return [];
+  }
+}
+
+/**
  * Generate test strategy recommendations based on project context
  */
 export async function generateTestStrategy(
