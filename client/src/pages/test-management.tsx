@@ -76,10 +76,7 @@ import {
   Check,
   GitBranch,
   CheckCircle,
-  Pencil,
-  Target,
-  BookOpen,
-  Shield
+  Pencil
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/app-layout";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -1039,64 +1036,11 @@ export default function TestManagement() {
                 />
                 <div className="p-4">
                   {selectedSuite ? (
-                    <>
-                      {/* Coverage Information */}
-                      {selectedSuite.coverage && (
-                        <div className="mb-6 p-4 bg-gradient-to-r from-slate-50 to-blue-50 rounded-lg border border-slate-200">
-                          <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-                            <Target className="h-4 w-4" />
-                            Test Suite Coverage
-                          </h4>
-                          <div className="space-y-3">
-                            {(() => {
-                              const sections = [];
-                              const parts = selectedSuite.coverage.split(' | ');
-                              
-                              parts.forEach(part => {
-                                const trimmed = part.trim();
-                                if (trimmed.startsWith('JIRA_TICKETS:')) {
-                                  const tickets = trimmed.replace('JIRA_TICKETS:', '').trim().split(',').map(t => t.trim()).filter(t => t);
-                                  if (tickets.length > 0) {
-                                    sections.push({ type: 'Jira Tickets', items: tickets, icon: GitBranch, color: 'text-green-600' });
-                                  }
-                                } else if (trimmed.startsWith('DOCUMENTS:')) {
-                                  const docs = trimmed.replace('DOCUMENTS:', '').trim().split(',').map(d => d.trim()).filter(d => d);
-                                  if (docs.length > 0) {
-                                    sections.push({ type: 'Documents', items: docs, icon: BookOpen, color: 'text-blue-600' });
-                                  }
-                                } else if (trimmed.startsWith('COMPLIANCE:')) {
-                                  const compliance = trimmed.replace('COMPLIANCE:', '').trim().split(',').map(c => c.trim()).filter(c => c);
-                                  if (compliance.length > 0) {
-                                    sections.push({ type: 'Compliance', items: compliance, icon: Shield, color: 'text-purple-600' });
-                                  }
-                                }
-                              });
-                              
-                              return sections;
-                            })().map((section, index) => (
-                              <div key={index} className="flex items-start gap-3">
-                                <section.icon className={`h-4 w-4 ${section.color} mt-0.5 flex-shrink-0`} />
-                                <div className="flex-1 min-w-0">
-                                  <div className="text-sm font-medium text-slate-700 mb-1">{section.type}</div>
-                                  <div className="flex flex-wrap gap-2">
-                                    {section.items.map((item, itemIndex) => (
-                                      <Badge key={itemIndex} variant="secondary" className="text-xs">
-                                        {item}
-                                      </Badge>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      
-                      {isLoadingTestCases ? (
-                        <div className="flex justify-center items-center h-24">
-                          <p>Loading test cases...</p>
-                        </div>
-                      ) : testCases && testCases.length > 0 ? (
+                    isLoadingTestCases ? (
+                      <div className="flex justify-center items-center h-24">
+                        <p>Loading test cases...</p>
+                      </div>
+                    ) : testCases && testCases.length > 0 ? (
                       <Table>
                         <TableHeader>
                           <TableRow>
