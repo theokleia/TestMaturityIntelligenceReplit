@@ -95,7 +95,7 @@ export function TestCaseTable({
           <TableHead>Priority</TableHead>
           <TableHead className="w-[80px]">Auto</TableHead>
           <TableHead>Jira</TableHead>
-          <TableHead>Source</TableHead>
+          <TableHead className="w-[80px]">Steps</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -105,7 +105,16 @@ export function TestCaseTable({
             className="cursor-pointer hover:bg-primary/5"
             onClick={() => onViewTestCase(testCase)}
           >
-            <TableCell className="font-medium">{testCase.title}</TableCell>
+            <TableCell className="font-medium">
+              <div className="flex items-center gap-2">
+                {testCase.aiGenerated && (
+                  <IconWrapper color="blue" size="xs">
+                    <Bot className="h-3 w-3" />
+                  </IconWrapper>
+                )}
+                <span>{testCase.title}</span>
+              </div>
+            </TableCell>
             <TableCell>
               <StatusBadge status={testCase.status} variant="test" />
             </TableCell>
@@ -142,29 +151,10 @@ export function TestCaseTable({
                 <span className="text-text-muted text-xs">—</span>
               )}
             </TableCell>
-            <TableCell>
-              <div className="flex items-center gap-2">
-                {testCase.aiGenerated ? (
-                  <IconWrapper color="blue" size="xs">
-                    <Bot className="h-3 w-3" />
-                  </IconWrapper>
-                ) : (
-                  <IconWrapper color="primary" size="xs">
-                    <FileText className="h-3 w-3" />
-                  </IconWrapper>
-                )}
-                <Button 
-                  size="icon" 
-                  variant="ghost" 
-                  className="h-7 w-7 ml-2"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onViewTestCase(testCase);
-                  }}
-                >
-                  <Eye className="h-3.5 w-3.5" />
-                </Button>
-              </div>
+            <TableCell className="text-center">
+              <Badge variant="outline" className="text-xs">
+                {testCase.steps ? testCase.steps.length : 0}
+              </Badge>
             </TableCell>
           </TableRow>
         ))}

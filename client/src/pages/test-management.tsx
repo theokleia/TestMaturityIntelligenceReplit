@@ -1215,7 +1215,7 @@ export default function TestManagement() {
                             <TableHead>Priority</TableHead>
                             <TableHead className="w-[80px]">Auto</TableHead>
                             <TableHead>Jira</TableHead>
-                            <TableHead>Source</TableHead>
+                            <TableHead className="w-[80px]">Steps</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1228,7 +1228,16 @@ export default function TestManagement() {
                                 setTestCaseDetailOpen(true);
                               }}
                             >
-                              <TableCell className="font-medium">{testCase.title}</TableCell>
+                              <TableCell className="font-medium">
+                                <div className="flex items-center gap-2">
+                                  {testCase.aiGenerated && (
+                                    <IconWrapper color="blue" size="xs">
+                                      <Bot className="h-3 w-3" />
+                                    </IconWrapper>
+                                  )}
+                                  <span>{testCase.title}</span>
+                                </div>
+                              </TableCell>
                               <TableCell>
                                 <StatusBadge status={testCase.status} variant="test" />
                               </TableCell>
@@ -1253,30 +1262,10 @@ export default function TestManagement() {
                                   jiraTickets={testCase.jiraTickets}
                                 />
                               </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  {testCase.aiGenerated ? (
-                                    <IconWrapper color="blue" size="xs">
-                                      <Bot className="h-3 w-3" />
-                                    </IconWrapper>
-                                  ) : (
-                                    <IconWrapper color="primary" size="xs">
-                                      <FileText className="h-3 w-3" />
-                                    </IconWrapper>
-                                  )}
-                                  <Button 
-                                    size="icon" 
-                                    variant="ghost" 
-                                    className="h-7 w-7 ml-2"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSelectedTestCase(testCase);
-                                      setTestCaseDetailOpen(true);
-                                    }}
-                                  >
-                                    <Eye className="h-3.5 w-3.5" />
-                                  </Button>
-                                </div>
+                              <TableCell className="text-center">
+                                <Badge variant="outline" className="text-xs">
+                                  {testCase.steps ? testCase.steps.length : 0}
+                                </Badge>
                               </TableCell>
                             </TableRow>
                           ))}
@@ -1942,29 +1931,7 @@ export default function TestManagement() {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex justify-end space-x-3 pt-4 border-t border-atmf-main/50">
-              <Button 
-                variant="outline" 
-                onClick={handleGenerateTestSteps}
-                className="flex items-center gap-2"
-                disabled={generatingTestSteps}
-              >
-                <Brain className="h-4 w-4" />
-                <span>{generatingTestSteps ? "Generating..." : "AI Test Steps"}</span>
-              </Button>
-              
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setTestCaseDetailOpen(false);
-                  setEditCaseDialogOpen(true);
-                }}
-                className="flex items-center gap-2"
-              >
-                <Pencil className="h-4 w-4" />
-                <span>Edit Test Case</span>
-              </Button>
-              
+            <div className="flex justify-between pt-4 border-t border-atmf-main/50">
               <Button 
                 variant="destructive" 
                 onClick={() => {
@@ -1976,6 +1943,30 @@ export default function TestManagement() {
                 <Trash2 className="h-4 w-4" />
                 <span>Delete</span>
               </Button>
+              
+              <div className="flex space-x-3">
+                <Button 
+                  variant="outline" 
+                  onClick={handleGenerateTestSteps}
+                  className="flex items-center gap-2"
+                  disabled={generatingTestSteps}
+                >
+                  <Brain className="h-4 w-4" />
+                  <span>{generatingTestSteps ? "Generating..." : "AI Test Steps"}</span>
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setTestCaseDetailOpen(false);
+                    setEditCaseDialogOpen(true);
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  <Pencil className="h-4 w-4" />
+                  <span>Edit Test Case</span>
+                </Button>
+              </div>
             </div>
           </div>
         </DialogContent>
@@ -2172,7 +2163,7 @@ export default function TestManagement() {
                             <FormItem>
                               <FormLabel className="sr-only">Step {index + 1}</FormLabel>
                               <FormControl>
-                                <Input placeholder={`Step ${index + 1}`} {...field} />
+                                <Textarea placeholder={`Step ${index + 1}`} {...field} className="min-h-16 resize-none" />
                               </FormControl>
                             </FormItem>
                           )}
@@ -2187,7 +2178,7 @@ export default function TestManagement() {
                             <FormItem>
                               <FormLabel className="sr-only">Expected Result</FormLabel>
                               <FormControl>
-                                <Input placeholder="Expected result" {...field} />
+                                <Textarea placeholder="Expected result" {...field} className="min-h-16 resize-none" />
                               </FormControl>
                             </FormItem>
                           )}
