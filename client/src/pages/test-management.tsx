@@ -1005,7 +1005,50 @@ export default function TestManagement() {
                                   <FileText className="h-3 w-3" />
                                   <span>{suite.projectArea}</span>
                                 </div>
-                                <StatusBadge status={suite.priority} variant="priority" />
+                                <div className="flex items-center gap-1">
+                                  <StatusBadge status={suite.priority} variant="priority" />
+                                  {selectedSuite?.id === suite.id && (
+                                    <div className="flex items-center ml-1">
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-6 w-6"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setEditSuiteDialogOpen(true);
+                                        }}
+                                        title="Edit test suite"
+                                      >
+                                        <Pencil className="h-3.5 w-3.5" />
+                                      </Button>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-6 w-6 text-destructive hover:text-destructive"
+                                        onClick={async (e) => {
+                                          e.stopPropagation();
+                                          // Fetch test case count before showing dialog
+                                          try {
+                                            const response = await fetch(`/api/test-suites/${suite.id}/test-cases/count`);
+                                            if (response.ok) {
+                                              const data = await response.json();
+                                              setSelectedSuiteTestCaseCount(data.count);
+                                            } else {
+                                              setSelectedSuiteTestCaseCount(0);
+                                            }
+                                          } catch (error) {
+                                            console.error('Error fetching test case count:', error);
+                                            setSelectedSuiteTestCaseCount(0);
+                                          }
+                                          setDeleteSuiteConfirmOpen(true);
+                                        }}
+                                        title="Delete test suite"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </ATMFCard>
