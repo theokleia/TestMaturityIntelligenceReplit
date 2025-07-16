@@ -805,9 +805,15 @@ export default function TestManagement() {
           description: `Created ${data.count} test cases from AI coverage analysis`,
         });
         
-        // Reset state and refresh
+        // Reset state and refresh data
         setProposedTestCases([]);
-        window.location.reload();
+        setCoverageAnalysis(null);
+        
+        // Invalidate and refetch test cases data to show new cases
+        queryClient.invalidateQueries({ queryKey: ['/api/test-cases'] });
+        
+        // Also invalidate test suites to update any counts
+        queryClient.invalidateQueries({ queryKey: ['/api/test-suites'] });
       } else {
         const errorData = await response.json();
         throw new Error(errorData.message || "Failed to create test cases");
