@@ -8,6 +8,7 @@ interface TestSuite {
   status: string;
   priority: string;
   projectArea: string;
+  coverage?: string;
   userId: number | null;
   aiGenerated: boolean;
   tags: string[];
