@@ -730,7 +730,11 @@ ${existingTestCases.map(tc => `- ${tc.title}: ${tc.description} (Priority: ${tc.
       ${relevantDocs.map(doc => `- ${doc.title}: ${doc.content?.substring(0, 500)}...`).join('\n')}
 
       ## Related Jira Tickets:
-      ${relevantTickets.map(ticket => `- ${ticket.key}: ${ticket.fields?.summary} (Status: ${ticket.fields?.status?.name}) - ${ticket.fields?.description?.substring(0, 200) || 'No description'}`).join('\n')}
+      ${relevantTickets.map(ticket => {
+        const description = ticket.fields?.description;
+        const descriptionText = typeof description === 'string' ? description.substring(0, 200) : 'No description';
+        return `- ${ticket.key}: ${ticket.fields?.summary} (Status: ${ticket.fields?.status?.name}) - ${descriptionText}`;
+      }).join('\n')}
 
       ## Task:
       ${existingTestCases.length > 0 
@@ -786,10 +790,15 @@ ${existingTestCases.map(tc => `- ${tc.title}: ${tc.description} (Priority: ${tc.
     const enhancedTestCases = result.proposedTestCases?.map((testCase: any) => {
       const jiraTickets = testCase.jiraTicketIds?.map((ticketKey: string) => {
         const ticket = relevantTickets.find(t => t.key === ticketKey);
-        return ticket ? {
-          key: ticket.key,
-          summary: ticket.fields?.summary?.substring(0, 50) || 'No summary'
-        } : { key: ticketKey, summary: 'Ticket not found' };
+        if (ticket) {
+          const summary = ticket.fields?.summary;
+          const summaryText = typeof summary === 'string' ? summary.substring(0, 50) : 'No summary';
+          return {
+            key: ticket.key,
+            summary: summaryText
+          };
+        }
+        return { key: ticketKey, summary: 'Ticket not found' };
       }) || [];
       
       return {
@@ -808,7 +817,7 @@ ${existingTestCases.map(tc => `- ${tc.title}: ${tc.description} (Priority: ${tc.
       },
       jiraTicketsContext: relevantTickets.map(ticket => ({
         key: ticket.key,
-        summary: ticket.fields?.summary || 'No summary',
+        summary: typeof ticket.fields?.summary === 'string' ? ticket.fields.summary : 'No summary',
         status: ticket.fields?.status?.name || 'Unknown'
       }))
     };
