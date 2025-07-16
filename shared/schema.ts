@@ -157,11 +157,11 @@ export const testCycles = pgTable("test_cycles", {
   name: varchar("name", { length: 100 }).notNull(),
   description: text("description"),
   status: varchar("status", { length: 30 }).default("created"), // created, in-progress, completed, archived
-  startDate: timestamp("start_date"),
-  endDate: timestamp("end_date"),
+  startDate: timestamp("start_date", { mode: 'string' }),
+  endDate: timestamp("end_date", { mode: 'string' }),
   userId: integer("user_id").references(() => users.id),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
   projectId: integer("project_id").references(() => projects.id, { onDelete: "cascade" }),
 });
 
