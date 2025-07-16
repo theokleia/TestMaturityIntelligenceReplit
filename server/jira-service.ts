@@ -46,7 +46,26 @@ export class JiraService {
     });
 
     if (!response.ok) {
-      throw new Error(`Jira API error: ${response.status} ${response.statusText}`);
+      let errorDetails = `${response.status} ${response.statusText}`;
+      try {
+        const errorBody = await response.text();
+        if (errorBody) {
+          const parsed = JSON.parse(errorBody);
+          if (parsed.errorMessages && parsed.errorMessages.length > 0) {
+            errorDetails += `: ${parsed.errorMessages.join(', ')}`;
+          } else if (parsed.errors) {
+            const errorKeys = Object.keys(parsed.errors);
+            if (errorKeys.length > 0) {
+              errorDetails += `: ${errorKeys.map(key => `${key}: ${parsed.errors[key]}`).join(', ')}`;
+            }
+          }
+        }
+      } catch (parseError) {
+        // If we can't parse the error, just use the status
+      }
+      
+      console.error(`Jira API error for ${url}:`, errorDetails);
+      throw new Error(`Jira API error: ${errorDetails}`);
     }
 
     return response.json();
@@ -135,7 +154,7 @@ export class JiraService {
       }
 
       // Build JQL query
-      let jql = project.jiraJql || `project = ${project.jiraProjectId}`;
+      let jql = project.jiraJql || `project = "${project.jiraProjectId}"`;
       
       // For incremental sync, only fetch recently updated tickets
       if (syncType === 'incremental') {
@@ -147,6 +166,8 @@ export class JiraService {
           jql += ` AND updated >= "${formattedDate}"`;
         }
       }
+
+      console.log(`Attempting to sync with JQL: ${jql}`);
 
       // Fetch issues from Jira
       const issues = await jiraService.fetchIssues(jql, 1000);

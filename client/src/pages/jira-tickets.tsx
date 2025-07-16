@@ -176,7 +176,7 @@ export default function JiraTickets() {
       } else {
         toast({
           title: "Sync Failed",
-          description: data.message || "Failed to sync Jira tickets",
+          description: data.error || data.message || "Failed to sync Jira tickets",
           variant: "destructive"
         });
       }
