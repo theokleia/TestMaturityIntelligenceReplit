@@ -733,7 +733,7 @@ export async function generateTestCoverage(
       - jiraTicketIds: Array of relevant Jira ticket keys that this test case covers
       - reasoning: Brief explanation of why this test case is important (1 sentence)
 
-      Return ONLY a JSON array with no additional text or formatting.
+      Return ONLY a valid JSON array with no markdown formatting, code blocks, or additional text.
     `;
 
     const response = await callOpenAI([
@@ -744,7 +744,12 @@ export async function generateTestCoverage(
       max_tokens: 2500
     });
 
-    const result = JSON.parse(response.choices[0].message.content || "[]");
+    let content = response.choices[0].message.content || "[]";
+    
+    // Clean up markdown formatting if present
+    content = content.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+    
+    const result = JSON.parse(content);
     return Array.isArray(result) ? result : [];
   } catch (error) {
     console.error("Error generating test coverage:", error);
