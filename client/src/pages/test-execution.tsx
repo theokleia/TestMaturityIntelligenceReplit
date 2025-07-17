@@ -158,13 +158,24 @@ function DatePicker({ selected, onSelect, placeholder = "Pick a date", fromDate 
 }
 
 // Test Data Manager Component
-interface TestDataManagerProps {
-  value: Array<{ title: string; value: string; description?: string }>;
-  onChange: (value: Array<{ title: string; value: string; description?: string }>) => void;
+interface TestDataItem {
+  title: string;
+  value: string;
+  description?: string;
 }
 
-function TestDataManager({ value, onChange }: TestDataManagerProps) {
-  const [items, setItems] = useState(value || []);
+interface TestDataManagerProps {
+  value: TestDataItem[];
+  onChange: (value: TestDataItem[]) => void;
+}
+
+function TestDataManager({ value = [], onChange }: TestDataManagerProps) {
+  const [items, setItems] = useState<TestDataItem[]>(value || []);
+
+  // Sync internal state with prop value changes
+  useEffect(() => {
+    setItems(value || []);
+  }, [value]);
 
   const addItem = () => {
     const newItems = [...items, { title: "", value: "", description: "" }];
@@ -900,7 +911,7 @@ export default function TestExecution() {
       
       {/* New Test Cycle Dialog */}
       <Dialog open={newCycleDialogOpen} onOpenChange={setNewCycleDialogOpen}>
-        <DialogContent className="sm:max-w-[525px]">
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create New Test Cycle</DialogTitle>
             <DialogDescription>
@@ -1069,7 +1080,7 @@ export default function TestExecution() {
       
       {/* Edit Test Cycle Dialog */}
       <Dialog open={editCycleDialogOpen} onOpenChange={setEditCycleDialogOpen}>
-        <DialogContent className="sm:max-w-[525px]">
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Test Cycle</DialogTitle>
             <DialogDescription>
