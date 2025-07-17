@@ -50,6 +50,12 @@ export default function TestCycleModals({
   const createCycleMutation = useCreateTestCycle();
   const updateCycleMutation = useUpdateTestCycle();
 
+  // Debug logging
+  console.log("TestCycleModals - newCycleDialogOpen:", newCycleDialogOpen);
+  console.log("TestCycleModals - editCycleDialogOpen:", editCycleDialogOpen);
+  console.log("TestCycleModals - selectedCycle:", selectedCycle);
+  console.log("TestCycleModals - projectId:", projectId);
+
   const handleCreateCycle = (data: TestCycleFormValues) => {
     if (!projectId) return;
     

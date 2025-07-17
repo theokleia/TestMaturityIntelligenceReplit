@@ -488,7 +488,10 @@ export default function TestExecution() {
         description="Execute test cases and record results"
         action={
           <Button 
-            onClick={() => setNewCycleDialogOpen(true)}
+            onClick={() => {
+              console.log("New Test Cycle button clicked");
+              setNewCycleDialogOpen(true);
+            }}
           >
             <Plus size={16} />
             <span>New Test Cycle</span>
