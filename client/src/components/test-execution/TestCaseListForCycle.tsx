@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/design-system/status-badge";
-import { Play, X, History } from "lucide-react";
+import { Play, X, History, Bot } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { TestCycleItem, TestRun } from "@/hooks/test-execution";
 import { TestCase } from "@/hooks/test-management";
@@ -20,6 +20,7 @@ interface TestCaseListForCycleProps {
   latestRuns: Record<number, TestRun>;
   isLoading: boolean;
   onExecute: (cycleItemId: number, testCaseId: number) => void;
+  onAIExecute: (cycleItemId: number, testCaseId: number) => void;
   onRemove: (cycleItemId: number) => void;
   onViewHistory: (testCaseId: number) => void;
 }
@@ -30,6 +31,7 @@ export function TestCaseListForCycle({
   latestRuns,
   isLoading,
   onExecute,
+  onAIExecute,
   onRemove,
   onViewHistory
 }: TestCaseListForCycleProps) {
@@ -93,8 +95,18 @@ export function TestCaseListForCycle({
                     size="sm"
                     className="h-8 px-2 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950 dark:hover:text-emerald-300"
                     onClick={() => onExecute(item.id, testCase.id)}
+                    title="Manual execution"
                   >
                     <Play className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950 dark:hover:text-blue-300"
+                    onClick={() => onAIExecute(item.id, testCase.id)}
+                    title="AI-assisted execution"
+                  >
+                    <Bot className="h-4 w-4" />
                   </Button>
                   <Button
                     variant="ghost"

@@ -57,7 +57,8 @@ import {
   TestCycleFormDialog,
   TestCaseListForCycle,
   TestExecutionDialog,
-  TestHistoryDialog
+  TestHistoryDialog,
+  AITestExecutionDialog
 } from "@/components/test-execution";
 
 export default function TestExecutionPage() {
@@ -72,6 +73,10 @@ export default function TestExecutionPage() {
   const [selectedTestCaseId, setSelectedTestCaseId] = useState<number | null>(null);
   const [selectedCases, setSelectedCases] = useState<number[]>([]);
   const [selectedSuiteId, setSelectedSuiteId] = useState<number | null>(null);
+  
+  // AI Execution State
+  const [aiExecutionDialogOpen, setAIExecutionDialogOpen] = useState(false);
+  const [aiExecutionTestCase, setAIExecutionTestCase] = useState<any>(null);
   
   // Dialog states
   const [newCycleDialogOpen, setNewCycleDialogOpen] = useState(false);
@@ -316,6 +321,70 @@ export default function TestExecutionPage() {
     setSelectedTestCaseId(testCaseId);
     setExecutionDialogOpen(true); // Opens execution dialog for running a test
   };
+
+  // Handle clicking the AI execute button (bot icon)
+  const handleAIExecuteTestCase = (cycleItemId: number, testCaseId: number) => {
+    setSelectedCycleItem(cycleItemId);
+    setSelectedTestCaseId(testCaseId);
+    
+    // Find the test case data
+    const testCase = testCases?.find(tc => tc.id === testCaseId);
+    if (testCase) {
+      setAIExecutionTestCase(testCase);
+      setAIExecutionDialogOpen(true);
+    }
+  };
+
+  const handleAIExecutionComplete = (result: {
+    status: 'passed' | 'failed' | 'blocked';
+    notes: string;
+    evidence: any[];
+    stepResults: any[];
+  }) => {
+    if (!selectedCycleItem || !selectedTestCaseId) return;
+
+    // Create a test run with AI execution results
+    createRunMutation.mutate(
+      {
+        cycleItemId: selectedCycleItem,
+        testCaseId: selectedTestCaseId,
+        status: result.status,
+        notes: result.notes,
+        steps: result.stepResults,
+        evidence: result.evidence
+      },
+      {
+        onSuccess: () => {
+          toast({
+            title: "AI Execution Complete",
+            description: `Test ${result.status === 'passed' ? 'passed' : result.status} via AI automation`,
+          });
+          
+          // Update the cycle item status
+          updateCycleItemMutation.mutate(
+            {
+              id: selectedCycleItem,
+              data: { status: result.status }
+            },
+            {
+              onSuccess: () => {
+                refetchItems();
+                refetchRuns();
+                setAIExecutionDialogOpen(false);
+              }
+            }
+          );
+        },
+        onError: () => {
+          toast({
+            title: "Error",
+            description: "Failed to save AI execution results",
+            variant: "destructive",
+          });
+        },
+      }
+    );
+  };
   
   // Handle clicking the history button (history icon)
   const handleViewTestCaseHistory = async (testCaseId: number) => {
@@ -558,6 +627,7 @@ export default function TestExecutionPage() {
                     latestRuns={latestRunsMap}
                     isLoading={isLoadingItems || isLoadingCases}
                     onExecute={handleExecuteTestCase}
+                    onAIExecute={handleAIExecuteTestCase}
                     onRemove={handleRemoveTestCaseFromCycle}
                     onViewHistory={handleViewTestCaseHistory}
                   />
@@ -764,6 +834,14 @@ export default function TestExecutionPage() {
           onOpenChange={setHistoryDialogOpen}
           testCase={selectedTestCaseId ? testCasesMap[selectedTestCaseId] : undefined}
           testRuns={historyTestRuns}
+        />
+
+        {/* AI Test Execution Dialog */}
+        <AITestExecutionDialog
+          isOpen={aiExecutionDialogOpen}
+          onOpenChange={setAIExecutionDialogOpen}
+          testCase={aiExecutionTestCase}
+          onComplete={handleAIExecutionComplete}
         />
       </PageContainer>
     </AppLayout>

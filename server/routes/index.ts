@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { setupWebSocketServer } from "../websocket-handler";
 
 // Import all route modules
 import { registerAuthRoutes } from "./auth.routes";
@@ -42,5 +43,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const server = createServer(app);
+  
+  // Setup WebSocket server for AI execution
+  setupWebSocketServer(server);
+  
   return server;
 }
