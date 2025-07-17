@@ -81,10 +81,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 
-// Import new components
-import TestCycleModals from "@/components/test-execution/TestCycleModals";
-import TestCyclesList from "@/components/test-execution/TestCyclesList";
-import TestCycleDetails from "@/components/test-execution/TestCycleDetails";
+// Removed test cycle CRUD components
 
 // Test run form schema
 const testRunSchema = z.object({
@@ -120,8 +117,6 @@ export default function TestExecution() {
   // State
   const [activeTab, setActiveTab] = useState("cycles");
   const [selectedCycle, setSelectedCycle] = useState<TestCycle | null>(null);
-  const [newCycleDialogOpen, setNewCycleDialogOpen] = useState(false);
-  const [editCycleDialogOpen, setEditCycleDialogOpen] = useState(false);
   const [selectCasesDialogOpen, setSelectCasesDialogOpen] = useState(false);
   const [selectSuiteDialogOpen, setSelectSuiteDialogOpen] = useState(false);
   const [testRunDialogOpen, setTestRunDialogOpen] = useState(false);
@@ -197,15 +192,7 @@ export default function TestExecution() {
     return testCases?.find(tc => tc.id === id);
   };
   
-  // Handlers
-  const handleCycleCreated = (cycle: TestCycle) => {
-    setSelectedCycle(cycle);
-    setActiveTab("execution");
-  };
-
-  const handleCycleUpdated = (cycle: TestCycle) => {
-    setSelectedCycle(cycle);
-  };
+  // Handlers (removed cycle creation/update handlers)
   
   const handleAddTestCases = () => {
     if (!selectedCycle || !selectedCases.length) return;
@@ -368,19 +355,80 @@ export default function TestExecution() {
       id: "cycles",
       label: "Test Cycles",
       content: (
-        <TestCyclesList
-          testCycles={testCycles}
-          isLoading={isLoadingCycles}
-          onSelectCycle={(cycle) => {
-            setSelectedCycle(cycle);
-            setActiveTab("execution");
-          }}
-          onEditCycle={(cycle) => {
-            setSelectedCycle(cycle);
-            setEditCycleDialogOpen(true);
-          }}
-          selectedCycle={selectedCycle}
-        />
+        <ATMFCard>
+          <ATMFCardHeader title="Test Cycles" description="Manage your test execution cycles" />
+          <div className="p-6">
+            {isLoadingCycles ? (
+              <div className="text-center py-8">Loading test cycles...</div>
+            ) : testCycles && testCycles.length > 0 ? (
+              <div className="space-y-4">
+                {testCycles.map((cycle) => (
+                  <div
+                    key={cycle.id}
+                    className={`border rounded-lg p-4 cursor-pointer transition-colors ${
+                      selectedCycle?.id === cycle.id 
+                        ? 'border-blue-500 bg-blue-50' 
+                        : 'hover:bg-gray-50'
+                    }`}
+                    onClick={() => {
+                      setSelectedCycle(cycle);
+                      setActiveTab("execution");
+                    }}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2">
+                          <h4 className="font-medium">{cycle.name}</h4>
+                          {renderStatusBadge(cycle.status)}
+                        </div>
+                        
+                        {cycle.description && (
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {cycle.description}
+                          </p>
+                        )}
+                        
+                        <div className="flex items-center space-x-4 mt-2 text-xs text-muted-foreground">
+                          {cycle.startDate && (
+                            <span>Start: {formatDate(cycle.startDate)}</span>
+                          )}
+                          {cycle.endDate && (
+                            <span>End: {formatDate(cycle.endDate)}</span>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedCycle(cycle);
+                            setActiveTab("execution");
+                          }}
+                        >
+                          <PlayCircle size={16} className="mr-1" />
+                          Execute
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <div className="py-8">
+                  <Clock className="mx-auto h-12 w-12 text-muted-foreground" />
+                  <h3 className="mt-4 text-lg font-semibold">No test cycles yet</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Test cycles will appear here once created.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </ATMFCard>
       )
     },
     {
@@ -388,12 +436,56 @@ export default function TestExecution() {
       label: "Test Execution",
       content: selectedCycle ? (
         <div className="space-y-6">
-          <TestCycleDetails
-            selectedCycle={selectedCycle}
-            onEditCycle={() => setEditCycleDialogOpen(true)}
-            onAddTestSuite={() => setSelectSuiteDialogOpen(true)}
-            onAddTestCases={() => setSelectCasesDialogOpen(true)}
-          />
+          <ATMFCard>
+            <ATMFCardHeader 
+              title={selectedCycle.name}
+              description={selectedCycle.description || "Test cycle execution details"}
+              actions={
+                <div className="flex space-x-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setSelectSuiteDialogOpen(true)}
+                  >
+                    <ListChecks size={16} className="mr-2" />
+                    Add Test Suite
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setSelectCasesDialogOpen(true)}
+                  >
+                    <Plus size={16} className="mr-2" />
+                    Add Test Cases
+                  </Button>
+                </div>
+              }
+            />
+            
+            <div className="p-6 grid grid-cols-4 gap-6 bg-atmf-card/30">
+              <div className="p-4 bg-atmf-card rounded-lg">
+                <span className="text-sm text-muted-foreground">Status</span>
+                <div className="mt-1">{renderStatusBadge(selectedCycle.status)}</div>
+              </div>
+              
+              <div className="p-4 bg-atmf-card rounded-lg">
+                <span className="text-sm text-muted-foreground">Start Date</span>
+                <div className="mt-1">
+                  {selectedCycle.startDate ? new Date(selectedCycle.startDate).toLocaleDateString() : "Not set"}
+                </div>
+              </div>
+              
+              <div className="p-4 bg-atmf-card rounded-lg">
+                <span className="text-sm text-muted-foreground">End Date</span>
+                <div className="mt-1">
+                  {selectedCycle.endDate ? new Date(selectedCycle.endDate).toLocaleDateString() : "Not set"}
+                </div>
+              </div>
+              
+              <div className="p-4 bg-atmf-card rounded-lg">
+                <span className="text-sm text-muted-foreground">Progress</span>
+                <div className="mt-1">-</div>
+              </div>
+            </div>
+          </ATMFCard>
           
           <ATMFCard>
             <ATMFCardHeader title="Test Cases" description="Execute test cases in this cycle" />
@@ -486,17 +578,7 @@ export default function TestExecution() {
       <PageHeader
         title="Test Execution"
         description="Execute test cases and record results"
-        action={
-          <Button 
-            onClick={() => {
-              console.log("New Test Cycle button clicked");
-              setNewCycleDialogOpen(true);
-            }}
-          >
-            <Plus size={16} />
-            <span>New Test Cycle</span>
-          </Button>
-        }
+        action={null}
       />
       
       <PageContent>
@@ -509,17 +591,7 @@ export default function TestExecution() {
         />
       </PageContent>
       
-      {/* Test Cycle Modals */}
-      <TestCycleModals
-        newCycleDialogOpen={newCycleDialogOpen}
-        setNewCycleDialogOpen={setNewCycleDialogOpen}
-        editCycleDialogOpen={editCycleDialogOpen}
-        setEditCycleDialogOpen={setEditCycleDialogOpen}
-        selectedCycle={selectedCycle}
-        onCycleCreated={handleCycleCreated}
-        onCycleUpdated={handleCycleUpdated}
-        onRefetchCycles={refetchCycles}
-      />
+
       
       {/* Select Test Cases Dialog */}
       <Dialog open={selectCasesDialogOpen} onOpenChange={setSelectCasesDialogOpen}>
