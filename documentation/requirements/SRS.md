@@ -106,11 +106,15 @@ Comprehensive test lifecycle management including test cases, suites, cycles, an
 #### 3.3.2 Functional Requirements
 **FR-TEST-001:** The system shall support test case creation with rich text and attachments
 **FR-TEST-002:** The system shall organize test cases into logical test suites
-**FR-TEST-003:** The system shall manage test cycles with scheduling and assignment
-**FR-TEST-004:** The system shall track test execution results and history
-**FR-TEST-005:** The system shall support test case versioning and change tracking
-**FR-TEST-006:** The system shall provide real-time collaboration features
-**FR-TEST-007:** The system shall generate test execution reports and metrics
+**FR-TEST-003:** The system shall manage enhanced test cycles with AI readiness features
+**FR-TEST-004:** The system shall support multiple testing modes (manual, AI-assisted, automated)
+**FR-TEST-005:** The system shall provide test deployment URL configuration for execution context
+**FR-TEST-006:** The system shall manage structured test data with key-value-description entries
+**FR-TEST-007:** The system shall track test execution results and comprehensive history
+**FR-TEST-008:** The system shall support test case versioning and change tracking
+**FR-TEST-009:** The system shall provide real-time collaboration features
+**FR-TEST-010:** The system shall generate test execution reports and analytics
+**FR-TEST-011:** The system shall enable AI-assisted test execution guidance
 
 #### 3.3.3 Input/Output Specifications
 - **Input:** Test case details, execution results, comments, attachments
@@ -379,9 +383,13 @@ Comprehensive analytics platform with real-time dashboards and automated reporti
 ### 10.1 Glossary
 - **Test Case:** Specific scenario to validate functionality
 - **Test Suite:** Collection of related test cases
-- **Test Cycle:** Organized test execution period
+- **Test Cycle:** Enhanced organized test execution period with AI readiness features
+- **Testing Mode:** Execution approach (manual, AI-assisted manual, automated)
+- **Test Deployment URL:** Application access point for testing execution context
+- **Test Data Configuration:** Structured key-value data with descriptions for test execution
 - **Maturity Assessment:** ATMF framework evaluation
 - **AI Context:** Project-specific data for AI features
+- **AI Readiness:** System preparedness for AI-powered artifact generation
 
 ### 10.2 References
 - ATMF Framework Specification

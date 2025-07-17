@@ -27,8 +27,14 @@ This directory contains detailed documentation for each functional area of the A
 ### 4. [Test Management](./test-management.md)
 - Test case authoring and management
 - Test suite organization
-- Test cycle execution
+- Enhanced test cycle execution with AI readiness features
 - Results tracking and reporting
+
+### 4.1 [Enhanced Test Cycles](./enhanced-test-cycles.md)
+- AI-assisted testing mode configuration
+- Test deployment URL management
+- Structured test data configuration
+- Complete CRUD operations with enhanced UI
 
 ### 5. [AI Integration](./ai-integration.md)
 - Dual AI provider strategy (OpenAI + Anthropic)

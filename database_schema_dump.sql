@@ -174,6 +174,10 @@ CREATE TABLE IF NOT EXISTS test_cycles (
     start_date TIMESTAMP WITHOUT TIME ZONE,
     end_date TIMESTAMP WITHOUT TIME ZONE,
     user_id INTEGER REFERENCES users(id),
+    -- Enhanced fields for AI Assisted Execution Readiness
+    testing_mode CHARACTER VARYING(30) DEFAULT 'manual'::character varying,
+    test_deployment_url TEXT,
+    test_data JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now(),
     updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now(),
     project_id INTEGER REFERENCES projects(id)

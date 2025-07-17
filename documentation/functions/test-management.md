@@ -40,12 +40,16 @@ The Test Management system provides comprehensive test lifecycle management capa
 - **AI-Generated Suites**: Automated test suite creation based on requirements
 
 ### 2.3 Test Cycle Execution
-- **Cycle Planning**: Structured test execution campaigns
-- **Assignment Management**: Assign test cases to team members
-- **Execution Tracking**: Real-time execution status monitoring
-- **Results Recording**: Detailed pass/fail/blocked result tracking
-- **Evidence Collection**: Screenshots, logs, and attachments
-- **Defect Integration**: Link test failures to defect tracking systems
+- **Enhanced Cycle Planning**: Structured test execution campaigns with AI readiness features
+- **Testing Mode Selection**: Manual, AI-assisted manual, or automated execution modes
+- **Deployment Integration**: Test deployment URL configuration for AI and manual testing
+- **Test Data Management**: Structured test data configuration with key-value pairs and descriptions
+- **Assignment Management**: Assign test cases to team members with role-based access
+- **Execution Tracking**: Real-time execution status monitoring with enhanced analytics
+- **Results Recording**: Detailed pass/fail/blocked result tracking with evidence
+- **Evidence Collection**: Screenshots, logs, and attachments with automated uploads
+- **Defect Integration**: Link test failures to defect tracking systems (Jira integration)
+- **AI-Assisted Execution**: Intelligent test execution guidance and anomaly detection
 
 ### 2.4 Collaborative Features
 - **Real-time Updates**: Live collaboration during test execution
@@ -276,7 +280,7 @@ interface TestRun {
 **Authentication**: Required (admin/manager)
 **Response**: Success confirmation
 
-### 5.3 Test Cycle Management
+### 5.3 Enhanced Test Cycle Management
 
 #### GET /api/test-cycles
 **Purpose**: Retrieve test cycles for a project
@@ -284,10 +288,28 @@ interface TestRun {
 **Response**: Array of test cycle objects
 
 #### POST /api/test-cycles
-**Purpose**: Create new test cycle
+**Purpose**: Create new test cycle with enhanced AI readiness features
 **Authentication**: Required
-**Request Body**: TestCycle object
-**Response**: Created test cycle object
+**Request Body**: Enhanced TestCycle object
+```json
+{
+  "name": "string",
+  "description": "string",
+  "status": "created|in-progress|completed|archived",
+  "startDate": "ISO8601 timestamp",
+  "endDate": "ISO8601 timestamp",
+  "testingMode": "manual|ai-assisted-manual|automated",
+  "testDeploymentUrl": "string",
+  "testData": {
+    "key1": {
+      "value": "string",
+      "description": "string"
+    }
+  },
+  "projectId": "number"
+}
+```
+**Response**: Created test cycle object with enhanced fields
 
 #### GET /api/test-cycle-items/:cycleId
 **Purpose**: Get test cases assigned to a cycle
@@ -303,6 +325,17 @@ interface TestRun {
 **Purpose**: Add all test cases from suite to cycle
 **Authentication**: Required
 **Response**: Array of created test cycle items
+
+#### PUT /api/test-cycles/:id
+**Purpose**: Update existing test cycle with enhanced fields
+**Authentication**: Required
+**Request Body**: Complete enhanced TestCycle object
+**Response**: Updated test cycle object
+
+#### DELETE /api/test-cycles/:id
+**Purpose**: Delete test cycle and associated items
+**Authentication**: Required (admin/manager)
+**Response**: Success confirmation
 
 ### 5.4 Test Execution
 
@@ -409,7 +442,7 @@ CREATE TABLE test_suites (
 );
 ```
 
-### 6.3 Test Cycles and Execution Tables
+### 6.3 Enhanced Test Cycles and Execution Tables
 ```sql
 CREATE TABLE test_cycles (
   id SERIAL PRIMARY KEY,
@@ -419,6 +452,10 @@ CREATE TABLE test_cycles (
   start_date TIMESTAMP,
   end_date TIMESTAMP,
   user_id INTEGER REFERENCES users(id),
+  -- Enhanced fields for AI Assisted Execution Readiness
+  testing_mode VARCHAR(30) DEFAULT 'manual',
+  test_deployment_url TEXT,
+  test_data JSONB DEFAULT '{}',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE
@@ -451,6 +488,11 @@ CREATE TABLE test_runs (
   tags JSONB DEFAULT '[]'
 );
 ```
+
+**Enhanced Test Cycle Features:**
+- **Testing Mode**: Supports manual, ai-assisted-manual, and automated execution strategies
+- **Test Deployment URL**: Direct links to staging/test environments for execution context
+- **Test Data Configuration**: Structured test data storage with descriptions for AI context
 
 ## 7. Configuration
 

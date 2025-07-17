@@ -35,15 +35,19 @@ ATMosFera is an advanced AI-powered test management and documentation platform b
 
 ## Recent Changes
 
-### 2025-07-17: Test Cycle CRUD Functionality Restoration
+### 2025-07-17: Complete Test Cycle CRUD Functionality Restoration and Enhancement
 - **Complete Test Cycle CRUD Restoration**: Restored all test cycle creation, editing, and viewing functionality to the system
 - **Enhanced Test Execution Page**: Added back TestCycleFormDialog component with full CRUD capabilities
+- **AI Readiness Form Fields**: Added Testing Mode (Manual, AI-Assisted Manual, Automated), Test Deployment URL, and Test Data Configuration
+- **Dynamic Test Data Management**: Implemented add/remove functionality for key-value-description test data entries
+- **Enhanced Form Validation**: Updated form schema and validation for all new enhanced fields
 - **UI Functionality Restored**: Restored "New Test Cycle" button and all modal dialogs for cycle management
-- **State Management Restored**: Re-added necessary state variables and handlers (newCycleDialogOpen, editCycleDialogOpen, handleCreateTestCycle, handleUpdateTestCycle)
+- **State Management Enhanced**: Re-added necessary state variables and handlers with enhanced field support
 - **Component Architecture**: Integrated TestCycleFormDialog component with proper form handling and validation
-- **Full Cycle Management**: Test cycles can now be created, edited, and managed through the UI
+- **Full Cycle Management**: Test cycles can now be created, edited, and managed through the UI with AI readiness features
 - **Enhanced Database Schema Active**: Database schema enhancements are fully utilized with UI functionality
 - **System Focus**: Application provides complete test cycle management alongside test execution capabilities
+- **Comprehensive Documentation Update**: Updated database, functions, and requirements documentation to reflect all enhancements
 
 ### 2025-07-17: AI Service Architecture Refactoring
 - **Modular AI Service Architecture**: Refactored massive 2,458-line openai-service.ts into focused, maintainable modules

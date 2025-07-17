@@ -222,7 +222,7 @@ CREATE INDEX idx_test_cases_ai_generated ON test_cases(ai_generated);
 - `deprecated`: No longer valid
 
 ### 4.3 Test Cycles Table
-**Purpose:** Organize test execution periods and campaigns
+**Purpose:** Organize test execution periods and campaigns with AI-enhanced capabilities
 
 ```sql
 CREATE TABLE test_cycles (
@@ -233,6 +233,10 @@ CREATE TABLE test_cycles (
   start_date TIMESTAMP,
   end_date TIMESTAMP,
   user_id INTEGER REFERENCES users(id),
+  -- Enhanced fields for AI Assisted Execution Readiness
+  testing_mode VARCHAR(30) DEFAULT 'manual',
+  test_deployment_url TEXT,
+  test_data JSONB DEFAULT '{}',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE
@@ -242,6 +246,33 @@ CREATE TABLE test_cycles (
 CREATE INDEX idx_test_cycles_project ON test_cycles(project_id);
 CREATE INDEX idx_test_cycles_status ON test_cycles(status);
 CREATE INDEX idx_test_cycles_dates ON test_cycles(start_date, end_date);
+CREATE INDEX idx_test_cycles_testing_mode ON test_cycles(testing_mode);
+```
+
+**Test Cycle Status Values:**
+- `created`: Newly created cycle
+- `in-progress`: Currently executing
+- `completed`: All tests executed
+- `archived`: Archived for reference
+
+**Testing Mode Values:**
+- `manual`: Traditional manual testing
+- `ai-assisted-manual`: AI-enhanced manual testing with intelligent suggestions
+- `automated`: Fully automated test execution
+
+**Test Data Structure:**
+The `test_data` JSONB field stores structured test data as key-value pairs with descriptions:
+```json
+{
+  "username": {
+    "value": "test@example.com",
+    "description": "Test user account for login scenarios"
+  },
+  "api_key": {
+    "value": "sk-test-123",
+    "description": "API key for external service integration testing"
+  }
+}
 ```
 
 ### 4.4 Test Cycle Items Table
