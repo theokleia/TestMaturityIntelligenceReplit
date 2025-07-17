@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -34,9 +34,10 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Plus, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { TestCycle } from "@/hooks/test-execution";
 
 // Form schema
@@ -46,6 +47,9 @@ const formSchema = z.object({
   status: z.string(),
   startDate: z.date(),
   endDate: z.date().optional(),
+  testingMode: z.string().default("manual"),
+  testDeploymentUrl: z.string().optional(),
+  testData: z.record(z.any()).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -67,6 +71,7 @@ export function TestCycleFormDialog({
 }: TestCycleFormDialogProps) {
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [endDateOpen, setEndDateOpen] = useState(false);
+  const [testDataEntries, setTestDataEntries] = useState<Array<{key: string, value: string, description?: string}>>([]);
   
   // Initialize form with edit data if available
   const form = useForm<FormValues>({
@@ -77,23 +82,71 @@ export function TestCycleFormDialog({
       status: editData.status,
       startDate: new Date(editData.startDate),
       endDate: editData.endDate ? new Date(editData.endDate) : undefined,
+      testingMode: editData.testingMode || "manual",
+      testDeploymentUrl: editData.testDeploymentUrl || "",
+      testData: editData.testData || {},
     } : {
       name: "",
       description: "",
-      status: "planned",
+      status: "created",
       startDate: new Date(),
       endDate: undefined,
+      testingMode: "manual",
+      testDeploymentUrl: "",
+      testData: {},
     },
   });
 
+  // Initialize test data entries when edit data changes
+  useEffect(() => {
+    if (editData && editData.testData) {
+      const entries = Object.entries(editData.testData).map(([key, value]) => ({
+        key,
+        value: typeof value === 'object' && value !== null ? (value as any).value || JSON.stringify(value) : String(value),
+        description: typeof value === 'object' && value !== null ? (value as any).description || '' : ''
+      }));
+      setTestDataEntries(entries);
+    } else {
+      setTestDataEntries([]);
+    }
+  }, [editData]);
+
   const handleSubmit = (values: FormValues) => {
-    onSubmit(values);
+    // Convert testDataEntries back to testData object
+    const testData: Record<string, any> = {};
+    testDataEntries.forEach(entry => {
+      if (entry.key.trim()) {
+        testData[entry.key] = {
+          value: entry.value,
+          description: entry.description || ''
+        };
+      }
+    });
+    
+    onSubmit({
+      ...values,
+      testData
+    });
     onOpenChange(false);
+  };
+
+  const addTestDataEntry = () => {
+    setTestDataEntries([...testDataEntries, { key: '', value: '', description: '' }]);
+  };
+
+  const removeTestDataEntry = (index: number) => {
+    setTestDataEntries(testDataEntries.filter((_, i) => i !== index));
+  };
+
+  const updateTestDataEntry = (index: number, field: 'key' | 'value' | 'description', value: string) => {
+    const updated = [...testDataEntries];
+    updated[index][field] = value;
+    setTestDataEntries(updated);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[525px]">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
@@ -151,10 +204,10 @@ export function TestCycleFormDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="planned">Planned</SelectItem>
+                      <SelectItem value="created">Created</SelectItem>
                       <SelectItem value="in-progress">In Progress</SelectItem>
                       <SelectItem value="completed">Completed</SelectItem>
-                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                      <SelectItem value="archived">Archived</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -247,6 +300,110 @@ export function TestCycleFormDialog({
                 )}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="testingMode"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Testing Mode</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select testing mode" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="manual">Manual Testing</SelectItem>
+                      <SelectItem value="ai-assisted-manual">AI-Assisted Manual</SelectItem>
+                      <SelectItem value="automated">Automated Testing</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="testDeploymentUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Test Deployment URL</FormLabel>
+                  <FormControl>
+                    <Input 
+                      {...field} 
+                      placeholder="https://staging.example.com"
+                      type="url"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center justify-between">
+                  Test Data Configuration
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addTestDataEntry}
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Add Entry
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {testDataEntries.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No test data entries. Click "Add Entry" to define test data variables.
+                  </p>
+                ) : (
+                  testDataEntries.map((entry, index) => (
+                    <div key={index} className="grid grid-cols-12 gap-2 items-start">
+                      <div className="col-span-3">
+                        <Input
+                          placeholder="Key"
+                          value={entry.key}
+                          onChange={(e) => updateTestDataEntry(index, 'key', e.target.value)}
+                        />
+                      </div>
+                      <div className="col-span-3">
+                        <Input
+                          placeholder="Value"
+                          value={entry.value}
+                          onChange={(e) => updateTestDataEntry(index, 'value', e.target.value)}
+                        />
+                      </div>
+                      <div className="col-span-5">
+                        <Input
+                          placeholder="Description (optional)"
+                          value={entry.description}
+                          onChange={(e) => updateTestDataEntry(index, 'description', e.target.value)}
+                        />
+                      </div>
+                      <div className="col-span-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeTestDataEntry(index)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
 
             <DialogFooter className="mt-6">
               <Button 
