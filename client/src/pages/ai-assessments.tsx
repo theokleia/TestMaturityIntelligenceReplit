@@ -383,39 +383,57 @@ export default function AIAssessmentsPage() {
               </Card>
             ) : (
               actionItems.map((item) => (
-                <Card key={item.id}>
+                <Card key={item.id} className="hover:shadow-md transition-shadow">
                   <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h3 className="font-medium">{item.title}</h3>
-                          <Badge className={getPriorityColor(item.priority)}>
-                            {item.priority}
-                          </Badge>
-                          <Badge className={getStatusColor(item.status)}>
-                            {item.status.replace('_', ' ')}
-                          </Badge>
+                    <div className="flex gap-4">
+                      {/* Main content area */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between mb-3">
+                          <h3 className="font-semibold text-lg leading-tight pr-4">{item.title}</h3>
+                          <div className="flex gap-2 flex-shrink-0">
+                            <Badge className={`${getPriorityColor(item.priority)} text-xs font-medium`}>
+                              {item.priority}
+                            </Badge>
+                            <Badge className={`${getStatusColor(item.status)} text-xs font-medium`}>
+                              {item.status.replace('_', ' ')}
+                            </Badge>
+                          </div>
                         </div>
-                        <p className="text-muted-foreground mb-3">{item.description}</p>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <span>Impact: {item.estimatedImpact}/10</span>
-                          <span>Category: {item.category}</span>
-                          {item.completedAt && (
-                            <span>Completed: {new Date(item.completedAt).toLocaleDateString()}</span>
+                        
+                        {/* Full description with proper formatting */}
+                        <div className="mb-4">
+                          <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{item.description}</p>
+                        </div>
+                        
+                        {/* Footer with metadata and actions */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4 text-sm">
+                            <span className="bg-gray-100 px-3 py-1 rounded-full text-gray-700 font-medium">
+                              {item.category}
+                            </span>
+                            <span className="flex items-center gap-1 text-gray-600">
+                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                              Impact: {item.estimatedImpact}/10
+                            </span>
+                            {item.completedAt && (
+                              <span className="text-green-600 font-medium">
+                                ✓ Completed {new Date(item.completedAt).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+                          
+                          {item.status !== 'completed' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updateActionItem(item.id, 'completed')}
+                              className="flex items-center gap-2 text-green-700 border-green-200 hover:bg-green-50"
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                              Mark Complete
+                            </Button>
                           )}
                         </div>
-                      </div>
-                      
-                      <div className="flex gap-2">
-                        {item.status !== 'completed' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => updateActionItem(item.id, 'completed')}
-                          >
-                            <CheckCircle className="h-4 w-4" />
-                          </Button>
-                        )}
                       </div>
                     </div>
                   </CardContent>
