@@ -366,6 +366,7 @@ export default function TestExecution() {
   // Effects
   useEffect(() => {
     if (selectedCycle && editCycleDialogOpen) {
+      console.log("Resetting form with selectedCycle:", selectedCycle);
       cycleForm.reset({
         name: selectedCycle.name,
         description: selectedCycle.description || "",
@@ -378,6 +379,22 @@ export default function TestExecution() {
       });
     }
   }, [selectedCycle, editCycleDialogOpen, cycleForm]);
+
+  // Clear form when closing new cycle dialog
+  useEffect(() => {
+    if (!newCycleDialogOpen) {
+      cycleForm.reset({
+        name: "",
+        description: "",
+        status: "planned",
+        startDate: null,
+        endDate: null,
+        testingMode: "manual",
+        testDeploymentUrl: "",
+        testData: [],
+      });
+    }
+  }, [newCycleDialogOpen, cycleForm]);
   
   useEffect(() => {
     if (selectedCycleItem && testRunDialogOpen) {
