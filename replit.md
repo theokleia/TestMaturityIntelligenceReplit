@@ -35,15 +35,15 @@ ATMosFera is an advanced AI-powered test management and documentation platform b
 
 ## Recent Changes
 
-### 2025-07-17: Test Cycle CRUD Functionality Removal
-- **Complete Test Cycle CRUD Removal**: Removed all test cycle creation, editing, and viewing functionality from the system
-- **Simplified Test Execution Page**: Cleaned up test-execution.tsx by removing TestCycleModals, TestCycleForm, and related components
-- **UI Streamlining**: Removed "New Test Cycle" button and all modal dialogs for cycle management
-- **State Management Cleanup**: Removed unused state variables and handlers (newCycleDialogOpen, editCycleDialogOpen, handleCycleCreated, handleCycleUpdated)
-- **Component Architecture**: Replaced complex refactored components with inline simplified display of existing cycles
-- **Read-Only Cycle Display**: Test cycles are now displayed as read-only cards with only execution functionality
-- **Enhanced Database Schema Preserved**: Database schema enhancements remain intact but UI functionality has been simplified
-- **System Focus**: Application now focuses on test execution rather than cycle management
+### 2025-07-17: Test Cycle CRUD Functionality Restoration
+- **Complete Test Cycle CRUD Restoration**: Restored all test cycle creation, editing, and viewing functionality to the system
+- **Enhanced Test Execution Page**: Added back TestCycleFormDialog component with full CRUD capabilities
+- **UI Functionality Restored**: Restored "New Test Cycle" button and all modal dialogs for cycle management
+- **State Management Restored**: Re-added necessary state variables and handlers (newCycleDialogOpen, editCycleDialogOpen, handleCreateTestCycle, handleUpdateTestCycle)
+- **Component Architecture**: Integrated TestCycleFormDialog component with proper form handling and validation
+- **Full Cycle Management**: Test cycles can now be created, edited, and managed through the UI
+- **Enhanced Database Schema Active**: Database schema enhancements are fully utilized with UI functionality
+- **System Focus**: Application provides complete test cycle management alongside test execution capabilities
 
 ### 2025-07-17: AI Service Architecture Refactoring
 - **Modular AI Service Architecture**: Refactored massive 2,458-line openai-service.ts into focused, maintainable modules
