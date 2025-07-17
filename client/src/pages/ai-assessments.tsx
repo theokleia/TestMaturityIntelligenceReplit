@@ -50,7 +50,8 @@ interface ActionItem {
 
 interface AssessmentSummary {
   overallReadinessScore: number;
-  assessments: Record<string, AssessmentResult>;
+  assessmentScores: Record<string, number>;
+  recentAssessments: AssessmentResult[];
   actionItems: {
     total: number;
     open: number;
@@ -114,7 +115,19 @@ export default function AIAssessmentsPage() {
       if (summaryResponse.ok) {
         const summaryData = await summaryResponse.json();
         setSummary(summaryData);
-        setAssessments(summaryData.assessments);
+        
+        // Fetch individual assessments for each type
+        const assessmentData: Record<string, AssessmentResult> = {};
+        for (const type of assessmentTypes) {
+          const assessmentsResponse = await fetch(`/api/ai-assessments/${selectedProject.id}?type=${type.key}`);
+          if (assessmentsResponse.ok) {
+            const typeAssessments = await assessmentsResponse.json();
+            if (typeAssessments.length > 0) {
+              assessmentData[type.key] = typeAssessments[0]; // Get latest assessment
+            }
+          }
+        }
+        setAssessments(assessmentData);
       }
 
       // Fetch action items
@@ -286,7 +299,7 @@ export default function AIAssessmentsPage() {
         <TabsContent value="assessments" className="space-y-6">
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {assessmentTypes.map((type) => {
-              const assessment = assessments[type.key];
+              const assessment = assessments?.[type.key];
               const isRunning = runningAssessments.has(type.key);
               const IconComponent = type.icon;
 
@@ -461,12 +474,12 @@ export default function AIAssessmentsPage() {
                     
                     <div className="space-y-2">
                       {assessmentTypes.map((type) => {
-                        const assessment = summary.assessments[type.key];
+                        const score = summary.assessmentScores?.[type.key] || 0;
                         return (
                           <div key={type.key} className="flex justify-between items-center">
                             <span className="text-sm">{type.title}</span>
-                            <span className={`font-medium ${assessment ? getReadinessColor(assessment.readinessScore) : 'text-muted-foreground'}`}>
-                              {assessment ? `${assessment.readinessScore}%` : 'Not run'}
+                            <span className={`font-medium ${score > 0 ? getReadinessColor(score) : 'text-muted-foreground'}`}>
+                              {score > 0 ? `${score}%` : 'Not run'}
                             </span>
                           </div>
                         );
