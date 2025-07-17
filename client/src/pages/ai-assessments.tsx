@@ -271,6 +271,7 @@ export default function AIAssessmentsPage() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="summary">Summary</TabsTrigger>
           <TabsTrigger value="assessments">AI Assessments</TabsTrigger>
           <TabsTrigger value="action-items">
             Action Items
@@ -280,7 +281,6 @@ export default function AIAssessmentsPage() {
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="summary">Summary</TabsTrigger>
         </TabsList>
 
         <TabsContent value="assessments" className="space-y-6">
@@ -520,11 +520,11 @@ export default function AIAssessmentsPage() {
                       .filter(item => item.status === 'completed')
                       .slice(0, 5)
                       .map((item) => (
-                        <div key={item.id} className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
-                          <CheckCircle className="h-5 w-5 text-green-600" />
+                        <div key={item.id} className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200 shadow-sm">
+                          <CheckCircle className="h-5 w-5 text-blue-600" />
                           <div className="flex-1">
-                            <div className="font-medium">{item.title}</div>
-                            <div className="text-sm text-muted-foreground">
+                            <div className="font-medium text-blue-900">{item.title}</div>
+                            <div className="text-sm text-blue-700">
                               Completed {item.completedAt ? new Date(item.completedAt).toLocaleDateString() : 'recently'}
                             </div>
                           </div>

@@ -1,265 +1,206 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { MaturityLevel, MaturityDimension, Metric, Recommendation } from "@shared/schema";
+import { Metric } from "@shared/schema";
 import { PageContainer } from "@/components/design-system/page-container";
-import { MaturityCard } from "@/components/dashboard/maturity-card";
 import { MetricsCard } from "@/components/dashboard/metrics-card";
-import { InsightCard } from "@/components/dashboard/insight-card";
-import { AiRecommendation, AiAnalysisCard } from "@/components/dashboard/ai-recommendation";
-import { InteractiveMindmap } from "@/components/dashboard/interactive-mindmap";
-import { MaturityRoadmap } from "@/components/dashboard/maturity-roadmap";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { CheckCircle, AlertCircle, TrendingUp, Clock } from "lucide-react";
 import { useProject } from "@/context/ProjectContext";
 
 export default function Dashboard() {
-  const [activeDimension, setActiveDimension] = useState<number>(1); // Default to first dimension
-  const [activeSecondaryTab, setActiveSecondaryTab] = useState<string>("maturity"); // Default to maturity levels
   const { selectedProject } = useProject();
   const projectId = selectedProject?.id;
   
-  // Fetch maturity dimensions
-  const { data: dimensions } = useQuery<MaturityDimension[]>({
-    queryKey: ['/api/dimensions', { projectId }],
+  // Fetch AI Assessment Summary
+  const { data: aiSummary } = useQuery({
+    queryKey: ['/api/ai-assessments', projectId, 'summary'],
+    enabled: !!projectId,
   });
-  
-  // Fetch maturity levels for the active dimension
-  const { data: levels } = useQuery<MaturityLevel[]>({
-    queryKey: ['/api/levels', { dimensionId: activeDimension, projectId }],
-    enabled: !!activeDimension,
+
+  // Fetch Action Items
+  const { data: actionItems = [] } = useQuery({
+    queryKey: ['/api/ai-assessments', projectId, 'action-items'],
+    enabled: !!projectId,
   });
-  
+
   // Fetch metrics
   const { data: metricsData } = useQuery<Metric[]>({
     queryKey: ['/api/metrics', { projectId }],
   });
-  
-  // Fetch recommendations
-  const { data: recommendationsData } = useQuery<Recommendation[]>({
-    queryKey: ['/api/recommendations', { projectId }],
-  });
 
-  const activeDimensionData = dimensions?.find(d => d.id === activeDimension);
+  const getReadinessColor = (score: number) => {
+    if (score >= 80) return "text-green-600";
+    if (score >= 60) return "text-yellow-600";
+    return "text-red-600";
+  };
   
+  if (!selectedProject) {
+    return (
+      <PageContainer
+        title="Dashboard"
+        subtitle="Project overview and AI readiness insights"
+        withPadding
+      >
+        <div className="text-center py-12">
+          <h2 className="text-2xl font-semibold mb-4">No Project Selected</h2>
+          <p className="text-muted-foreground">Please select a project to view the dashboard.</p>
+        </div>
+      </PageContainer>
+    );
+  }
+
   return (
     <PageContainer
-      title="ATMF Dashboard"
-      subtitle="Track and improve your testing maturity across all dimensions"
+      title="Dashboard"
+      subtitle="Project overview and AI readiness insights"
       withPadding
-    >  
-      {/* Dimension Tabs */}
-      <div className="mb-8">
-        <div className="flex border-b border-white/10">
-          {dimensions?.map((dimension) => (
-            <button
-              key={dimension.id}
-              className={`px-6 py-3 font-medium relative inline-flex items-center justify-center ${
-                dimension.id === activeDimension
-                  ? "text-primary"
-                  : "text-text-muted"
-              }`}
-              onClick={() => setActiveDimension(dimension.id)}
-            >
-              {dimension.name}
-              {dimension.id === activeDimension && (
-                <div
-                  className="tab-indicator absolute bottom-0 left-0 w-full"
-                  style={{ backgroundColor: dimension.color || "var(--primary)", height: "2px" }}
-                />
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
-        
-      {/* Dimension Content */}
-      <div>
-        <div className="mb-8">
-          <h2 className="text-2xl font-heading font-bold mb-2">
-            {activeDimensionData?.name || "Loading..."}
-          </h2>
-          <p className="text-text-muted">
-            {activeDimensionData?.description || "Loading dimension details..."}
-          </p>
-        </div>
-        
-        {/* Secondary Tabs */}
-        <div className="mb-8">
-          <div className="flex space-x-6 text-sm">
-            <button 
-              className={`px-1 py-2 font-medium border-b-2 ${
-                activeSecondaryTab === "maturity" 
-                  ? "text-primary border-primary" 
-                  : "text-text-muted border-transparent"
-              }`}
-              onClick={() => setActiveSecondaryTab("maturity")}
-            >
-              Maturity Levels
-            </button>
-            <button 
-              className={`px-1 py-2 font-medium border-b-2 ${
-                activeSecondaryTab === "recommendations" 
-                  ? "text-primary border-primary" 
-                  : "text-text-muted border-transparent"
-              }`}
-              onClick={() => setActiveSecondaryTab("recommendations")}
-            >
-              Recommendations
-            </button>
-            <button 
-              className={`px-1 py-2 font-medium border-b-2 ${
-                activeSecondaryTab === "mindmap" 
-                  ? "text-primary border-primary" 
-                  : "text-text-muted border-transparent"
-              }`}
-              onClick={() => setActiveSecondaryTab("mindmap")}
-            >
-              Interactive Mindmap
-            </button>
-          </div>
-        </div>
-        
-        {/* Maturity Levels */}
-        {activeSecondaryTab === "maturity" && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {levels?.map((level) => (
-              <MaturityCard 
-                key={level.id} 
-                level={level} 
-                isHighlighted={level.level === 3} // Highlight level 3 as in the design
-              />
-            ))}
-          </div>
-        )}
-        
-        {/* AI Recommendations */}
-        {activeSecondaryTab === "recommendations" && (
-          <div>
-            <div className="glassmorphism rounded-2xl p-6 mb-6 border border-primary-purple/20 neon-border-purple">
-              <div className="flex items-start">
-                <div className="h-10 w-10 rounded-full bg-[#8A56FF]/20 flex items-center justify-center flex-shrink-0">
-                  <i className="bx bx-bulb text-lg text-[#8A56FF]"></i>
+    >
+      {/* AI Readiness Summary */}
+      {aiSummary && (
+        <div className="space-y-6 mb-12">
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>AI Readiness Overview</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="text-center">
+                  <div className={`text-4xl font-bold ${getReadinessColor(aiSummary.overallReadinessScore)}`}>
+                    {aiSummary.overallReadinessScore}%
+                  </div>
+                  <div className="text-muted-foreground">Overall AI Readiness</div>
                 </div>
-                <div className="ml-4">
-                  <h3 className="text-lg font-heading font-bold mb-2">AI Recommendation</h3>
-                  <p className="text-text-muted text-sm mb-3">Based on your recent test results, consider implementing automated regression tests for your API endpoints to improve coverage.</p>
-                  <div className="flex items-center space-x-3">
-                    <Button className="px-3 py-1.5 rounded-lg bg-[#8A56FF]/20 text-[#8A56FF] text-sm">Implement</Button>
-                    <Button variant="secondary" className="px-3 py-1.5 rounded-lg bg-white/5 text-text-muted text-sm">Dismiss</Button>
+                
+                <div className="space-y-2">
+                  {aiSummary.assessments?.map((assessment: any) => {
+                    const readinessScore = assessment.readinessScore || 0;
+                    return (
+                      <div key={assessment.type} className="flex justify-between items-center">
+                        <span className="text-sm capitalize">{assessment.type.replace('_', ' ')}</span>
+                        <div className="flex items-center gap-2">
+                          <Progress value={readinessScore} className="w-20" />
+                          <span className={`text-sm font-medium ${getReadinessColor(readinessScore)}`}>
+                            {readinessScore}%
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Action Items Progress</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="text-center">
+                  <div className="text-4xl font-bold text-primary">
+                    {aiSummary.actionItems?.completionRate || 0}%
+                  </div>
+                  <div className="text-muted-foreground">Completion Rate</div>
+                </div>
+                
+                <Progress value={aiSummary.actionItems?.completionRate || 0} className="w-full" />
+                
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">Total Items</span>
+                    <span className="font-medium">{aiSummary.actionItems?.total || 0}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">Open/In Progress</span>
+                    <span className="font-medium text-orange-600">{aiSummary.actionItems?.open || 0}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">Completed</span>
+                    <span className="font-medium text-green-600">{aiSummary.actionItems?.completed || 0}</span>
                   </div>
                 </div>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="glassmorphism rounded-2xl p-6 border border-white/5">
-                <h3 className="text-lg font-heading font-bold mb-4">Test Prioritization</h3>
-                <ul className="space-y-3">
-                  <li className="flex items-start">
-                    <div className="h-5 w-5 rounded-full bg-[#2FFFAA]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <i className="bx bx-check text-[#2FFFAA]"></i>
-                    </div>
-                    <span className="ml-2 text-sm">Prioritize API integration tests</span>
-                  </li>
-                  <li className="flex items-start">
-                    <div className="h-5 w-5 rounded-full bg-[#FFBB3A]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <i className="bx bx-time text-[#FFBB3A]"></i>
-                    </div>
-                    <span className="ml-2 text-sm">Focus on payment processing module</span>
-                  </li>
-                  <li className="flex items-start">
-                    <div className="h-5 w-5 rounded-full bg-text-muted/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <i className="bx bx-minus text-text-muted"></i>
-                    </div>
-                    <span className="ml-2 text-sm">Reduce redundant UI tests</span>
-                  </li>
-                </ul>
-              </div>
-              
-              <div className="glassmorphism rounded-2xl p-6 border border-white/5">
-                <h3 className="text-lg font-heading font-bold mb-4">Defect Prediction</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Authentication Module</span>
-                    <div className="h-2 w-24 bg-white/10 rounded-full overflow-hidden">
-                      <div className="h-full w-1/4 bg-[#2FFFAA] rounded-full"></div>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Payment Processing</span>
-                    <div className="h-2 w-24 bg-white/10 rounded-full overflow-hidden">
-                      <div className="h-full w-3/4 bg-[#FF4A6B] rounded-full"></div>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">User Profile</span>
-                    <div className="h-2 w-24 bg-white/10 rounded-full overflow-hidden">
-                      <div className="h-full w-2/4 bg-[#FFBB3A] rounded-full"></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           </div>
-        )}
-        
-        {/* Interactive Mindmap */}
-        {activeSecondaryTab === "mindmap" && (
-          <InteractiveMindmap />
-        )}
-      </div>
+
+          {/* Recent Assessment Results */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Assessment Results</CardTitle>
+              <CardDescription>
+                Latest AI readiness assessments and recommendations
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-3">
+                {aiSummary.recentAssessments?.slice(0, 3).map((assessment: any) => (
+                  <div key={assessment.id} className="p-4 border rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-medium capitalize">{assessment.type.replace('_', ' ')}</h4>
+                      <div className={`text-lg font-semibold ${getReadinessColor(assessment.readinessScore)}`}>
+                        {assessment.readinessScore}%
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                      {assessment.analysis}
+                    </p>
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(assessment.createdAt).toLocaleDateString()}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Completed Action Items */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Completed Action Items</CardTitle>
+              <CardDescription>
+                Recently completed improvements to AI readiness
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {actionItems
+                  .filter((item: any) => item.status === 'completed')
+                  .slice(0, 5)
+                  .map((item: any) => (
+                    <div key={item.id} className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200 shadow-sm">
+                      <CheckCircle className="h-5 w-5 text-blue-600" />
+                      <div className="flex-1">
+                        <div className="font-medium text-blue-900">{item.title}</div>
+                        <div className="text-sm text-blue-700">
+                          Completed {item.completedAt ? new Date(item.completedAt).toLocaleDateString() : 'recently'}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                {actionItems.filter((item: any) => item.status === 'completed').length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Clock className="h-8 w-8 mx-auto mb-2" />
+                    <p>No completed action items yet</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
       
       {/* Metrics Overview */}
-      <div className="mt-12">
+      <div>
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-heading font-bold">Metrics Overview</h2>
-          <Button variant="link" className="text-sm text-primary flex items-center">
-            View All
-            <i className="bx bx-chevron-right ml-1"></i>
-          </Button>
+          <h2 className="text-2xl font-bold">Metrics Overview</h2>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {metricsData?.slice(0, 3).map((metric) => (
+          {metricsData?.map((metric) => (
             <MetricsCard key={metric.id} metric={metric} />
           ))}
         </div>
       </div>
-      
-      {/* AI Insights */}
-      <div className="mt-12">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-heading font-bold">AI-Generated Insights</h2>
-          <Button variant="link" className="text-sm text-primary flex items-center">
-            View All
-            <i className="bx bx-chevron-right ml-1"></i>
-          </Button>
-        </div>
-        
-        {recommendationsData?.slice(0, 1).map((insight) => (
-          <InsightCard 
-            key={insight.id} 
-            insight={insight} 
-            type="teal"
-            className="mb-6" 
-          />
-        ))}
-      </div>
-      
-      {/* Maturity Roadmap */}
-      <div className="mt-12">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-heading font-bold">Maturity Planning</h2>
-          <Button variant="link" className="text-sm text-primary flex items-center">
-            Export Plan
-            <i className="bx bx-download ml-1"></i>
-          </Button>
-        </div>
-        
-        {dimensions && dimensions.length > 0 && (
-          <MaturityRoadmap dimensions={dimensions} />
-        )}
-      </div>
-      </PageContainer>
+    </PageContainer>
   );
 }
