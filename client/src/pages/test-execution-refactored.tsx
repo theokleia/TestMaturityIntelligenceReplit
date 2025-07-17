@@ -54,7 +54,6 @@ import { Plus, ListChecks, Table as TableIcon } from "lucide-react";
 import { TabView } from "@/components/design-system/tab-view";
 import {
   TestCycleTable,
-  TestCycleFormDialog,
   TestCaseListForCycle,
   TestExecutionDialog,
   TestHistoryDialog
@@ -73,14 +72,11 @@ export default function TestExecutionPage() {
   const [selectedCases, setSelectedCases] = useState<number[]>([]);
   const [selectedSuiteId, setSelectedSuiteId] = useState<number | null>(null);
   
-  // Dialog states
-  const [newCycleDialogOpen, setNewCycleDialogOpen] = useState(false);
-  const [editCycleDialogOpen, setEditCycleDialogOpen] = useState(false);
+  // Dialog states (removed cycle creation/edit dialogs)
   const [addCasesDialogOpen, setAddCasesDialogOpen] = useState(false);
   const [addSuiteDialogOpen, setAddSuiteDialogOpen] = useState(false);
   const [executionDialogOpen, setExecutionDialogOpen] = useState(false);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
-  const [cycleToEdit, setCycleToEdit] = useState<TestCycle | null>(null);
   
   // Queries
   const { 
@@ -128,9 +124,7 @@ export default function TestExecutionPage() {
   // and shown in the history dialog
   const [historyTestRuns, setHistoryTestRuns] = useState<TestRun[]>([]);
   
-  // Mutations
-  const createCycleMutation = useCreateTestCycle();
-  const updateCycleMutation = useUpdateTestCycle();
+  // Mutations (removed cycle creation/update mutations)
   const addCasesToCycleMutation = useAddTestCasesToCycle();
   const addSuiteToCycleMutation = useAddTestSuiteToCycle();
   const removeCaseFromCycleMutation = useRemoveTestCaseFromCycle();
@@ -163,74 +157,7 @@ export default function TestExecutionPage() {
     }
   }, [testCycles, selectedCycleId]);
   
-  // Handlers
-  const handleCreateTestCycle = (data: any) => {
-    if (!projectId) return;
-    
-    createCycleMutation.mutate(
-      { 
-        ...data,
-        projectId
-      },
-      {
-        onSuccess: () => {
-          toast({
-            title: "Success",
-            description: "Test cycle created successfully",
-          });
-          refetchCycles();
-          setNewCycleDialogOpen(false);
-        },
-        onError: () => {
-          toast({
-            title: "Error",
-            description: "Failed to create test cycle",
-            variant: "destructive",
-          });
-        },
-      }
-    );
-  };
-  
-  const handleUpdateTestCycle = (data: any) => {
-    if (!cycleToEdit) return;
-    
-    updateCycleMutation.mutate(
-      { 
-        id: cycleToEdit.id,
-        data: {
-          ...data,
-          projectId: cycleToEdit.projectId
-        }
-      },
-      {
-        onSuccess: () => {
-          toast({
-            title: "Success",
-            description: "Test cycle updated successfully",
-          });
-          refetchCycles();
-          setEditCycleDialogOpen(false);
-          setCycleToEdit(null);
-        },
-        onError: () => {
-          toast({
-            title: "Error",
-            description: "Failed to update test cycle",
-            variant: "destructive",
-          });
-        },
-      }
-    );
-  };
-  
-  const handleDeleteTestCycle = (id: number) => {
-    // TODO: Implement delete cycle functionality
-    toast({
-      title: "Not Implemented",
-      description: "Delete test cycle functionality is not yet implemented",
-    });
-  };
+  // Handlers (removed cycle creation/update/delete handlers)
   
   const handleAddTestCasesToCycle = (testCaseIds: number[]) => {
     if (!selectedCycleId) return;
@@ -580,12 +507,7 @@ export default function TestExecutionPage() {
         <PageHeader
           title="Test Execution"
           description="Create and manage test cycles to track test case execution"
-          actions={
-            <Button onClick={() => setNewCycleDialogOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              New Test Cycle
-            </Button>
-          }
+          actions={null}
         />
       
         <PageContent>
@@ -598,22 +520,7 @@ export default function TestExecutionPage() {
           />
         </PageContent>
       
-        {/* New Test Cycle Dialog */}
-        <TestCycleFormDialog
-          open={newCycleDialogOpen}
-          onOpenChange={setNewCycleDialogOpen}
-          onSubmit={handleCreateTestCycle}
-          title="New Test Cycle"
-        />
-        
-        {/* Edit Test Cycle Dialog */}
-        <TestCycleFormDialog
-          open={editCycleDialogOpen}
-          onOpenChange={setEditCycleDialogOpen}
-          onSubmit={handleUpdateTestCycle}
-          editData={cycleToEdit || undefined}
-          title="Edit Test Cycle"
-        />
+        {/* Removed test cycle CRUD dialogs */}
         
         {/* Add Test Cases Dialog */}
         <Dialog open={addCasesDialogOpen} onOpenChange={setAddCasesDialogOpen}>
