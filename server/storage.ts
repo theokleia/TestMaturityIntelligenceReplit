@@ -16,7 +16,10 @@ import {
   globalSettings, type GlobalSetting, type InsertGlobalSetting,
   jiraTickets, type JiraTicket, type InsertJiraTicket,
   jiraSyncLogs, type JiraSyncLog, type InsertJiraSyncLog,
-  testCaseJiraLinks, type TestCaseJiraLink, type InsertTestCaseJiraLink
+  testCaseJiraLinks, type TestCaseJiraLink, type InsertTestCaseJiraLink,
+  aiAssessments, type AiAssessment, type InsertAiAssessment,
+  aiAssessmentActionItems, type AiAssessmentActionItem, type InsertAiAssessmentActionItem,
+  aiAssessmentHistory, type AiAssessmentHistory, type InsertAiAssessmentHistory
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc, or, inArray, lt, gte, isNull } from "drizzle-orm";
@@ -167,6 +170,34 @@ export interface IStorage {
   getTestCaseJiraLinks(testCaseId: number): Promise<TestCaseJiraLink[]>;
   createTestCaseJiraLink(link: InsertTestCaseJiraLink): Promise<TestCaseJiraLink>;
   deleteTestCaseJiraLink(id: number): Promise<boolean>;
+
+  // AI Assessments
+  getAiAssessments(filters?: {
+    projectId?: number;
+    assessmentType?: string;
+    status?: string;
+  }): Promise<AiAssessment[]>;
+  getAiAssessment(id: number): Promise<AiAssessment | undefined>;
+  createAiAssessment(assessment: InsertAiAssessment): Promise<AiAssessment>;
+  updateAiAssessment(id: number, assessment: Partial<InsertAiAssessment>): Promise<AiAssessment | undefined>;
+
+  // AI Assessment Action Items
+  getAiAssessmentActionItems(filters?: {
+    assessmentId?: number;
+    projectId?: number;
+    status?: string;
+    assignedTo?: number;
+  }): Promise<AiAssessmentActionItem[]>;
+  getAiAssessmentActionItem(id: number): Promise<AiAssessmentActionItem | undefined>;
+  createAiAssessmentActionItem(actionItem: InsertAiAssessmentActionItem): Promise<AiAssessmentActionItem>;
+  updateAiAssessmentActionItem(id: number, actionItem: Partial<InsertAiAssessmentActionItem>): Promise<AiAssessmentActionItem | undefined>;
+
+  // AI Assessment History
+  getAiAssessmentHistory(filters?: {
+    projectId?: number;
+    assessmentType?: string;
+  }): Promise<AiAssessmentHistory[]>;
+  createAiAssessmentHistory(history: InsertAiAssessmentHistory): Promise<AiAssessmentHistory>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1717,6 +1748,115 @@ export class DatabaseStorage implements IStorage {
   async deleteTestCaseJiraLink(id: number): Promise<boolean> {
     const result = await db.delete(testCaseJiraLinks).where(eq(testCaseJiraLinks.id, id));
     return (result.rowCount || 0) > 0;
+  }
+
+  // AI Assessments
+  async getAiAssessments(filters?: {
+    projectId?: number;
+    assessmentType?: string;
+    status?: string;
+  }): Promise<AiAssessment[]> {
+    let query = db.select().from(aiAssessments);
+    
+    if (filters) {
+      const conditions = [];
+      if (filters.projectId) conditions.push(eq(aiAssessments.projectId, filters.projectId));
+      if (filters.assessmentType) conditions.push(eq(aiAssessments.assessmentType, filters.assessmentType));
+      if (filters.status) conditions.push(eq(aiAssessments.status, filters.status));
+      
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
+      }
+    }
+    
+    return query.orderBy(desc(aiAssessments.createdAt));
+  }
+
+  async getAiAssessment(id: number): Promise<AiAssessment | undefined> {
+    const [assessment] = await db.select().from(aiAssessments).where(eq(aiAssessments.id, id));
+    return assessment || undefined;
+  }
+
+  async createAiAssessment(assessment: InsertAiAssessment): Promise<AiAssessment> {
+    const [newAssessment] = await db.insert(aiAssessments).values(assessment).returning();
+    return newAssessment;
+  }
+
+  async updateAiAssessment(id: number, assessment: Partial<InsertAiAssessment>): Promise<AiAssessment | undefined> {
+    const [updatedAssessment] = await db
+      .update(aiAssessments)
+      .set({ ...assessment, updatedAt: new Date().toISOString() })
+      .where(eq(aiAssessments.id, id))
+      .returning();
+    return updatedAssessment || undefined;
+  }
+
+  // AI Assessment Action Items
+  async getAiAssessmentActionItems(filters?: {
+    assessmentId?: number;
+    projectId?: number;
+    status?: string;
+    assignedTo?: number;
+  }): Promise<AiAssessmentActionItem[]> {
+    let query = db.select().from(aiAssessmentActionItems);
+    
+    if (filters) {
+      const conditions = [];
+      if (filters.assessmentId) conditions.push(eq(aiAssessmentActionItems.assessmentId, filters.assessmentId));
+      if (filters.projectId) conditions.push(eq(aiAssessmentActionItems.projectId, filters.projectId));
+      if (filters.status) conditions.push(eq(aiAssessmentActionItems.status, filters.status));
+      if (filters.assignedTo) conditions.push(eq(aiAssessmentActionItems.assignedTo, filters.assignedTo));
+      
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
+      }
+    }
+    
+    return query.orderBy(desc(aiAssessmentActionItems.createdAt));
+  }
+
+  async getAiAssessmentActionItem(id: number): Promise<AiAssessmentActionItem | undefined> {
+    const [actionItem] = await db.select().from(aiAssessmentActionItems).where(eq(aiAssessmentActionItems.id, id));
+    return actionItem || undefined;
+  }
+
+  async createAiAssessmentActionItem(actionItem: InsertAiAssessmentActionItem): Promise<AiAssessmentActionItem> {
+    const [newActionItem] = await db.insert(aiAssessmentActionItems).values(actionItem).returning();
+    return newActionItem;
+  }
+
+  async updateAiAssessmentActionItem(id: number, actionItem: Partial<InsertAiAssessmentActionItem>): Promise<AiAssessmentActionItem | undefined> {
+    const [updatedActionItem] = await db
+      .update(aiAssessmentActionItems)
+      .set({ ...actionItem, updatedAt: new Date().toISOString() })
+      .where(eq(aiAssessmentActionItems.id, id))
+      .returning();
+    return updatedActionItem || undefined;
+  }
+
+  // AI Assessment History
+  async getAiAssessmentHistory(filters?: {
+    projectId?: number;
+    assessmentType?: string;
+  }): Promise<AiAssessmentHistory[]> {
+    let query = db.select().from(aiAssessmentHistory);
+    
+    if (filters) {
+      const conditions = [];
+      if (filters.projectId) conditions.push(eq(aiAssessmentHistory.projectId, filters.projectId));
+      if (filters.assessmentType) conditions.push(eq(aiAssessmentHistory.assessmentType, filters.assessmentType));
+      
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
+      }
+    }
+    
+    return query.orderBy(desc(aiAssessmentHistory.createdAt));
+  }
+
+  async createAiAssessmentHistory(history: InsertAiAssessmentHistory): Promise<AiAssessmentHistory> {
+    const [newHistory] = await db.insert(aiAssessmentHistory).values(history).returning();
+    return newHistory;
   }
 }
 

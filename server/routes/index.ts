@@ -10,6 +10,7 @@ import { registerAIRoutes } from "./ai.routes";
 import { registerJiraRoutes } from "./jira.routes";
 import { registerMaturityRoutes } from "./maturity.routes";
 import { registerDocumentRoutes } from "./documents.routes";
+import { registerAIAssessmentRoutes } from "./ai-assessments.routes";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Register all route modules
@@ -21,6 +22,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerJiraRoutes(app);
   registerMaturityRoutes(app);
   registerDocumentRoutes(app);
+  registerAIAssessmentRoutes(app);
 
   // Health check endpoint
   app.get("/api/health", (req, res) => {

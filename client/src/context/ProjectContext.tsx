@@ -448,4 +448,7 @@ export const useProject = () => {
   }
   
   return context;
-}
+};
+
+// Export alias for consistency with component naming
+export const useProjectContext = useProject;

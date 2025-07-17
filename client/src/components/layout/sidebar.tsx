@@ -34,10 +34,9 @@ export function Sidebar() {
       icon: "bx-line-chart",
     },
     {
-      title: "Assessments",
-      path: "/assessments",
-      icon: "bx-clipboard",
-      badge: 3,
+      title: "AI Assessments",
+      path: "/ai-assessments",
+      icon: "bx-target-lock",
     },
     {
       title: "Test Management",

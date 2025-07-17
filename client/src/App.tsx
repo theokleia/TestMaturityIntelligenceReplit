@@ -18,6 +18,7 @@ import TestFetch from "@/pages/test-fetch";
 import AuthPage from "@/pages/auth-page";
 import Documenter from "@/pages/documenter";
 import AISettings from "@/pages/ai-settings";
+import AIAssessmentsPage from "@/pages/ai-assessments";
 import Layout from "@/components/layout/layout";
 import { ProjectProvider } from "@/context/ProjectContext";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
@@ -40,6 +41,7 @@ function Router() {
       <ProtectedRoute path="/design-system" component={DesignSystem} />
       <ProtectedRoute path="/documenter" component={Documenter} />
       <ProtectedRoute path="/ai-settings" component={AISettings} />
+      <ProtectedRoute path="/ai-assessments" component={AIAssessmentsPage} />
       <ProtectedRoute path="/atmf" component={ATMF} />
       {/* Redirect old documentation path to new ATMF path */}
       <Route path="/documentation">

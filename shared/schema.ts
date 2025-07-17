@@ -160,6 +160,9 @@ export const testCycles = pgTable("test_cycles", {
   startDate: timestamp("start_date", { mode: 'string' }),
   endDate: timestamp("end_date", { mode: 'string' }),
   userId: integer("user_id").references(() => users.id),
+  // New fields for AI Assisted Execution Readiness
+  testInstanceUrl: text("test_instance_url"), // URL for automated browser testing
+  testData: jsonb("test_data"), // Structured test data (user credentials, test scenarios)
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
   updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
   projectId: integer("project_id").references(() => projects.id, { onDelete: "cascade" }),
@@ -580,3 +583,114 @@ export type JiraSyncLog = typeof jiraSyncLogs.$inferSelect;
 
 export type InsertTestCaseJiraLink = z.infer<typeof insertTestCaseJiraLinkSchema>;
 export type TestCaseJiraLink = typeof testCaseJiraLinks.$inferSelect;
+
+// AI Assessments for AI Readiness Analysis
+export const aiAssessments = pgTable("ai_assessments", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").references(() => projects.id, { onDelete: "cascade" }).notNull(),
+  assessmentType: varchar("assessment_type", { length: 50 }).notNull(), // project_definition, ai_coverage, ai_execution, ai_automation, documentation
+  readinessScore: integer("readiness_score"), // 0-100 percentage
+  analysis: text("analysis"), // AI's detailed analysis of the current state
+  strengths: text("strengths").array().default([]), // What's good about current setup
+  recommendations: text("recommendations").array().default([]), // What needs improvement
+  status: varchar("status", { length: 20 }).default("completed"), // pending, completed, error
+  runBy: integer("run_by").references(() => users.id),
+  createdAt: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: 'string', withTimezone: true }).defaultNow(),
+});
+
+// Action Items generated from AI assessments
+export const aiAssessmentActionItems = pgTable("ai_assessment_action_items", {
+  id: serial("id").primaryKey(),
+  assessmentId: integer("assessment_id").references(() => aiAssessments.id, { onDelete: "cascade" }).notNull(),
+  projectId: integer("project_id").references(() => projects.id, { onDelete: "cascade" }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  category: varchar("category", { length: 50 }), // configuration, documentation, integration, testing
+  priority: varchar("priority", { length: 20 }).default("medium"), // high, medium, low
+  estimatedImpact: integer("estimated_impact"), // 1-10 scale of impact on readiness
+  status: varchar("status", { length: 20 }).default("open"), // open, in_progress, completed, cancelled
+  assignedTo: integer("assigned_to").references(() => users.id),
+  completedAt: timestamp("completed_at", { mode: 'string', withTimezone: true }),
+  completedBy: integer("completed_by").references(() => users.id),
+  createdAt: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: 'string', withTimezone: true }).defaultNow(),
+});
+
+// History of AI assessments for trend analysis
+export const aiAssessmentHistory = pgTable("ai_assessment_history", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").references(() => projects.id, { onDelete: "cascade" }).notNull(),
+  assessmentType: varchar("assessment_type", { length: 50 }).notNull(),
+  previousScore: integer("previous_score"),
+  currentScore: integer("current_score"),
+  scoreChange: integer("score_change"),
+  previousAnalysis: text("previous_analysis"),
+  actionItemsCompleted: integer("action_items_completed").default(0),
+  runBy: integer("run_by").references(() => users.id),
+  createdAt: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow(),
+});
+
+// Relations for AI assessments
+export const aiAssessmentsRelations = relations(aiAssessments, ({ one, many }) => ({
+  project: one(projects, {
+    fields: [aiAssessments.projectId],
+    references: [projects.id],
+  }),
+  runner: one(users, {
+    fields: [aiAssessments.runBy],
+    references: [users.id],
+  }),
+  actionItems: many(aiAssessmentActionItems),
+}));
+
+export const aiAssessmentActionItemsRelations = relations(aiAssessmentActionItems, ({ one }) => ({
+  assessment: one(aiAssessments, {
+    fields: [aiAssessmentActionItems.assessmentId],
+    references: [aiAssessments.id],
+  }),
+  project: one(projects, {
+    fields: [aiAssessmentActionItems.projectId],
+    references: [projects.id],
+  }),
+  assignee: one(users, {
+    fields: [aiAssessmentActionItems.assignedTo],
+    references: [users.id],
+  }),
+  completedByUser: one(users, {
+    fields: [aiAssessmentActionItems.completedBy],
+    references: [users.id],
+  }),
+}));
+
+export const aiAssessmentHistoryRelations = relations(aiAssessmentHistory, ({ one }) => ({
+  project: one(projects, {
+    fields: [aiAssessmentHistory.projectId],
+    references: [projects.id],
+  }),
+  runner: one(users, {
+    fields: [aiAssessmentHistory.runBy],
+    references: [users.id],
+  }),
+}));
+
+// Schemas and types for AI assessments
+export const insertAiAssessmentSchema = createInsertSchema(aiAssessments)
+  .omit({ id: true, createdAt: true, updatedAt: true })
+  .extend({
+    strengths: z.array(z.string()).optional().default([]),
+    recommendations: z.array(z.string()).optional().default([]),
+  });
+
+export const insertAiAssessmentActionItemSchema = createInsertSchema(aiAssessmentActionItems)
+  .omit({ id: true, createdAt: true, updatedAt: true });
+
+export const insertAiAssessmentHistorySchema = createInsertSchema(aiAssessmentHistory)
+  .omit({ id: true, createdAt: true });
+
+export type InsertAiAssessment = z.infer<typeof insertAiAssessmentSchema>;
+export type AiAssessment = typeof aiAssessments.$inferSelect;
+export type InsertAiAssessmentActionItem = z.infer<typeof insertAiAssessmentActionItemSchema>;
+export type AiAssessmentActionItem = typeof aiAssessmentActionItems.$inferSelect;
+export type InsertAiAssessmentHistory = z.infer<typeof insertAiAssessmentHistorySchema>;
+export type AiAssessmentHistory = typeof aiAssessmentHistory.$inferSelect;
