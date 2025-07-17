@@ -431,11 +431,8 @@ export default function TestExecutionPage() {
                   setSelectedCycleId(cycleId);
                   setActiveTab("details");
                 }}
-                onEdit={(cycle) => {
-                  setCycleToEdit(cycle);
-                  setEditCycleDialogOpen(true);
-                }}
-                onDelete={handleDeleteTestCycle}
+                onEdit={null}
+                onDelete={null}
               />
             </div>
           </ATMFCard>
