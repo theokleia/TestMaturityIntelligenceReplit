@@ -409,7 +409,13 @@ Respond with JSON containing: readinessScore (0-100), analysis, strengths[], rec
         analysis: parsed.analysis || 'No analysis provided',
         strengths: parsed.strengths || [],
         recommendations: parsed.recommendations || [],
-        actionItems: parsed.actionItems || []
+        actionItems: (parsed.actionItems || []).map((item: any) => ({
+          title: item.title || 'Untitled Action',
+          description: item.description || 'No description provided',
+          category: item.category || 'general',
+          priority: ['high', 'medium', 'low'].includes(item.priority) ? item.priority : 'medium',
+          estimatedImpact: this.parseEstimatedImpact(item.estimatedImpact)
+        }))
       };
     } catch (error) {
       console.error('Error parsing assessment response:', error);
@@ -427,6 +433,37 @@ Respond with JSON containing: readinessScore (0-100), analysis, strengths[], rec
         }]
       };
     }
+  }
+
+  /**
+   * Parse estimated impact from various formats
+   */
+  private parseEstimatedImpact(value: any): number {
+    // If it's already a number, return it within bounds
+    if (typeof value === 'number') {
+      return Math.min(10, Math.max(1, Math.round(value)));
+    }
+    
+    // If it's a string that might be a number
+    if (typeof value === 'string') {
+      const parsed = parseInt(value);
+      if (!isNaN(parsed)) {
+        return Math.min(10, Math.max(1, parsed));
+      }
+      
+      // Handle descriptive text by mapping to numeric values
+      const lowerValue = value.toLowerCase();
+      if (lowerValue.includes('high') || lowerValue.includes('critical') || lowerValue.includes('major')) {
+        return 8;
+      } else if (lowerValue.includes('medium') || lowerValue.includes('moderate')) {
+        return 5;
+      } else if (lowerValue.includes('low') || lowerValue.includes('minor')) {
+        return 3;
+      }
+    }
+    
+    // Default fallback
+    return 5;
   }
 }
 
