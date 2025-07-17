@@ -54,6 +54,7 @@ interface AITestExecutionDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   testCase: TestCase | null;
+  testCycle?: any;
   onComplete: (result: any) => void;
 }
 
@@ -61,6 +62,7 @@ export function AITestExecutionDialog({
   isOpen,
   onOpenChange,
   testCase,
+  testCycle,
   onComplete
 }: AITestExecutionDialogProps) {
   const [executionId, setExecutionId] = useState<string | null>(null);
@@ -75,6 +77,55 @@ export function AITestExecutionDialog({
   const [userInterventionRequired, setUserInterventionRequired] = useState(false);
   const [userNotes, setUserNotes] = useState('');
   const [deploymentUrl, setDeploymentUrl] = useState('');
+
+  // Initialize deployment URL from test cycle and parse test steps
+  useEffect(() => {
+    if (isOpen && testCase) {
+      // Reset state when dialog opens
+      setStatus('idle');
+      setCurrentStep(0);
+      setUserInterventionRequired(false);
+      setUserNotes('');
+      setBrowserState({ url: '', title: '', isLoading: false });
+      
+      // Set deployment URL from test cycle
+      if (testCycle?.testDeploymentUrl) {
+        setDeploymentUrl(testCycle.testDeploymentUrl);
+      } else {
+        setDeploymentUrl('');
+      }
+      
+      // Initialize steps from test case
+      const initialSteps = parseTestStepsFromTestCase(testCase);
+      setSteps(initialSteps);
+    }
+  }, [isOpen, testCase, testCycle]);
+
+  const parseTestStepsFromTestCase = (testCase: TestCase): ExecutionStep[] => {
+    if (!testCase.steps) return [];
+    
+    let stepsArray: any[] = [];
+    
+    // Handle different step formats
+    if (Array.isArray(testCase.steps)) {
+      stepsArray = testCase.steps;
+    } else if (typeof testCase.steps === 'string') {
+      // Parse string steps (split by newlines)
+      stepsArray = testCase.steps.split('\n').filter(step => step.trim()).map(step => ({
+        description: step.trim()
+      }));
+    } else if (typeof testCase.steps === 'object') {
+      // Handle object format
+      stepsArray = Object.values(testCase.steps).filter(step => step);
+    }
+    
+    return stepsArray.map((step, index) => ({
+      stepNumber: index + 1,
+      description: typeof step === 'string' ? step : (step.description || step.step || `Step ${index + 1}`),
+      status: 'pending' as const,
+      timestamp: new Date()
+    }));
+  };
   
   const wsRef = useRef<WebSocket | null>(null);
 

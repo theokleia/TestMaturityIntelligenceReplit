@@ -841,6 +841,7 @@ export default function TestExecutionPage() {
           isOpen={aiExecutionDialogOpen}
           onOpenChange={setAIExecutionDialogOpen}
           testCase={aiExecutionTestCase}
+          testCycle={testCycles.find(cycle => cycle.id === selectedCycleId)}
           onComplete={handleAIExecutionComplete}
         />
       </PageContainer>
