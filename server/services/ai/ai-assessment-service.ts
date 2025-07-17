@@ -38,7 +38,13 @@ class AIAssessmentService {
 
     try {
       // Get project context
-      const context = await contextManager.getProjectContext(request.projectId);
+      const context = await contextManager.aggregateProjectContext(request.projectId, {
+        includeDocuments: true,
+        includeJira: true,
+        includeGithub: true,
+        includeTestData: true,
+        includeMaturity: false
+      });
       const project = context.project;
 
       // Get historical assessments for this type
