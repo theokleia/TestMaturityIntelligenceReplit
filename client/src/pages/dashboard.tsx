@@ -14,13 +14,13 @@ export default function Dashboard() {
   
   // Fetch AI Assessment Summary
   const { data: aiSummary } = useQuery({
-    queryKey: ['/api/ai-assessments', projectId, 'summary'],
+    queryKey: [`/api/ai-assessments/${projectId}/summary`],
     enabled: !!projectId,
   });
 
   // Fetch Action Items
   const { data: actionItems = [] } = useQuery({
-    queryKey: ['/api/ai-assessments', projectId, 'action-items'],
+    queryKey: [`/api/ai-assessments/${projectId}/action-items`],
     enabled: !!projectId,
   });
 
