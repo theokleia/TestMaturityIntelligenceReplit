@@ -54,20 +54,25 @@ class AIExecutionService {
         userInterventionRequired: false
       };
 
-      // Launch browser with visible interface
+      // Launch browser in headless mode for Replit environment
       const browser = await chromium.launch({
-        headless: false, // Visible browser for user to see
-        slowMo: 1000, // Slow down actions for better visibility
+        headless: true, // Use headless mode for containerized environment
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
           '--disable-dev-shm-usage',
           '--disable-web-security',
-          '--disable-features=VizDisplayCompositor'
+          '--disable-features=VizDisplayCompositor',
+          '--disable-blink-features=AutomationControlled',
+          '--disable-background-timer-throttling',
+          '--disable-backgrounding-occluded-windows',
+          '--disable-renderer-backgrounding'
         ]
       });
 
-      const page = await browser.newPage();
+      const page = await browser.newPage({
+        viewport: { width: 1280, height: 720 }
+      });
       context.browser = browser;
       context.page = page;
       
@@ -445,7 +450,10 @@ class AIExecutionService {
   }
 
   private async getScreenshotBase64(page: Page): Promise<string> {
-    const screenshot = await page.screenshot({ fullPage: false });
+    const screenshot = await page.screenshot({ 
+      fullPage: false,
+      clip: { x: 0, y: 0, width: 1280, height: 720 }
+    });
     return `data:image/png;base64,${screenshot.toString('base64')}`;
   }
 
