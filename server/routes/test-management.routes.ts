@@ -443,6 +443,30 @@ export function registerTestManagementRoutes(app: Express) {
     }
   });
 
+  app.patch("/api/test-cycles/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const testCycleData = insertTestCycleSchema.partial().parse(req.body);
+      const testCycle = await storage.updateTestCycle(id, testCycleData);
+      
+      if (!testCycle) {
+        return res.status(404).json({ message: "Test cycle not found" });
+      }
+      
+      res.json(testCycle);
+    } catch (error) {
+      console.error("Error updating test cycle:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ 
+          message: "Invalid test cycle data", 
+          errors: error.errors 
+        });
+      } else {
+        res.status(500).json({ message: "Failed to update test cycle" });
+      }
+    }
+  });
+
   app.post("/api/test-cycles", requireAuth, async (req, res) => {
     try {
       const testCycleData = insertTestCycleSchema.parse(req.body);

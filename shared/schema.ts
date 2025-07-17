@@ -160,9 +160,10 @@ export const testCycles = pgTable("test_cycles", {
   startDate: timestamp("start_date", { mode: 'string' }),
   endDate: timestamp("end_date", { mode: 'string' }),
   userId: integer("user_id").references(() => users.id),
-  // New fields for AI Assisted Execution Readiness
-  testInstanceUrl: text("test_instance_url"), // URL for automated browser testing
-  testData: jsonb("test_data"), // Structured test data (user credentials, test scenarios)
+  // Enhanced fields for AI Assisted Execution Readiness
+  testingMode: varchar("testing_mode", { length: 30 }).default("manual"), // ai-assisted-manual, manual, automated
+  testDeploymentUrl: text("test_deployment_url"), // URL for testers or AI to access the application
+  testData: jsonb("test_data").default({}), // Structured test data with title/value pairs and descriptions
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
   updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
   projectId: integer("project_id").references(() => projects.id, { onDelete: "cascade" }),

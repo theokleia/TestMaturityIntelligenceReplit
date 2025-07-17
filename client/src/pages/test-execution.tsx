@@ -65,11 +65,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { StatusBadgeVariant, StatusBadge } from "@/components/design-system/status-badge";
 import { TabView } from "@/components/design-system/tab-view";
 import {
   PlayCircle,
-  Calendar,
+  Calendar as CalendarIcon,
   Plus,
   Check,
   X,
@@ -82,7 +85,14 @@ import {
 import { format } from "date-fns";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
+
+// Test data item schema for structured test data
+const testDataItemSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  value: z.string(),
+  description: z.string().optional(),
+});
 
 // Test cycle form schema
 const testCycleSchema = z.object({
@@ -91,6 +101,9 @@ const testCycleSchema = z.object({
   status: z.string().default("planned"),
   startDate: z.date().optional().nullable(),
   endDate: z.date().optional().nullable(),
+  testingMode: z.string().default("manual"),
+  testDeploymentUrl: z.string().url().optional().or(z.literal("")),
+  testData: z.array(testDataItemSchema).default([]),
 });
 
 type TestCycleFormValues = z.infer<typeof testCycleSchema>;
@@ -102,6 +115,136 @@ const testRunSchema = z.object({
 });
 
 type TestRunFormValues = z.infer<typeof testRunSchema>;
+
+// Simple DatePicker component
+interface DatePickerProps {
+  selected?: Date | null;
+  onSelect: (date: Date | undefined) => void;
+  placeholder?: string;
+  fromDate?: Date;
+}
+
+function DatePicker({ selected, onSelect, placeholder = "Pick a date", fromDate }: DatePickerProps) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          className={cn(
+            "w-full justify-start text-left font-normal",
+            !selected && "text-muted-foreground"
+          )}
+        >
+          <CalendarIcon className="mr-2 h-4 w-4" />
+          {selected ? format(selected, "PPP") : placeholder}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <Calendar
+          mode="single"
+          selected={selected || undefined}
+          onSelect={(date) => {
+            onSelect(date);
+            setOpen(false);
+          }}
+          disabled={(date) => fromDate ? date < fromDate : false}
+          initialFocus
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+// Test Data Manager Component
+interface TestDataManagerProps {
+  value: Array<{ title: string; value: string; description?: string }>;
+  onChange: (value: Array<{ title: string; value: string; description?: string }>) => void;
+}
+
+function TestDataManager({ value, onChange }: TestDataManagerProps) {
+  const [items, setItems] = useState(value || []);
+
+  const addItem = () => {
+    const newItems = [...items, { title: "", value: "", description: "" }];
+    setItems(newItems);
+    onChange(newItems);
+  };
+
+  const removeItem = (index: number) => {
+    const newItems = items.filter((_, i) => i !== index);
+    setItems(newItems);
+    onChange(newItems);
+  };
+
+  const updateItem = (index: number, field: string, newValue: string) => {
+    const newItems = items.map((item, i) => 
+      i === index ? { ...item, [field]: newValue } : item
+    );
+    setItems(newItems);
+    onChange(newItems);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h4 className="text-sm font-medium">Test Data</h4>
+          <p className="text-xs text-muted-foreground">
+            Define structured test data for this cycle
+          </p>
+        </div>
+        <Button type="button" variant="outline" size="sm" onClick={addItem}>
+          <Plus size={14} className="mr-1" />
+          Add Data
+        </Button>
+      </div>
+      
+      {items.length > 0 && (
+        <div className="space-y-3 max-h-64 overflow-y-auto">
+          {items.map((item, index) => (
+            <div key={index} className="border rounded-lg p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground">
+                  Data Item {index + 1}
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeItem(index)}
+                  className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                >
+                  <X size={12} />
+                </Button>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  placeholder="Title (e.g., User ID)"
+                  value={item.title}
+                  onChange={(e) => updateItem(index, "title", e.target.value)}
+                />
+                <Input
+                  placeholder="Value (e.g., user123)"
+                  value={item.value}
+                  onChange={(e) => updateItem(index, "value", e.target.value)}
+                />
+              </div>
+              
+              <Input
+                placeholder="Description (optional)"
+                value={item.description || ""}
+                onChange={(e) => updateItem(index, "description", e.target.value)}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Helper function to render status badge with appropriate color
 function renderStatusBadge(status: string): JSX.Element {
@@ -195,6 +338,9 @@ export default function TestExecution() {
       status: "planned",
       startDate: null,
       endDate: null,
+      testingMode: "manual",
+      testDeploymentUrl: "",
+      testData: [],
     }
   });
   
@@ -215,6 +361,9 @@ export default function TestExecution() {
         status: selectedCycle.status,
         startDate: selectedCycle.startDate ? new Date(selectedCycle.startDate) : null,
         endDate: selectedCycle.endDate ? new Date(selectedCycle.endDate) : null,
+        testingMode: selectedCycle.testingMode || "manual",
+        testDeploymentUrl: selectedCycle.testDeploymentUrl || "",
+        testData: Array.isArray(selectedCycle.testData) ? selectedCycle.testData : [],
       });
     }
   }, [selectedCycle, editCycleDialogOpen, cycleForm]);
@@ -569,9 +718,9 @@ export default function TestExecution() {
               </div>
               
               <div className="p-4 bg-atmf-card rounded-lg">
-                <span className="text-sm text-muted-foreground">Created</span>
-                <div className="mt-1">
-                  {selectedCycle.createdAt ? new Date(selectedCycle.createdAt).toLocaleDateString() : "Unknown"}
+                <span className="text-sm text-muted-foreground">Testing Mode</span>
+                <div className="mt-1 capitalize">
+                  {selectedCycle.testingMode?.replace('-', ' ') || 'Manual'}
                 </div>
               </div>
               
@@ -589,6 +738,41 @@ export default function TestExecution() {
                 </div>
               </div>
             </div>
+            
+            {selectedCycle.testDeploymentUrl && (
+              <div className="p-6 border-t bg-atmf-card/20">
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm font-medium text-muted-foreground">Test Environment:</span>
+                  <a 
+                    href={selectedCycle.testDeploymentUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-600 hover:text-blue-800 underline"
+                  >
+                    {selectedCycle.testDeploymentUrl}
+                  </a>
+                </div>
+              </div>
+            )}
+            
+            {selectedCycle.testData && Array.isArray(selectedCycle.testData) && selectedCycle.testData.length > 0 && (
+              <div className="p-6 border-t bg-atmf-card/20">
+                <h4 className="text-sm font-medium mb-3">Test Data</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  {selectedCycle.testData.map((item: any, index: number) => (
+                    <div key={index} className="p-3 bg-white rounded border">
+                      <div className="flex justify-between items-start">
+                        <span className="text-xs font-medium text-muted-foreground">{item.title}</span>
+                      </div>
+                      <div className="text-sm font-mono mt-1">{item.value}</div>
+                      {item.description && (
+                        <div className="text-xs text-muted-foreground mt-1">{item.description}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </ATMFCard>
           
           <ATMFCard>
@@ -691,6 +875,9 @@ export default function TestExecution() {
                 status: "planned",
                 startDate: null,
                 endDate: null,
+                testingMode: "manual",
+                testDeploymentUrl: "",
+                testData: [],
               });
               setNewCycleDialogOpen(true);
             }}
@@ -819,6 +1006,56 @@ export default function TestExecution() {
                 />
               </div>
               
+              <div className="space-y-4">
+                <FormField
+                  control={cycleForm.control}
+                  name="testingMode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Testing Mode</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select testing mode" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="manual">Manual</SelectItem>
+                          <SelectItem value="ai-assisted-manual">AI-Assisted Manual</SelectItem>
+                          <SelectItem value="automated">Automated</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={cycleForm.control}
+                  name="testDeploymentUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Test Deployment URL</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="https://staging.myapp.com" />
+                      </FormControl>
+                      <FormDescription>
+                        URL where testers or AI can access the application for testing
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <TestDataManager 
+                  value={cycleForm.watch("testData")}
+                  onChange={(testData) => cycleForm.setValue("testData", testData)}
+                />
+              </div>
+              
               <DialogFooter>
                 <Button variant="outline" type="button" onClick={() => setNewCycleDialogOpen(false)}>
                   Cancel
@@ -935,6 +1172,56 @@ export default function TestExecution() {
                       <FormMessage />
                     </FormItem>
                   )}
+                />
+              </div>
+              
+              <div className="space-y-4">
+                <FormField
+                  control={cycleForm.control}
+                  name="testingMode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Testing Mode</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select testing mode" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="manual">Manual</SelectItem>
+                          <SelectItem value="ai-assisted-manual">AI-Assisted Manual</SelectItem>
+                          <SelectItem value="automated">Automated</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={cycleForm.control}
+                  name="testDeploymentUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Test Deployment URL</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="https://staging.myapp.com" />
+                      </FormControl>
+                      <FormDescription>
+                        URL where testers or AI can access the application for testing
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <TestDataManager 
+                  value={cycleForm.watch("testData")}
+                  onChange={(testData) => cycleForm.setValue("testData", testData)}
                 />
               </div>
               
