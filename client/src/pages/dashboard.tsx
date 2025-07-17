@@ -72,25 +72,25 @@ export default function Dashboard() {
                   <div className="text-muted-foreground">Overall AI Readiness</div>
                 </div>
                 
-                <div className="space-y-2">
-                  {aiSummary.recentAssessments && Array.isArray(aiSummary.recentAssessments) ? 
-                    aiSummary.recentAssessments.map((assessment: any) => {
-                      const readinessScore = assessment.readinessScore || 0;
-                      return (
-                        <div key={assessment.assessmentType || assessment.id} className="flex justify-between items-center">
-                          <span className="text-sm capitalize">{(assessment.assessmentType || 'unknown').replace('_', ' ')}</span>
-                          <div className="flex items-center gap-2">
-                            <Progress value={readinessScore} className="w-20" />
-                            <span className={`text-sm font-medium ${getReadinessColor(readinessScore)}`}>
-                              {readinessScore}%
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    }) : (
-                      <div className="text-sm text-muted-foreground">No assessments available</div>
-                    )
-                  }
+                <div className="space-y-3">
+                  {/* Individual Assessment Types */}
+                  {[
+                    { key: 'project_definition', label: 'Project Definition', score: aiSummary.assessmentScores?.project_definition || 0 },
+                    { key: 'ai_coverage', label: 'AI Coverage', score: aiSummary.assessmentScores?.ai_coverage || 0 },
+                    { key: 'ai_execution', label: 'AI Assisted Execution', score: aiSummary.assessmentScores?.ai_execution || 0 },
+                    { key: 'ai_automation', label: 'AI Automation', score: aiSummary.assessmentScores?.ai_automation || 0 },
+                    { key: 'documentation', label: 'Documentation Readiness', score: aiSummary.assessmentScores?.documentation || 0 }
+                  ].map((assessment) => (
+                    <div key={assessment.key} className="flex justify-between items-center">
+                      <span className="text-sm font-medium">{assessment.label}</span>
+                      <div className="flex items-center gap-2">
+                        <Progress value={assessment.score} className="w-24" />
+                        <span className={`text-sm font-semibold min-w-[3rem] text-right ${getReadinessColor(assessment.score)}`}>
+                          {assessment.score}%
+                        </span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
@@ -127,76 +127,7 @@ export default function Dashboard() {
             </Card>
           </div>
 
-          {/* Recent Assessment Results */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Assessment Results</CardTitle>
-              <CardDescription>
-                Latest AI readiness assessments and recommendations
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-3">
-                {aiSummary.recentAssessments && Array.isArray(aiSummary.recentAssessments) && aiSummary.recentAssessments.length > 0 ? 
-                  aiSummary.recentAssessments.slice(0, 3).map((assessment: any) => (
-                    <div key={assessment.id} className="p-4 border rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-medium capitalize">{(assessment.assessmentType || 'assessment').replace('_', ' ')}</h4>
-                        <div className={`text-lg font-semibold ${getReadinessColor(assessment.readinessScore || 0)}`}>
-                          {assessment.readinessScore || 0}%
-                        </div>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                        {assessment.analysis || 'No analysis available'}
-                      </p>
-                      <div className="text-xs text-muted-foreground">
-                        {assessment.createdAt ? new Date(assessment.createdAt).toLocaleDateString() : 'Date unavailable'}
-                      </div>
-                    </div>
-                  )) : (
-                    <div className="col-span-3 text-center py-8 text-muted-foreground">
-                      <AlertCircle className="h-8 w-8 mx-auto mb-2" />
-                      <p>No recent assessments available</p>
-                    </div>
-                  )
-                }
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* Completed Action Items */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Completed Action Items</CardTitle>
-              <CardDescription>
-                Recently completed improvements to AI readiness
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {actionItems
-                  .filter((item: any) => item.status === 'completed')
-                  .slice(0, 5)
-                  .map((item: any) => (
-                    <div key={item.id} className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200 shadow-sm">
-                      <CheckCircle className="h-5 w-5 text-blue-600" />
-                      <div className="flex-1">
-                        <div className="font-medium text-blue-900">{item.title}</div>
-                        <div className="text-sm text-blue-700">
-                          Completed {item.completedAt ? new Date(item.completedAt).toLocaleDateString() : 'recently'}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                {actionItems.filter((item: any) => item.status === 'completed').length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Clock className="h-8 w-8 mx-auto mb-2" />
-                    <p>No completed action items yet</p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
         </div>
       )}
       

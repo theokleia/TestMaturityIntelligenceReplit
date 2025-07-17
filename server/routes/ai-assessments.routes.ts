@@ -191,13 +191,14 @@ export function registerAIAssessmentRoutes(app: Express) {
 
       const summary = {
         overallReadinessScore: overallScore,
-        assessments: {
-          project_definition: latestAssessments[0],
-          ai_coverage: latestAssessments[1],
-          ai_execution: latestAssessments[2],
-          ai_automation: latestAssessments[3],
-          documentation: latestAssessments[4]
+        assessmentScores: {
+          project_definition: latestAssessments[0]?.readinessScore || 0,
+          ai_coverage: latestAssessments[1]?.readinessScore || 0,
+          ai_execution: latestAssessments[2]?.readinessScore || 0,
+          ai_automation: latestAssessments[3]?.readinessScore || 0,
+          documentation: latestAssessments[4]?.readinessScore || 0
         },
+        recentAssessments: validAssessments.slice(0, 3),
         actionItems: {
           total: allActionItems.length,
           open: openItems.length,
