@@ -73,20 +73,24 @@ export default function Dashboard() {
                 </div>
                 
                 <div className="space-y-2">
-                  {aiSummary.assessments?.map((assessment: any) => {
-                    const readinessScore = assessment.readinessScore || 0;
-                    return (
-                      <div key={assessment.type} className="flex justify-between items-center">
-                        <span className="text-sm capitalize">{assessment.type.replace('_', ' ')}</span>
-                        <div className="flex items-center gap-2">
-                          <Progress value={readinessScore} className="w-20" />
-                          <span className={`text-sm font-medium ${getReadinessColor(readinessScore)}`}>
-                            {readinessScore}%
-                          </span>
+                  {aiSummary.recentAssessments && Array.isArray(aiSummary.recentAssessments) ? 
+                    aiSummary.recentAssessments.map((assessment: any) => {
+                      const readinessScore = assessment.readinessScore || 0;
+                      return (
+                        <div key={assessment.assessmentType || assessment.id} className="flex justify-between items-center">
+                          <span className="text-sm capitalize">{(assessment.assessmentType || 'unknown').replace('_', ' ')}</span>
+                          <div className="flex items-center gap-2">
+                            <Progress value={readinessScore} className="w-20" />
+                            <span className={`text-sm font-medium ${getReadinessColor(readinessScore)}`}>
+                              {readinessScore}%
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    }) : (
+                      <div className="text-sm text-muted-foreground">No assessments available</div>
+                    )
+                  }
                 </div>
               </CardContent>
             </Card>
@@ -133,22 +137,29 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 md:grid-cols-3">
-                {aiSummary.recentAssessments?.slice(0, 3).map((assessment: any) => (
-                  <div key={assessment.id} className="p-4 border rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-medium capitalize">{assessment.type.replace('_', ' ')}</h4>
-                      <div className={`text-lg font-semibold ${getReadinessColor(assessment.readinessScore)}`}>
-                        {assessment.readinessScore}%
+                {aiSummary.recentAssessments && Array.isArray(aiSummary.recentAssessments) && aiSummary.recentAssessments.length > 0 ? 
+                  aiSummary.recentAssessments.slice(0, 3).map((assessment: any) => (
+                    <div key={assessment.id} className="p-4 border rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-medium capitalize">{(assessment.assessmentType || 'assessment').replace('_', ' ')}</h4>
+                        <div className={`text-lg font-semibold ${getReadinessColor(assessment.readinessScore || 0)}`}>
+                          {assessment.readinessScore || 0}%
+                        </div>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                        {assessment.analysis || 'No analysis available'}
+                      </p>
+                      <div className="text-xs text-muted-foreground">
+                        {assessment.createdAt ? new Date(assessment.createdAt).toLocaleDateString() : 'Date unavailable'}
                       </div>
                     </div>
-                    <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                      {assessment.analysis}
-                    </p>
-                    <div className="text-xs text-muted-foreground">
-                      {new Date(assessment.createdAt).toLocaleDateString()}
+                  )) : (
+                    <div className="col-span-3 text-center py-8 text-muted-foreground">
+                      <AlertCircle className="h-8 w-8 mx-auto mb-2" />
+                      <p>No recent assessments available</p>
                     </div>
-                  </div>
-                ))}
+                  )
+                }
               </div>
             </CardContent>
           </Card>
