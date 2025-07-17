@@ -86,7 +86,7 @@ class AIAssessmentService {
         runBy: request.runBy
       });
 
-      // Create action items
+      // Create action items from the assessment result
       for (const actionItem of result.actionItems) {
         await storage.createAiAssessmentActionItem({
           assessmentId: assessment.id,
@@ -96,6 +96,20 @@ class AIAssessmentService {
           category: actionItem.category,
           priority: actionItem.priority,
           estimatedImpact: actionItem.estimatedImpact
+        });
+      }
+
+      // Also create action items from key recommendations
+      for (let i = 0; i < result.recommendations.length && i < 5; i++) {
+        const recommendation = result.recommendations[i];
+        await storage.createAiAssessmentActionItem({
+          assessmentId: assessment.id,
+          projectId: request.projectId,
+          title: `Implement: ${recommendation.substring(0, 50)}${recommendation.length > 50 ? '...' : ''}`,
+          description: recommendation,
+          category: 'recommendation',
+          priority: i < 2 ? 'high' : 'medium', // First 2 recommendations are high priority
+          estimatedImpact: Math.max(5, 8 - i) // Decreasing impact: 8, 7, 6, 5, 5
         });
       }
 
