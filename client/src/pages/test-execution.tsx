@@ -980,6 +980,32 @@ export default function TestExecution() {
                     </FormItem>
                   )}
                 />
+                
+                <FormField
+                  control={cycleForm.control}
+                  name="testingMode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Testing Mode</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select testing mode" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="manual">Manual</SelectItem>
+                          <SelectItem value="ai-assisted-manual">AI-Assisted Manual</SelectItem>
+                          <SelectItem value="automated">Automated</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
               
               <div className="grid grid-cols-2 gap-4">
@@ -1017,55 +1043,27 @@ export default function TestExecution() {
                 />
               </div>
               
-              <div className="space-y-4">
-                <FormField
-                  control={cycleForm.control}
-                  name="testingMode"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Testing Mode</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select testing mode" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="manual">Manual</SelectItem>
-                          <SelectItem value="ai-assisted-manual">AI-Assisted Manual</SelectItem>
-                          <SelectItem value="automated">Automated</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={cycleForm.control}
-                  name="testDeploymentUrl"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Test Deployment URL</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="https://staging.myapp.com" />
-                      </FormControl>
-                      <FormDescription>
-                        URL where testers or AI can access the application for testing
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <TestDataManager 
-                  value={cycleForm.watch("testData")}
-                  onChange={(testData) => cycleForm.setValue("testData", testData)}
-                />
-              </div>
+              <FormField
+                control={cycleForm.control}
+                name="testDeploymentUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Test Deployment URL</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="https://staging.myapp.com" />
+                    </FormControl>
+                    <FormDescription>
+                      URL where testers or AI can access the application for testing
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <TestDataManager 
+                value={cycleForm.watch("testData")}
+                onChange={(testData) => cycleForm.setValue("testData", testData)}
+              />
               
               <DialogFooter>
                 <Button variant="outline" type="button" onClick={() => setNewCycleDialogOpen(false)}>
@@ -1149,6 +1147,32 @@ export default function TestExecution() {
                     </FormItem>
                   )}
                 />
+                
+                <FormField
+                  control={cycleForm.control}
+                  name="testingMode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Testing Mode</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select testing mode" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="manual">Manual</SelectItem>
+                          <SelectItem value="ai-assisted-manual">AI-Assisted Manual</SelectItem>
+                          <SelectItem value="automated">Automated</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
               
               <div className="grid grid-cols-2 gap-4">
@@ -1186,55 +1210,27 @@ export default function TestExecution() {
                 />
               </div>
               
-              <div className="space-y-4">
-                <FormField
-                  control={cycleForm.control}
-                  name="testingMode"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Testing Mode</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select testing mode" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="manual">Manual</SelectItem>
-                          <SelectItem value="ai-assisted-manual">AI-Assisted Manual</SelectItem>
-                          <SelectItem value="automated">Automated</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={cycleForm.control}
-                  name="testDeploymentUrl"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Test Deployment URL</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="https://staging.myapp.com" />
-                      </FormControl>
-                      <FormDescription>
-                        URL where testers or AI can access the application for testing
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <TestDataManager 
-                  value={cycleForm.watch("testData")}
-                  onChange={(testData) => cycleForm.setValue("testData", testData)}
-                />
-              </div>
+              <FormField
+                control={cycleForm.control}
+                name="testDeploymentUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Test Deployment URL</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="https://staging.myapp.com" />
+                    </FormControl>
+                    <FormDescription>
+                      URL where testers or AI can access the application for testing
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <TestDataManager 
+                value={cycleForm.watch("testData")}
+                onChange={(testData) => cycleForm.setValue("testData", testData)}
+              />
               
               <DialogFooter>
                 <Button variant="outline" type="button" onClick={() => setEditCycleDialogOpen(false)}>
