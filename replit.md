@@ -35,6 +35,16 @@ ATMosFera is an advanced AI-powered test management and documentation platform b
 
 ## Recent Changes
 
+### 2025-07-17: AI Service Architecture Refactoring
+- **Modular AI Service Architecture**: Refactored massive 2,458-line openai-service.ts into focused, maintainable modules
+- **AI Client Manager**: Centralized OpenAI and Anthropic client management with configuration handling
+- **Context Manager**: Intelligent project context aggregation and optimization for AI features
+- **Test Generation Service**: Dedicated service for AI-powered test case, step, and coverage generation
+- **Document Generation Service**: Specialized service for AI document creation using Anthropic Claude
+- **Prompt Templates Engine**: Centralized prompt management with template system and optimization
+- **Backward Compatibility**: Maintained compatibility layer for existing code while enabling new modular usage
+- **Architecture Benefits**: Single responsibility principle, improved maintainability, better testability, and enhanced reusability
+
 ### 2025-07-16: Comprehensive Documentation Structure Creation
 - **Complete Documentation Architecture**: Created comprehensive documentation structure with requirements, database, and functions folders
 - **Product Requirements Document (PRD)**: Detailed market analysis, value proposition, feature requirements, and go-to-market strategy

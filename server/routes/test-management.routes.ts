@@ -10,7 +10,7 @@ import {
 } from "@shared/schema";
 import { 
   generateTestCases,
-  generateTestCoverage,
+  analyzeTestCoverage as generateTestCoverage,
   generateTestSteps
 } from "../openai-service";
 import { requireAuth } from "./auth.routes";
