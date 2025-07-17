@@ -383,6 +383,7 @@ export default function TestExecution() {
   // Clear form when closing new cycle dialog
   useEffect(() => {
     if (!newCycleDialogOpen) {
+      console.log("Resetting new cycle form to defaults");
       cycleForm.reset({
         name: "",
         description: "",
@@ -414,6 +415,8 @@ export default function TestExecution() {
   const handleCreateCycle = (data: TestCycleFormValues) => {
     if (!projectId) return;
     
+    console.log("Creating cycle with data:", data);
+    
     // Convert Date objects to ISO strings for API
     const apiData = {
       ...data,
@@ -422,10 +425,13 @@ export default function TestExecution() {
       endDate: data.endDate?.toISOString() || null,
     };
     
+    console.log("API data being sent:", apiData);
+    
     createCycleMutation.mutate(
       apiData,
       {
         onSuccess: (newCycle) => {
+          console.log("Created cycle:", newCycle);
           toast({
             title: "Success",
             description: "Test cycle created successfully",
@@ -438,6 +444,7 @@ export default function TestExecution() {
           setActiveTab("execution");
         },
         onError: (error) => {
+          console.error("Error creating cycle:", error);
           toast({
             title: "Error",
             description: "Failed to create test cycle",
