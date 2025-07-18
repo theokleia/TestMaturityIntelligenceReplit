@@ -50,6 +50,21 @@ export function registerTestManagementRoutes(app: Express) {
     }
   });
 
+  app.patch("/api/test-cycle-items/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updateData = req.body;
+      const updatedItem = await storage.updateTestCycleItem(id, updateData);
+      if (!updatedItem) {
+        return res.status(404).json({ message: "Test cycle item not found" });
+      }
+      res.json(updatedItem);
+    } catch (error) {
+      console.error("Error updating test cycle item:", error);
+      res.status(500).json({ message: "Failed to update test cycle item" });
+    }
+  });
+
   // Test Suites CRUD
   app.get("/api/test-suites", async (req, res) => {
     try {
