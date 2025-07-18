@@ -35,6 +35,17 @@ ATMosFera is an advanced AI-powered test management and documentation platform b
 
 ## Recent Changes
 
+### 2025-07-18: AI Test Execution Logic Overhaul - Step-Based Analysis Implementation
+- **Completely Rewritten AI Execution Engine**: Replaced hard-coded login flows with intelligent step-based analysis that follows actual test step structure
+- **Step-Specific Action Recognition**: AI now analyzes individual test steps and executes actions based on step description and expected results
+- **Action Type Classification**: Implemented intelligent classification for click actions, login sequences, form submissions, navigation, and generic interactions
+- **Test Credential Integration**: Enhanced credential extraction to work with step-specific validation criteria and expected results
+- **Validation-Driven Execution**: AI now considers expected results from test steps to determine success/failure criteria
+- **Modular Execution Functions**: Created specialized execution functions for each action type (executeClickAction, executeLoginSequence, etc.)
+- **Realistic Step Progression**: AI follows the actual test case step sequence instead of generic predetermined actions
+- **Enhanced Analysis Framework**: Implemented analyzeStepRequirements function that parses step descriptions and maps to appropriate actions
+- **Improved User Experience**: Test execution now reflects actual test step content, providing more accurate and meaningful automation
+
 ### 2025-07-17: Complete Test Cycle CRUD Functionality Restoration and Enhancement
 - **Complete Test Cycle CRUD Restoration**: Restored all test cycle creation, editing, and viewing functionality to the system
 - **Enhanced Test Execution Page**: Added back TestCycleFormDialog component with full CRUD capabilities
