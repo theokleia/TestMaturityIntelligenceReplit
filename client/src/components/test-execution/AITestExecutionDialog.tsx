@@ -48,6 +48,8 @@ interface BrowserState {
   title: string;
   screenshot?: string;
   isLoading: boolean;
+  liveView?: boolean;
+  iframeUrl?: string;
 }
 
 interface AITestExecutionDialogProps {
@@ -78,6 +80,7 @@ export function AITestExecutionDialog({
   const [userNotes, setUserNotes] = useState('');
   const [executionResults, setExecutionResults] = useState<any>(null);
   const [deploymentUrl, setDeploymentUrl] = useState('');
+  const [aiInteractions, setAiInteractions] = useState<any[]>([]);
 
   // Initialize deployment URL from test cycle and parse test steps
   useEffect(() => {
@@ -87,7 +90,7 @@ export function AITestExecutionDialog({
       setCurrentStep(0);
       setUserInterventionRequired(false);
       setUserNotes('');
-      setBrowserState({ url: '', title: '', isLoading: false });
+      setBrowserState({ url: '', title: '', isLoading: false, liveView: false, iframeUrl: '' });
       
       // Set deployment URL from test cycle
       if (testCycle?.testDeploymentUrl) {
@@ -227,8 +230,22 @@ export function AITestExecutionDialog({
           url: message.url,
           title: message.title,
           screenshot: message.screenshot,
-          isLoading: message.isLoading
+          isLoading: message.isLoading,
+          liveView: message.liveView || false,
+          iframeUrl: message.iframeUrl || ''
         });
+        break;
+        
+      case 'ai_interaction':
+        setAiInteractions(prev => [...prev, {
+          id: Date.now(),
+          stepNumber: message.stepNumber,
+          action: message.action,
+          target: message.target,
+          coordinates: message.coordinates,
+          description: message.description,
+          timestamp: new Date()
+        }]);
         break;
         
       case 'execution_completed':
@@ -534,17 +551,59 @@ export function AITestExecutionDialog({
                 )}
               </CardHeader>
               <CardContent className="p-0">
-                <div className="border-2 border-gray-200 rounded-lg overflow-hidden bg-gray-100 min-h-[400px] flex items-center justify-center">
-                  {browserState.screenshot ? (
-                    <img
-                      src={browserState.screenshot}
-                      alt="Browser screenshot"
-                      className="max-w-full max-h-full object-contain"
-                    />
+                <div className="border-2 border-gray-200 rounded-lg overflow-hidden bg-gray-100 min-h-[400px] relative">
+                  {browserState.liveView && browserState.iframeUrl ? (
+                    <div className="w-full h-[400px] relative">
+                      <iframe
+                        src={browserState.iframeUrl}
+                        className="w-full h-full border-0"
+                        title="Live Browser View"
+                        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                      />
+                      
+                      {/* AI Interaction Overlays */}
+                      {aiInteractions.map((interaction) => (
+                        <div
+                          key={interaction.id}
+                          className="absolute pointer-events-none"
+                          style={{
+                            left: interaction.coordinates?.x || '50%',
+                            top: interaction.coordinates?.y || '50%',
+                            transform: 'translate(-50%, -50%)'
+                          }}
+                        >
+                          <div className="bg-red-500 rounded-full w-6 h-6 animate-ping opacity-75"></div>
+                          <div className="absolute top-0 left-0 bg-red-500 rounded-full w-6 h-6"></div>
+                          <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded whitespace-nowrap">
+                            {interaction.action}: {interaction.target}
+                          </div>
+                        </div>
+                      ))}
+                      
+                      <div className="absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded">
+                        🔴 LIVE
+                      </div>
+                      
+                      {status === 'running' && (
+                        <div className="absolute top-2 left-2 bg-blue-500 text-white text-xs px-2 py-1 rounded">
+                          AI is interacting...
+                        </div>
+                      )}
+                    </div>
+                  ) : browserState.screenshot ? (
+                    <div className="flex items-center justify-center min-h-[400px]">
+                      <img
+                        src={browserState.screenshot}
+                        alt="Browser screenshot"
+                        className="max-w-full max-h-full object-contain"
+                      />
+                    </div>
                   ) : (
-                    <div className="text-center text-gray-500">
-                      <Monitor className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                      <p>Browser view will appear here during execution</p>
+                    <div className="text-center text-gray-500 flex items-center justify-center min-h-[400px]">
+                      <div>
+                        <Monitor className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                        <p>Browser view will appear here during execution</p>
+                      </div>
                     </div>
                   )}
                 </div>
