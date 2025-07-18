@@ -257,8 +257,16 @@ class AIExecutionService {
       stepDescription: stepDescription
     });
     
-    // Wait for real-time analysis to complete
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Wait for real-time analysis to complete with progress updates
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    this.sendWebSocketMessage(context.websocket, {
+      type: 'ai_thinking',
+      message: `AI scanning page DOM structure and interactive elements...`,
+      stepNumber
+    });
+    
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
     // Use enhanced analysis that considers real rendered content
     const pageAnalysis = this.analyzePageContent(context.pageContent || '', stepDescription);
@@ -301,7 +309,7 @@ class AIExecutionService {
         // Login likely hidden in hamburger menu, explore navigation first
         this.sendWebSocketMessage(context.websocket, {
           type: 'ai_thinking',
-          message: `AI looking for login options. Found ${pageAnalysis.hamburgerElements} hamburger menu(s) - will open navigation menu to find login.`,
+          message: `AI found ${pageAnalysis.hamburgerElements} hamburger menu(s) - analyzing best target to access login.`,
           stepNumber
         });
         
@@ -317,14 +325,32 @@ class AIExecutionService {
         
         this.sendWebSocketMessage(context.websocket, {
           type: 'ai_thinking',
-          message: `AI attempting to click hamburger menu to access login options.`,
+          message: `AI targeting hamburger menu in top-right corner - attempting click to reveal navigation.`,
+          stepNumber
+        });
+        
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        this.sendWebSocketMessage(context.websocket, {
+          type: 'ai_thinking',
+          message: `AI clicked hamburger menu but cannot verify if login form is now accessible. Need manual verification.`,
           stepNumber
         });
         
         const coordinates = { x: '95%', y: '10%' }; // Fallback location
+        
+        // Since this is a login attempt and we can't actually verify the click worked,
+        // we should request user intervention after attempting the action
+        this.sendWebSocketMessage(context.websocket, {
+          type: 'ai_thinking',
+          message: `AI attempted to click hamburger menu but cannot verify if login form appeared. Need user verification.`,
+          stepNumber
+        });
+        
         return {
-          aiOutput: `AI exploring navigation menu on ${context.pageTitle}. Found ${pageAnalysis.hamburgerElements} hamburger menu(s) and ${pageAnalysis.navElements} navigation elements - targeting hamburger menu to find login options.`,
-          requiresUserIntervention: false,
+          aiOutput: `AI attempted to access navigation menu on ${context.pageTitle}. Found ${pageAnalysis.hamburgerElements} hamburger menu(s) and ${pageAnalysis.navElements} navigation elements. Clicked hamburger menu but cannot verify if login form is now visible. User intervention required to confirm login form access and complete login.`,
+          requiresUserIntervention: true,
+          reason: 'Cannot verify if hamburger menu click revealed login form. Manual verification needed.',
           action: 'click',
           target: 'Hamburger menu',
           coordinates,
@@ -339,9 +365,9 @@ class AIExecutionService {
         
         const coordinates = { x: '50%', y: '40%' };
         return {
-          aiOutput: `AI unable to find login elements on ${context.pageTitle}. ${pageAnalysis.summary}. User intervention required.`,
+          aiOutput: `AI Analysis: Scanned ${context.pageTitle} for login elements. ${pageAnalysis.summary}. No visible login form, sign-in buttons, or accessible navigation menus detected. AI cannot proceed with automated login - user intervention required to manually locate and access login functionality.`,
           requiresUserIntervention: true,
-          reason: 'Cannot locate login form or navigation elements on the page',
+          reason: 'No login form or navigation elements detected on page. Manual user action needed to access login.',
           action: 'click',
           target: 'Login area',
           coordinates,

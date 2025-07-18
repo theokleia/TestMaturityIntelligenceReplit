@@ -968,9 +968,32 @@ export function AITestExecutionDialog({
                           {getStepBadge(step)}
                         </div>
                         <p className="text-sm text-gray-700 mb-2">{step.description}</p>
+                        
+                        {/* Show AI thinking for current step */}
+                        {step.stepNumber === currentStep && aiThinking && (
+                          <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded mb-2">
+                            <div className="flex items-center gap-1 mb-1">
+                              <Bot className="h-3 w-3 animate-pulse" />
+                              <strong>AI is thinking:</strong>
+                            </div>
+                            <p>{aiThinking}</p>
+                          </div>
+                        )}
+                        
+                        {/* Show user intervention needed */}
+                        {step.stepNumber === currentStep && requiresUserIntervention && (
+                          <div className="text-xs text-yellow-700 bg-yellow-50 border border-yellow-200 p-2 rounded mb-2">
+                            <div className="flex items-center gap-1 mb-1">
+                              <AlertCircle className="h-3 w-3" />
+                              <strong>AI needs help:</strong>
+                            </div>
+                            <p>{interventionReason}</p>
+                          </div>
+                        )}
+                        
                         {step.aiOutput && (
                           <div className="text-xs text-gray-600 bg-gray-100 p-2 rounded">
-                            <strong>AI Output:</strong> {step.aiOutput}
+                            <strong>AI Analysis:</strong> {step.aiOutput}
                           </div>
                         )}
                       </div>
