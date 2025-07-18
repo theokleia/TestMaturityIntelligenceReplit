@@ -274,6 +274,11 @@ export function AITestExecutionDialog({
         };
         setAiInteractions(prev => [...prev, interaction]);
         
+        // Show visual AI interaction on the iframe
+        if (iframeRef.current) {
+          showAIInteractionOnIframe(interaction);
+        }
+        
         // Execute real browser interaction
         executeRealBrowserAction(interaction);
         
@@ -758,38 +763,116 @@ export function AITestExecutionDialog({
     }
   };
   
+  const showAIInteractionOnIframe = (interaction: any) => {
+    try {
+      const iframe = iframeRef.current;
+      if (!iframe || !iframe.contentWindow) return;
+      
+      const script = generateBrowserActionScript(interaction);
+      iframe.contentWindow.eval(script);
+    } catch (error) {
+      console.log('Could not inject AI interaction into iframe:', error.message);
+    }
+  };
+
   const generateBrowserActionScript = (interaction: any) => {
+    const coords = interaction.coordinates || { x: '50%', y: '50%' };
+    const xPercent = parseFloat(coords.x.replace('%', '')) / 100;
+    const yPercent = parseFloat(coords.y.replace('%', '')) / 100;
+    
     switch (interaction.action) {
       case 'click':
         return `
-          // AI Click Automation Script
-          const x = window.innerWidth * ${parseFloat(interaction.coordinates?.x || '50%') / 100};
-          const y = window.innerHeight * ${parseFloat(interaction.coordinates?.y || '50%') / 100};
-          const element = document.elementFromPoint(x, y);
-          if (element) {
-            element.style.border = '3px solid red';
-            element.style.backgroundColor = 'rgba(255,0,0,0.1)';
-            setTimeout(() => {
-              element.click();
-              element.style.border = '';
-              element.style.backgroundColor = '';
-            }, 1000);
-          }
+          (function() {
+            // Create AI cursor animation
+            const cursor = document.createElement('div');
+            cursor.style.cssText = \`
+              position: fixed;
+              z-index: 999999;
+              width: 20px;
+              height: 20px;
+              background: radial-gradient(circle, #ff4444 0%, #ff0000 70%);
+              border-radius: 50%;
+              pointer-events: none;
+              box-shadow: 0 0 10px rgba(255,0,0,0.8);
+              transition: all 0.3s ease;
+            \`;
+            document.body.appendChild(cursor);
+            
+            const x = window.innerWidth * ${xPercent};
+            const y = window.innerHeight * ${yPercent};
+            cursor.style.left = (x - 10) + 'px';
+            cursor.style.top = (y - 10) + 'px';
+            
+            // Find and highlight the target element
+            const element = document.elementFromPoint(x, y);
+            if (element) {
+              element.style.outline = '3px solid #ff4444';
+              element.style.backgroundColor = 'rgba(255,68,68,0.1)';
+              element.style.transition = 'all 0.3s ease';
+              
+              setTimeout(() => {
+                element.click();
+                element.style.outline = '';
+                element.style.backgroundColor = '';
+                cursor.remove();
+              }, 1500);
+            } else {
+              setTimeout(() => cursor.remove(), 2000);
+            }
+          })();
         `;
+        
       case 'type':
         return `
-          // AI Type Automation Script
-          const inputs = document.querySelectorAll('input[type="text"], input[type="email"], input[type="password"]');
-          inputs.forEach(input => {
-            if (input.offsetParent !== null) {
-              input.focus();
-              input.value = '${interaction.value || 'test@example.com'}';
-              input.dispatchEvent(new Event('input', { bubbles: true }));
+          (function() {
+            const inputs = document.querySelectorAll('input[type="text"], input[type="email"], input[type="password"], input:not([type])');
+            const targetInput = inputs[${interaction.target.includes('Password') ? '1' : '0'}] || inputs[0];
+            
+            if (targetInput && targetInput.offsetParent !== null) {
+              // Highlight the input field
+              targetInput.style.outline = '3px solid #4444ff';
+              targetInput.style.backgroundColor = 'rgba(68,68,255,0.1)';
+              targetInput.style.transition = 'all 0.3s ease';
+              
+              // Focus and type
+              targetInput.focus();
+              setTimeout(() => {
+                targetInput.value = '${interaction.value || 'test@example.com'}';
+                targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+                targetInput.dispatchEvent(new Event('change', { bubbles: true }));
+                
+                setTimeout(() => {
+                  targetInput.style.outline = '';
+                  targetInput.style.backgroundColor = '';
+                }, 1000);
+              }, 500);
             }
-          });
+          })();
         `;
+        
       default:
-        return `console.log('AI action: ${interaction.action} on ${interaction.target}');`;
+        return `
+          (function() {
+            const notification = document.createElement('div');
+            notification.style.cssText = \`
+              position: fixed;
+              top: 20px;
+              right: 20px;
+              z-index: 999999;
+              background: rgba(0,0,0,0.8);
+              color: white;
+              padding: 10px 15px;
+              border-radius: 5px;
+              font-family: Arial, sans-serif;
+              font-size: 12px;
+            \`;
+            notification.textContent = 'AI: ${interaction.description || interaction.action}';
+            document.body.appendChild(notification);
+            
+            setTimeout(() => notification.remove(), 3000);
+          })();
+        `;
     }
   };
 
@@ -1073,6 +1156,7 @@ export function AITestExecutionDialog({
                         sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"
                         onLoad={() => {
                           // Inject AI automation capabilities when iframe loads
+                          injectAIAutomation();
                           injectAIAutomationCapabilities();
                         }}
                       />

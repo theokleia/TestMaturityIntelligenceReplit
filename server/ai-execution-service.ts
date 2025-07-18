@@ -34,6 +34,16 @@ class AIExecutionService {
       totalSteps: steps.length
     });
 
+    // Send browser state update to display the iframe
+    this.sendWebSocketMessage(websocket, {
+      type: 'browser_state_update',
+      url: context.deploymentUrl,
+      title: context.pageTitle || 'Loading...',
+      isLoading: false,
+      liveView: true,
+      iframeUrl: context.deploymentUrl
+    });
+
     // Execute steps with real HTTP requests and enhanced simulation
     for (let i = 0; i < steps.length; i++) {
       if (context.status !== 'running') break;
@@ -53,16 +63,32 @@ class AIExecutionService {
 
       const result = await this.executeStep(context, step, i + 1);
       
-      // Send AI interaction event to show live interaction
-      this.sendWebSocketMessage(websocket, {
-        type: 'ai_interaction',
-        stepNumber: i + 1,
-        action: result.action,
-        target: result.target,
-        coordinates: result.coordinates,
-        value: result.value,
-        description: result.aiOutput
-      });
+      // Send AI interaction events for visual feedback
+      if (result.aiInteractions) {
+        for (const interaction of result.aiInteractions) {
+          this.sendWebSocketMessage(websocket, {
+            type: 'ai_interaction',
+            stepNumber: i + 1,
+            action: interaction.action,
+            target: interaction.target,
+            coordinates: interaction.coordinates,
+            value: interaction.value,
+            description: interaction.description
+          });
+          await new Promise(resolve => setTimeout(resolve, 800)); // Delay between interactions
+        }
+      } else {
+        // Single interaction
+        this.sendWebSocketMessage(websocket, {
+          type: 'ai_interaction',
+          stepNumber: i + 1,
+          action: result.action,
+          target: result.target,
+          coordinates: result.coordinates,
+          value: result.value,
+          description: result.aiOutput
+        });
+      }
 
       // Wait for interaction to complete
       await new Promise(resolve => setTimeout(resolve, 2000));
@@ -308,61 +334,29 @@ class AIExecutionService {
 
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // Type username
-    this.sendWebSocketMessage(context.websocket, {
-      type: 'ai_interaction',
-      stepNumber,
-      action: 'type',
-      target: 'Username field',
-      coordinates: { x: '50%', y: '45%' },
-      value: credentials.username,
-      description: `AI typing username: ${credentials.username}`
-    });
-
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    // Type password
-    this.sendWebSocketMessage(context.websocket, {
-      type: 'ai_thinking',
-      message: `AI entering ${credentials.isValid ? 'valid' : 'invalid'} password`,
-      stepNumber
-    });
-
-    this.sendWebSocketMessage(context.websocket, {
-      type: 'ai_interaction',
-      stepNumber,
-      action: 'type',
-      target: 'Password field',
-      coordinates: { x: '50%', y: '55%' },
-      value: credentials.password,
-      description: `AI typing password: ***`
-    });
-
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    // Click login button
-    this.sendWebSocketMessage(context.websocket, {
-      type: 'ai_thinking',
-      message: `AI clicking login button to submit credentials`,
-      stepNumber
-    });
-
-    this.sendWebSocketMessage(context.websocket, {
-      type: 'ai_interaction',
-      stepNumber,
-      action: 'click',
-      target: 'Login button',
-      coordinates: { x: '50%', y: '65%' },
-      description: `AI clicking login button`
-    });
-
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    this.sendWebSocketMessage(context.websocket, {
-      type: 'ai_thinking',
-      message: `AI login attempt completed. Expected: ${validationCriteria}`,
-      stepNumber
-    });
+    // Return multiple interactions for visual feedback
+    const interactions = [
+      {
+        action: 'type',
+        target: 'Username field',
+        coordinates: { x: '50%', y: '45%' },
+        value: credentials.username,
+        description: `AI typing username: ${credentials.username}`
+      },
+      {
+        action: 'type',
+        target: 'Password field',
+        coordinates: { x: '50%', y: '55%' },
+        value: '***',
+        description: `AI typing password: ***`
+      },
+      {
+        action: 'click',
+        target: 'Login button',
+        coordinates: { x: '50%', y: '65%' },
+        description: `AI clicking login button`
+      }
+    ];
 
     return {
       aiOutput: `AI completed login sequence with ${credentials.username}. Expected: ${validationCriteria}`,
@@ -370,6 +364,7 @@ class AIExecutionService {
       action: 'login_sequence',
       target: 'Login form',
       coordinates,
+      aiInteractions: interactions,
       pageAnalysis: { 
         action: 'login', 
         credentials: { username: credentials.username, isValid: credentials.isValid },
