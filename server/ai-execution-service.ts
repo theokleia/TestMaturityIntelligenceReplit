@@ -316,12 +316,13 @@ class AIExecutionService {
     });
 
     return {
-      aiOutput: `AI successfully clicked ${target}. Expected: ${validationCriteria}`,
-      requiresUserIntervention: false,
+      aiOutput: `AI simulated clicking ${target} at coordinates ${coordinates.x}, ${coordinates.y}. This is a visual simulation - real interaction would require manual testing. Expected: ${validationCriteria}`,
+      requiresUserIntervention: true,
+      reason: `AI cannot directly interact with external websites due to browser security restrictions. Manual verification needed for: ${target}`,
       action: 'click',
       target,
       coordinates,
-      pageAnalysis: { action: 'click', target, validation: validationCriteria }
+      pageAnalysis: { action: 'click_simulation', target, validation: validationCriteria }
     };
   }
 
@@ -359,14 +360,15 @@ class AIExecutionService {
     ];
 
     return {
-      aiOutput: `AI completed login sequence with ${credentials.username}. Expected: ${validationCriteria}`,
-      requiresUserIntervention: false,
+      aiOutput: `AI simulated login sequence with ${credentials.username} (${credentials.isValid ? 'valid' : 'invalid'} credentials). This is a visual simulation - real login testing requires manual interaction. Expected: ${validationCriteria}`,
+      requiresUserIntervention: true,
+      reason: `AI cannot directly enter credentials into external websites due to browser security restrictions. Please manually test login with: ${credentials.username} / ${credentials.isValid ? 'valid password' : 'invalid password'}`,
       action: 'login_sequence',
       target: 'Login form',
       coordinates,
       aiInteractions: interactions,
       pageAnalysis: { 
-        action: 'login', 
+        action: 'login_simulation', 
         credentials: { username: credentials.username, isValid: credentials.isValid },
         validation: validationCriteria 
       }

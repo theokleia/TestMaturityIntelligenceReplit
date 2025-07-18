@@ -1180,15 +1180,21 @@ export function AITestExecutionDialog({
                         </div>
                       ))}
                       
-                      <div className="absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded">
-                        🔴 LIVE
+                      <div className="absolute top-2 right-2 bg-orange-500 text-white text-xs px-2 py-1 rounded">
+                        🔴 SIMULATION
                       </div>
                       
                       {status === 'running' && (
                         <div className="absolute top-2 left-2 bg-blue-500 text-white text-xs px-2 py-1 rounded">
-                          AI is interacting...
+                          AI is simulating interactions...
                         </div>
                       )}
+                      
+                      {/* Information overlay */}
+                      <div className="absolute bottom-2 left-2 right-2 bg-black bg-opacity-75 text-white text-xs p-2 rounded">
+                        <div className="font-semibold mb-1">AI Test Execution Simulation</div>
+                        <div>Visual representation of AI actions. Real interactions require manual testing due to browser security restrictions.</div>
+                      </div>
                     </div>
                   ) : browserState.screenshot ? (
                     <div className="flex items-center justify-center min-h-[400px]">
