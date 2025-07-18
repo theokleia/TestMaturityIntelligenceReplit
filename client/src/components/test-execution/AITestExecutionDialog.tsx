@@ -81,6 +81,9 @@ export function AITestExecutionDialog({
   const [executionResults, setExecutionResults] = useState<any>(null);
   const [deploymentUrl, setDeploymentUrl] = useState('');
   const [aiInteractions, setAiInteractions] = useState<any[]>([]);
+  const [aiThinking, setAIThinking] = useState<string>('');
+  const [requiresUserIntervention, setRequiresUserIntervention] = useState(false);
+  const [interventionReason, setInterventionReason] = useState('');
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // Initialize deployment URL from test cycle and parse test steps
@@ -169,9 +172,15 @@ export function AITestExecutionDialog({
 
   const handleWebSocketMessage = (message: any) => {
     switch (message.type) {
+      case 'ai_thinking':
+        setAIThinking(message.message);
+        console.log('🤖 AI Thinking:', message.message);
+        break;
+        
       case 'execution_started':
         setExecutionId(message.executionId);
         setStatus('running');
+        setAIThinking('AI execution started...');
         setSteps(message.steps.map((step: any) => ({
           ...step,
           timestamp: new Date(step.timestamp)
@@ -180,6 +189,7 @@ export function AITestExecutionDialog({
         
       case 'step_started':
         setCurrentStep(message.stepNumber);
+        setAIThinking(`Starting step ${message.stepNumber}...`);
         setSteps(prev => prev.map(step => 
           step.stepNumber === message.stepNumber 
             ? { ...step, status: 'running' }
@@ -198,6 +208,16 @@ export function AITestExecutionDialog({
               }
             : step
         ));
+        
+        if (message.requiresUserIntervention) {
+          setRequiresUserIntervention(true);
+          setInterventionReason(message.reason || 'AI unable to proceed automatically');
+          setAIThinking(`AI needs help: ${message.reason || 'Cannot complete action'}`);
+          setUserInterventionRequired(true);
+          setStatus('paused');
+        } else {
+          setAIThinking('Step completed successfully');
+        }
         break;
         
       case 'step_failed':
@@ -214,6 +234,9 @@ export function AITestExecutionDialog({
         
       case 'user_intervention_required':
         setUserInterventionRequired(true);
+        setRequiresUserIntervention(true);
+        setInterventionReason(message.reason || 'AI unable to proceed');
+        setAIThinking(`AI needs help: ${message.reason}`);
         setStatus('paused');
         setSteps(prev => prev.map(step => 
           step.stepNumber === message.stepNumber 
@@ -960,6 +983,45 @@ export function AITestExecutionDialog({
 
           {/* Right Panel - Browser View */}
           <div className="flex flex-col space-y-4">
+            {/* AI Thinking Display */}
+            {aiThinking && (
+              <Card>
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Bot className="h-4 w-4 text-blue-600 animate-pulse" />
+                    <span className="text-sm font-medium text-blue-800">AI is thinking...</span>
+                  </div>
+                  <p className="text-sm text-blue-700">{aiThinking}</p>
+                </CardContent>
+              </Card>
+            )}
+            
+            {/* User intervention alert */}
+            {requiresUserIntervention && (
+              <Card>
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertCircle className="h-4 w-4 text-yellow-600" />
+                    <span className="text-sm font-medium text-yellow-800">AI needs your help</span>
+                  </div>
+                  <p className="text-sm text-yellow-700 mb-3">{interventionReason}</p>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    className="text-yellow-800 border-yellow-300 hover:bg-yellow-100"
+                    onClick={() => {
+                      setRequiresUserIntervention(false);
+                      setInterventionReason('');
+                      setAIThinking('User is taking manual control...');
+                    }}
+                  >
+                    <User className="h-3 w-3 mr-1" />
+                    Take Manual Control
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+            
             <Card className="flex-1">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">

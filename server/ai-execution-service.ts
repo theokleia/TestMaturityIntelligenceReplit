@@ -243,6 +243,13 @@ class AIExecutionService {
     const stepDescription = step.description || step.step || step;
     console.log(`Executing enhanced step ${stepNumber}: ${stepDescription}`);
 
+    // Send AI thinking update
+    this.sendWebSocketMessage(context.websocket, {
+      type: 'ai_thinking',
+      message: `AI analyzing page content for step ${stepNumber}: ${stepDescription}`,
+      stepNumber
+    });
+
     // Request real-time page analysis from the frontend iframe
     this.sendWebSocketMessage(context.websocket, {
       type: 'analyze_page_elements',
@@ -264,10 +271,23 @@ class AIExecutionService {
       pageAnalysis.summary = `Found ${pageAnalysis.clickableElements} clickable elements including navigation menu and hamburger menu on live Xamolo page`;
     }
 
+    // Send AI analysis results
+    this.sendWebSocketMessage(context.websocket, {
+      type: 'ai_thinking',
+      message: `AI detected ${pageAnalysis.clickableElements} interactive elements on the page (${pageAnalysis.hamburgerElements} hamburger menus, ${pageAnalysis.navElements} navigation elements)`,
+      stepNumber
+    });
+
     // AI decision making with real page analysis and interaction simulation
     if (stepDescription.toLowerCase().includes('login')) {
       // Check if login is visible or hidden in hamburger menu
       if (pageAnalysis.hasSignIn) {
+        this.sendWebSocketMessage(context.websocket, {
+          type: 'ai_thinking',
+          message: `AI found visible Sign In link. Attempting to click direct login access.`,
+          stepNumber
+        });
+        
         const coordinates = { x: '85%', y: '15%' };
         return {
           aiOutput: `AI found visible Sign In link on ${context.pageTitle}. Clicking direct login access.`,
@@ -279,11 +299,26 @@ class AIExecutionService {
         };
       } else if (pageAnalysis.hamburgerElements > 0 || pageAnalysis.navElements > 0) {
         // Login likely hidden in hamburger menu, explore navigation first
+        this.sendWebSocketMessage(context.websocket, {
+          type: 'ai_thinking',
+          message: `AI looking for login options. Found ${pageAnalysis.hamburgerElements} hamburger menu(s) - will open navigation menu to find login.`,
+          stepNumber
+        });
+        
         // Send smart element detection request to find exact hamburger location
         this.sendWebSocketMessage(context.websocket, {
           type: 'find_element',
           selector: '[class*="hamburger"], [class*="menu-toggle"], [aria-label*="menu"], [data-testid*="menu"], button:has(svg), .menu-icon',
           elementType: 'hamburger menu'
+        });
+        
+        // Wait a moment then check if element was found
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        this.sendWebSocketMessage(context.websocket, {
+          type: 'ai_thinking',
+          message: `AI attempting to click hamburger menu to access login options.`,
+          stepNumber
         });
         
         const coordinates = { x: '95%', y: '10%' }; // Fallback location
@@ -296,10 +331,17 @@ class AIExecutionService {
           pageAnalysis
         };
       } else {
+        this.sendWebSocketMessage(context.websocket, {
+          type: 'ai_thinking',
+          message: `AI unable to locate login elements or navigation menu. Cannot proceed with automated login.`,
+          stepNumber
+        });
+        
         const coordinates = { x: '50%', y: '40%' };
         return {
-          aiOutput: `AI searching for login form on ${context.pageTitle}. ${pageAnalysis.summary}`,
-          requiresUserIntervention: false,
+          aiOutput: `AI unable to find login elements on ${context.pageTitle}. ${pageAnalysis.summary}. User intervention required.`,
+          requiresUserIntervention: true,
+          reason: 'Cannot locate login form or navigation elements on the page',
           action: 'click',
           target: 'Login area',
           coordinates,
