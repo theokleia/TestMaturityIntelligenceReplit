@@ -136,7 +136,7 @@ class AIExecutionService {
   }
 
   private async runSimulatedExecution(context: ExecutionContext): Promise<void> {
-    const { steps, websocket, executionId } = context;
+    const { steps, websocket, executionId, deploymentUrl } = context;
 
     // Store the execution context
     this.activeExecutions.set(executionId, context);
