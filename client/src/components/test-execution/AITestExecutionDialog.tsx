@@ -441,6 +441,15 @@ export function AITestExecutionDialog({
       const iframeDoc = iframe.contentDocument;
       
       if (iframeDoc && iframeWindow) {
+        // Set viewport meta tag for desktop view to prevent mobile layout
+        let viewportMeta = iframeDoc.querySelector('meta[name="viewport"]');
+        if (!viewportMeta) {
+          viewportMeta = iframeDoc.createElement('meta');
+          viewportMeta.name = 'viewport';
+          iframeDoc.head.appendChild(viewportMeta);
+        }
+        viewportMeta.content = 'width=1200, initial-scale=1.0, user-scalable=yes';
+        
         // Inject AI automation script into the iframe
         const script = iframeDoc.createElement('script');
         script.textContent = `
@@ -467,12 +476,29 @@ export function AITestExecutionDialog({
             performClick: function(x, y) {
               const element = document.elementFromPoint(x, y);
               if (element) {
-                console.log('🤖 AI clicking element:', element.tagName, element.textContent?.substring(0, 50));
+                console.log('🤖 AI clicking element:', element.tagName, element.className, element.textContent?.substring(0, 50));
                 this.highlightElement(element);
+                
+                // Enhanced click with better event handling
                 setTimeout(() => {
+                  // Try multiple click methods for better compatibility
+                  const clickEvent = new MouseEvent('click', {
+                    view: window,
+                    bubbles: true,
+                    cancelable: true
+                  });
+                  element.dispatchEvent(clickEvent);
                   element.click();
                   this.removeHighlight(element);
-                  console.log('✅ Click completed');
+                  console.log('✅ Click completed on', element.tagName, element.className);
+                  
+                  // Report back what happened after click
+                  setTimeout(() => {
+                    const newElements = document.querySelectorAll('a[href*="login"], a[href*="signin"], button:contains("login"), button:contains("sign in")');
+                    if (newElements.length > 0) {
+                      console.log('🎯 Found login elements after navigation:', newElements.length);
+                    }
+                  }, 500);
                 }, 1000);
                 return true;
               }
@@ -510,6 +536,12 @@ export function AITestExecutionDialog({
                 case 'click':
                   const x = window.innerWidth * (parseFloat(coordinates?.x || '50%') / 100);
                   const y = window.innerHeight * (parseFloat(coordinates?.y || '50%') / 100);
+                  console.log('🎯 AI attempting click at coordinates:', x, y, 'for target:', target);
+                  
+                  // Enhanced element detection and interaction
+                  const elementAtPoint = document.elementFromPoint(x, y);
+                  console.log('📍 Element found at coordinates:', elementAtPoint?.tagName, elementAtPoint?.className, elementAtPoint?.textContent?.substring(0, 100));
+                  
                   window.aiAutomation.performClick(x, y);
                   break;
                 case 'type':
@@ -520,9 +552,37 @@ export function AITestExecutionDialog({
           });
           
           console.log('🚀 AI automation system initialized');
+          
+          // Force desktop layout by setting viewport width
+          if (document.body) {
+            document.body.style.minWidth = '1200px';
+            document.body.style.width = 'auto';
+          }
+          
+          // Log page analysis for debugging
+          const allButtons = document.querySelectorAll('button, [role="button"], .btn');
+          const allLinks = document.querySelectorAll('a[href]');
+          const allInputs = document.querySelectorAll('input, textarea, select');
+          const navElements = document.querySelectorAll('nav, .nav, .navbar, .menu, .navigation');
+          
+          console.log('📊 Page analysis:');
+          console.log('  🔘 Buttons:', allButtons.length);
+          console.log('  🔗 Links:', allLinks.length);  
+          console.log('  📝 Inputs:', allInputs.length);
+          console.log('  🧭 Navigation:', navElements.length);
+          
+          // Look for login/signin elements specifically
+          const loginElements = document.querySelectorAll('a[href*="login"], a[href*="signin"], button:contains("login"), button:contains("sign"), [data-testid*="login"], [id*="login"], [class*="login"], [class*="signin"]');
+          console.log('  🔐 Login elements:', loginElements.length);
+          
+          if (loginElements.length > 0) {
+            loginElements.forEach((el, i) => {
+              console.log('    Login element', i + 1, ':', el.tagName, el.className, el.textContent?.substring(0, 50));
+            });
+          }
         `;
         iframeDoc.head.appendChild(script);
-        console.log('✅ AI automation capabilities injected into iframe');
+        console.log('✅ AI automation capabilities injected into iframe with desktop viewport');
       }
     } catch (error) {
       console.log('⚠️ Could not inject AI automation:', error.message);
@@ -771,9 +831,9 @@ export function AITestExecutionDialog({
                 )}
               </CardHeader>
               <CardContent className="p-0">
-                <div className="border-2 border-gray-200 rounded-lg overflow-hidden bg-gray-100 min-h-[400px] relative">
+                <div className="border-2 border-gray-200 rounded-lg overflow-hidden bg-gray-100 min-h-[600px] relative">
                   {browserState.liveView && browserState.iframeUrl ? (
-                    <div className="w-full h-[400px] relative">
+                    <div className="w-full h-[600px] relative">
                       <iframe
                         ref={iframeRef}
                         src={browserState.iframeUrl}
@@ -824,7 +884,7 @@ export function AITestExecutionDialog({
                       />
                     </div>
                   ) : (
-                    <div className="text-center text-gray-500 flex items-center justify-center min-h-[400px]">
+                    <div className="text-center text-gray-500 flex items-center justify-center min-h-[600px]">
                       <div>
                         <Monitor className="w-12 h-12 mx-auto mb-2 opacity-50" />
                         <p>Browser view will appear here during execution</p>

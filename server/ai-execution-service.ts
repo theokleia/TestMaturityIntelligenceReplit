@@ -248,15 +248,39 @@ class AIExecutionService {
 
     // AI decision making with real page analysis and interaction simulation
     if (stepDescription.toLowerCase().includes('login')) {
-      const coordinates = pageAnalysis.hasSignIn ? { x: '85%', y: '15%' } : { x: '50%', y: '40%' };
-      return {
-        aiOutput: `AI locating login form on ${context.pageTitle}. Found ${pageAnalysis.loginForms} login forms, attempting credential entry.`,
-        requiresUserIntervention: false,
-        action: 'click',
-        target: pageAnalysis.hasSignIn ? 'Sign in button' : 'Login form',
-        coordinates,
-        pageAnalysis
-      };
+      // Check if login is visible or hidden in hamburger menu
+      if (pageAnalysis.hasSignIn) {
+        const coordinates = { x: '85%', y: '15%' };
+        return {
+          aiOutput: `AI found visible Sign In link on ${context.pageTitle}. Clicking direct login access.`,
+          requiresUserIntervention: false,
+          action: 'click',
+          target: 'Sign in button',
+          coordinates,
+          pageAnalysis
+        };
+      } else if (pageAnalysis.hamburgerElements > 0 || pageAnalysis.navElements > 0) {
+        // Login likely hidden in hamburger menu, explore navigation first
+        const coordinates = { x: '95%', y: '10%' }; // Typical hamburger menu location
+        return {
+          aiOutput: `AI exploring navigation menu on ${context.pageTitle}. Found ${pageAnalysis.hamburgerElements} hamburger menu(s) - opening to find login options.`,
+          requiresUserIntervention: false,
+          action: 'click',
+          target: 'Hamburger menu',
+          coordinates,
+          pageAnalysis
+        };
+      } else {
+        const coordinates = { x: '50%', y: '40%' };
+        return {
+          aiOutput: `AI searching for login form on ${context.pageTitle}. ${pageAnalysis.summary}`,
+          requiresUserIntervention: false,
+          action: 'click',
+          target: 'Login area',
+          coordinates,
+          pageAnalysis
+        };
+      }
     } else if (stepDescription.toLowerCase().includes('click') && stepDescription.toLowerCase().includes('get started')) {
       const coordinates = { x: '25%', y: '85%' }; // Location of Get started button on Xamolo
       return {
@@ -312,12 +336,19 @@ class AIExecutionService {
   }
 
   private analyzePageContent(content: string, stepDescription: string): any {
-    // Deep HTML analysis for realistic page representation
+    // Enhanced HTML analysis for better element detection
     const loginForms = (content.match(/<form[^>]*>/gi) || []).filter(form => 
       form.toLowerCase().includes('login') || content.includes('password')
     ).length;
     
-    const clickableElements = (content.match(/<(button|a|input[^>]*type=["']?(button|submit))/gi) || []).length;
+    // More comprehensive clickable element detection
+    const buttonElements = (content.match(/<button[^>]*>/gi) || []).length;
+    const linkElements = (content.match(/<a[^>]*href[^>]*>/gi) || []).length;
+    const inputButtons = (content.match(/<input[^>]*type=["']?(button|submit)["']?[^>]*>/gi) || []).length;
+    const navElements = (content.match(/<nav[^>]*>|class=["'][^"']*nav[^"']*["']|class=["'][^"']*menu[^"']*["']/gi) || []).length;
+    const hamburgerElements = (content.match(/hamburger|menu.*toggle|☰|≡|\u2630/gi) || []).length;
+    
+    const clickableElements = buttonElements + linkElements + inputButtons + navElements + hamburgerElements;
     
     const textContent = content.replace(/<[^>]*>/g, '').trim();
     
@@ -339,6 +370,10 @@ class AIExecutionService {
     return {
       loginForms,
       clickableElements,
+      buttonElements,
+      linkElements,
+      navElements,
+      hamburgerElements,
       textContent,
       hasGetStarted,
       hasPropertyManagement,
@@ -351,7 +386,7 @@ class AIExecutionService {
       title: titleMatch ? titleMatch[1] : 'Xamolo',
       heading: h1Match ? h1Match[1] : '',
       description: metaDesc ? metaDesc[1] : '',
-      summary: `Found ${loginForms} login forms, ${clickableElements} clickable elements, ${textContent.length} characters of text content`
+      summary: `Found ${loginForms} login forms, ${clickableElements} clickable elements (${buttonElements} buttons, ${linkElements} links, ${navElements} nav, ${hamburgerElements} hamburger), ${textContent.length} characters of text content`
     };
   }
 
