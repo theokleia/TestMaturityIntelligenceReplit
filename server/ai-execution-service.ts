@@ -538,7 +538,26 @@ class AIExecutionService {
   } {
     const foundElements: string[] = [];
     
-    // Check for direct login forms
+    // Check if this is a SPA (Single Page Application) by looking for React/JS frameworks
+    const isSPA = content.includes('id="root"') || content.includes('React') || content.includes('Vue') || content.includes('Angular') || 
+                 content.includes('/assets/index-') || content.includes('crossorigin src=');
+    
+    if (isSPA) {
+      // For SPAs, we assume login elements will be rendered by JavaScript
+      foundElements.push('SPA detected - login elements rendered by JavaScript');
+      const titleMatch = content.match(/<title>(.*?)<\/title>/i);
+      const title = titleMatch ? titleMatch[1] : 'Unknown';
+      
+      return {
+        hasDirectLogin: true, // Assume login capability exists for SPAs
+        hasNavigationElements: true,
+        foundElements,
+        summary: 'SPA with JavaScript-rendered login elements detected',
+        pagePreview: `${title} - Single Page Application with dynamic content`
+      };
+    }
+    
+    // Original static HTML analysis for non-SPA sites
     const hasPasswordField = content.toLowerCase().includes('password') || content.includes('type="password"');
     const hasEmailField = content.toLowerCase().includes('email') || content.includes('type="email"');
     
