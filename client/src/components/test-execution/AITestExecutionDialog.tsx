@@ -526,8 +526,53 @@ export function AITestExecutionDialog({
             }
           };
           
-          // Listen for AI automation commands
+          // Listen for AI automation commands and page analysis requests
           window.addEventListener('message', function(event) {
+            if (event.data.type === 'analyze_page_elements') {
+              console.log('🔍 AI requesting page analysis');
+              
+              // Perform comprehensive page analysis on the actual rendered DOM
+              const allButtons = document.querySelectorAll('button, [role="button"], .btn, input[type="button"], input[type="submit"]');
+              const allLinks = document.querySelectorAll('a[href]');
+              const allInputs = document.querySelectorAll('input, textarea, select');
+              const navElements = document.querySelectorAll('nav, .nav, .navbar, .menu, .navigation, [role="navigation"]');
+              const hamburgerElements = document.querySelectorAll('[class*="hamburger"], [class*="menu-toggle"], [aria-label*="menu"], [data-testid*="menu"], button:has(svg), .menu-icon');
+              const loginElements = document.querySelectorAll('a[href*="login"], a[href*="signin"], button:contains("login"), button:contains("sign"), [data-testid*="login"], [id*="login"], [class*="login"], [class*="signin"]');
+              
+              const analysisResult = {
+                buttonElements: allButtons.length,
+                linkElements: allLinks.length,
+                inputElements: allInputs.length,
+                navElements: navElements.length,
+                hamburgerElements: hamburgerElements.length,
+                loginElements: loginElements.length,
+                clickableElements: allButtons.length + allLinks.length + hamburgerElements.length,
+                pageWidth: document.body.scrollWidth,
+                pageHeight: document.body.scrollHeight,
+                viewportWidth: window.innerWidth,
+                viewportHeight: window.innerHeight
+              };
+              
+              console.log('📊 Real-time page analysis:', analysisResult);
+              
+              // Send analysis back to parent window
+              parent.postMessage({
+                type: 'page_analysis_result',
+                analysis: analysisResult,
+                stepNumber: event.data.stepNumber
+              }, '*');
+              
+              // Detail each element type found
+              if (hamburgerElements.length > 0) {
+                console.log('🍔 Hamburger menu elements found:');
+                hamburgerElements.forEach((el, i) => {
+                  console.log('  ', i + 1, ':', el.tagName, el.className, el.getAttribute('aria-label'));
+                });
+              }
+              
+              return;
+            }
+            
             if (event.data.type === 'ai_automation') {
               const { action, coordinates, target } = event.data;
               console.log('🎯 Received AI automation command:', action, target);
