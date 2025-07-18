@@ -57,6 +57,7 @@ interface AITestExecutionDialogProps {
   onOpenChange: (open: boolean) => void;
   testCase: TestCase | null;
   testCycle?: any;
+  cycleItemId?: number;
   onComplete: (result: any) => void;
 }
 
@@ -65,6 +66,7 @@ export function AITestExecutionDialog({
   onOpenChange,
   testCase,
   testCycle,
+  cycleItemId,
   onComplete
 }: AITestExecutionDialogProps) {
   const [executionId, setExecutionId] = useState<string | null>(null);
@@ -304,7 +306,8 @@ export function AITestExecutionDialog({
       type: 'start_execution',
       testCaseId: testCase.id,
       testCase,
-      deploymentUrl
+      deploymentUrl,
+      cycleItemId: cycleItemId // Include cycle item ID to fetch test data
     };
     
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {

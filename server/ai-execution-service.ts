@@ -16,6 +16,7 @@ interface ExecutionContext {
   pageContent?: string;
   pageTitle?: string;
   pageUrl?: string;
+  testCycleData?: any;
 }
 
 interface ExecutionStep {
@@ -35,7 +36,8 @@ class AIExecutionService {
     executionId: string,
     testCase: any,
     deploymentUrl: string,
-    websocket: WebSocket
+    websocket: WebSocket,
+    testCycleData?: any
   ): Promise<void> {
     try {
       console.log(`Starting AI execution for test case ${testCase.id}: ${testCase.title}`);
@@ -52,7 +54,8 @@ class AIExecutionService {
         currentStep: 0,
         steps: testSteps,
         status: 'running',
-        userInterventionRequired: false
+        userInterventionRequired: false,
+        testCycleData: testCycleData
       };
 
       console.log('Using enhanced simulation mode with real HTTP requests for AI execution');
@@ -291,32 +294,45 @@ class AIExecutionService {
       // Check what login elements actually exist on the page
       const loginAnalysis = this.analyzeLoginOptions(context.pageContent || '');
       
+      // Extract test credentials from cycle data
+      const testCredentials = this.extractTestCredentials(context.testCycleData, stepDescription);
+      
       this.sendWebSocketMessage(context.websocket, {
         type: 'ai_thinking',
-        message: `AI analyzing login options: ${loginAnalysis.summary}`,
+        message: `AI analyzing login options: ${loginAnalysis.summary}. Found test credentials: ${testCredentials.username}, password: ${testCredentials.password ? '***' : 'none'}`,
         stepNumber
       });
       
       if (loginAnalysis.hasDirectLogin) {
         this.sendWebSocketMessage(context.websocket, {
           type: 'ai_thinking',
-          message: `AI found direct login elements on page - attempting to interact with login form.`,
+          message: `AI found direct login elements on page - will use ${testCredentials.username} and ${testCredentials.password ? 'test password' : 'no password'} for login attempt.`,
+          stepNumber
+        });
+        
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        this.sendWebSocketMessage(context.websocket, {
+          type: 'ai_thinking',
+          message: `AI attempting login with test credentials. Cannot verify form submission success in iframe environment - user verification needed.`,
           stepNumber
         });
         
         const coordinates = { x: '50%', y: '50%' };
         return {
-          aiOutput: `AI found direct login elements on ${context.pageTitle}: ${loginAnalysis.foundElements.join(', ')}. Attempting to interact with login form.`,
-          requiresUserIntervention: false,
-          action: 'click',
+          aiOutput: `AI found direct login elements on ${context.pageTitle}: ${loginAnalysis.foundElements.join(', ')}. Using test credentials ${testCredentials.username} with ${testCredentials.password ? 'provided password' : 'no password'} for login attempt. Cannot verify login success due to iframe limitations - user intervention required to confirm login status.`,
+          requiresUserIntervention: true,
+          reason: `AI attempted login with ${testCredentials.username} but cannot verify success. Manual confirmation needed.`,
+          action: 'login',
           target: 'Login form',
           coordinates,
+          value: testCredentials.username,
           pageAnalysis
         };
       } else if (loginAnalysis.hasNavigationElements) {
         this.sendWebSocketMessage(context.websocket, {
           type: 'ai_thinking',
-          message: `AI found navigation elements but no direct login. Checking if login is hidden in navigation menu.`,
+          message: `AI found navigation elements but no direct login. Has credentials ${testCredentials.username} ready but need to access login form first.`,
           stepNumber
         });
         
@@ -325,15 +341,15 @@ class AIExecutionService {
         
         this.sendWebSocketMessage(context.websocket, {
           type: 'ai_thinking',
-          message: `AI cannot directly verify where login is located in navigation. User intervention needed to access login.`,
+          message: `AI cannot directly access hidden login form in navigation. User intervention needed to reveal login form and enter credentials manually.`,
           stepNumber
         });
         
         const coordinates = { x: '90%', y: '15%' };
         return {
-          aiOutput: `AI detected navigation elements on ${context.pageTitle} (${loginAnalysis.foundElements.join(', ')}) but cannot locate direct login access. Login may be hidden in navigation menu. User intervention required to manually access and complete login process.`,
+          aiOutput: `AI detected navigation elements on ${context.pageTitle} (${loginAnalysis.foundElements.join(', ')}) but login form is hidden. Ready to use test credentials ${testCredentials.username} with ${testCredentials.password ? 'test password' : 'no password'}. User intervention required to manually access navigation menu, reveal login form, and enter the provided credentials.`,
           requiresUserIntervention: true,
-          reason: 'Cannot directly access login form - may be hidden in navigation menu that requires manual interaction',
+          reason: `Login form hidden in navigation. Use credentials: ${testCredentials.username} / ${testCredentials.password || 'no password provided'}`,
           action: 'click',
           target: 'Navigation menu',
           coordinates,
@@ -342,17 +358,17 @@ class AIExecutionService {
       } else {
         this.sendWebSocketMessage(context.websocket, {
           type: 'ai_thinking',
-          message: `AI completed page scan - no login elements or navigation menus detected. Page appears to be: ${context.pageTitle}`,
+          message: `AI completed page scan - no login elements detected. Has credentials ${testCredentials.username} ready but page appears to be: ${context.pageTitle}`,
           stepNumber
         });
         
         const coordinates = { x: '50%', y: '50%' };
         return {
-          aiOutput: `AI completed comprehensive scan of ${context.pageTitle}. Page content: "${loginAnalysis.pagePreview}". No login forms, sign-in buttons, or navigation menus detected. This appears to be a landing/marketing page without direct login access. User intervention required to navigate to login page.`,
+          aiOutput: `AI completed comprehensive scan of ${context.pageTitle}. Page content: "${loginAnalysis.pagePreview}". No login forms or navigation menus detected. This appears to be a landing/marketing page. Ready to use test credentials ${testCredentials.username} with ${testCredentials.password ? 'test password' : 'no password'} once login page is accessible. User intervention required to navigate to login page.`,
           requiresUserIntervention: true,
-          reason: 'No login elements found on current page - may need to navigate to different page for login',
-          action: 'analyze',
-          target: 'Page content',
+          reason: `No login elements found. Use credentials when login page is found: ${testCredentials.username} / ${testCredentials.password || 'no password provided'}`,
+          action: 'navigate',
+          target: 'Login page',
           coordinates,
           pageAnalysis
         };
@@ -487,6 +503,46 @@ class AIExecutionService {
       summary: foundElements.length > 0 ? foundElements.join(', ') : 'no login or navigation elements detected',
       pagePreview: `${title} - ${textContent}`
     };
+  }
+
+  private extractTestCredentials(testCycleData: any, stepDescription: string): {
+    username: string;
+    password: string;
+    isValid: boolean;
+  } {
+    // Default fallback credentials
+    let username = 'test@example.com';
+    let password = 'testpassword';
+    let isValid = true;
+
+    if (testCycleData && testCycleData.testData) {
+      try {
+        const testData = typeof testCycleData.testData === 'string' 
+          ? JSON.parse(testCycleData.testData) 
+          : testCycleData.testData;
+
+        // Determine if this is an invalid login test based on step description
+        const isInvalidTest = stepDescription.toLowerCase().includes('invalid') || 
+                             stepDescription.toLowerCase().includes('incorrect') ||
+                             stepDescription.toLowerCase().includes('wrong');
+
+        if (isInvalidTest) {
+          // Use invalid credentials for negative testing
+          username = testData.invalid_user?.value || testData.invalid_email?.value || 'invalid@test.com';
+          password = testData.invalid_password?.value || 'wrongpassword';
+          isValid = false;
+        } else {
+          // Use valid credentials for positive testing
+          username = testData.valid_user?.value || testData.valid_email?.value || testData.username?.value || 'test@example.com';
+          password = testData.valid_password?.value || testData.password?.value || 'testpassword';
+          isValid = true;
+        }
+      } catch (error) {
+        console.error('Error parsing test cycle data:', error);
+      }
+    }
+
+    return { username, password, isValid };
   }
 
   private async updateEnhancedBrowserState(context: ExecutionContext, stepNumber: number): Promise<void> {

@@ -73,16 +73,32 @@ export function setupWebSocketServer(server: Server): void {
 async function handleStartExecution(ws: WebSocket, message: any): Promise<void> {
   try {
     const executionId = uuidv4();
-    const { testCaseId, testCase, deploymentUrl } = message;
+    const { testCaseId, testCase, deploymentUrl, cycleItemId } = message;
 
     console.log(`Starting AI execution for test case ${testCaseId}: ${testCase.title}`);
 
-    // Start the AI execution
+    // Fetch test cycle data if cycleItemId is provided to get test credentials
+    let testCycleData = null;
+    if (cycleItemId) {
+      try {
+        const { storage } = await import('./storage');
+        const cycleItem = await storage.getTestCycleItem(cycleItemId);
+        if (cycleItem) {
+          const testCycle = await storage.getTestCycle(cycleItem.cycleId);
+          testCycleData = testCycle;
+        }
+      } catch (error) {
+        console.error('Error fetching test cycle data:', error);
+      }
+    }
+
+    // Start the AI execution with cycle data
     await aiExecutionService.startExecution(
       executionId,
       testCase,
       deploymentUrl || 'https://staging.example.com', // Use provided URL or fallback
-      ws
+      ws,
+      testCycleData
     );
 
   } catch (error) {
