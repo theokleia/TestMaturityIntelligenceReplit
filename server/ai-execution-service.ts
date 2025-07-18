@@ -289,8 +289,8 @@ class AIExecutionService {
       stepNumber
     });
 
-    // Real AI decision making based on actual page analysis
-    if (stepDescription.toLowerCase().includes('login')) {
+    // Real AI decision making based on actual page analysis  
+    if (stepDescription.toLowerCase().includes('login') || stepDescription.toLowerCase().includes('log in') || stepDescription.toLowerCase().includes('sign in')) {
       // Check what login elements actually exist on the page
       const loginAnalysis = this.analyzeLoginOptions(context.pageContent || '');
       
