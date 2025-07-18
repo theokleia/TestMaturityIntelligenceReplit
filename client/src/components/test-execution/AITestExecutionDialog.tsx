@@ -573,21 +573,119 @@ export function AITestExecutionDialog({
               return;
             }
             
+            if (event.data.type === 'find_element') {
+              console.log('🎯 AI searching for element:', event.data.selector);
+              
+              const elements = document.querySelectorAll(event.data.selector);
+              if (elements.length > 0) {
+                const firstElement = elements[0];
+                const rect = firstElement.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                
+                console.log('✅ Found', event.data.elementType, 'at coordinates:', centerX, centerY);
+                console.log('   Element details:', firstElement.tagName, firstElement.className);
+                
+                // Send exact coordinates back to parent
+                parent.postMessage({
+                  type: 'element_found',
+                  elementType: event.data.elementType,
+                  coordinates: {
+                    x: Math.round((centerX / window.innerWidth) * 100) + '%',
+                    y: Math.round((centerY / window.innerHeight) * 100) + '%'
+                  },
+                  element: {
+                    tagName: firstElement.tagName,
+                    className: firstElement.className,
+                    text: firstElement.textContent?.substring(0, 50)
+                  }
+                }, '*');
+              } else {
+                console.log('❌ Element not found:', event.data.selector);
+              }
+              
+              return;
+            }
+            
             if (event.data.type === 'ai_automation') {
               const { action, coordinates, target } = event.data;
               console.log('🎯 Received AI automation command:', action, target);
               
               switch (action) {
                 case 'click':
-                  const x = window.innerWidth * (parseFloat(coordinates?.x || '50%') / 100);
-                  const y = window.innerHeight * (parseFloat(coordinates?.y || '50%') / 100);
-                  console.log('🎯 AI attempting click at coordinates:', x, y, 'for target:', target);
+                  let targetX, targetY;
+                  
+                  // Smart element targeting - find actual elements instead of using fallback coordinates
+                  if (target.toLowerCase().includes('hamburger') || target.toLowerCase().includes('menu')) {
+                    // Look for hamburger menu elements with comprehensive selectors
+                    const selectors = [
+                      '[class*="hamburger"]',
+                      '[class*="menu-toggle"]', 
+                      '[aria-label*="menu"]',
+                      '[data-testid*="menu"]',
+                      'button[aria-expanded]',
+                      '.menu-icon',
+                      'nav button',
+                      '.nav button',
+                      'button svg',
+                      'button:has(svg)',
+                      '[role="button"][aria-label*="Menu"]',
+                      'button[class*="Menu"]',
+                      // Look for buttons in the top-right area that might be hamburger menus
+                      'header button',
+                      'nav .btn',
+                      '.navbar button'
+                    ];
+                    
+                    let hamburgerElement = null;
+                    for (const selector of selectors) {
+                      const elements = document.querySelectorAll(selector);
+                      if (elements.length > 0) {
+                        // Find the element closest to top-right corner (typical hamburger location)
+                        let bestElement = elements[0];
+                        let bestScore = 0;
+                        
+                        elements.forEach(el => {
+                          const rect = el.getBoundingClientRect();
+                          // Score based on proximity to top-right corner
+                          const rightProximity = (window.innerWidth - rect.right) / window.innerWidth;
+                          const topProximity = rect.top / window.innerHeight;
+                          const score = (1 - rightProximity) + (1 - topProximity);
+                          
+                          if (score > bestScore) {
+                            bestScore = score;
+                            bestElement = el;
+                          }
+                        });
+                        
+                        hamburgerElement = bestElement;
+                        console.log('🍔 Found hamburger candidate with selector:', selector, hamburgerElement);
+                        break;
+                      }
+                    }
+                    
+                    if (hamburgerElement) {
+                      const rect = hamburgerElement.getBoundingClientRect();
+                      targetX = rect.left + rect.width / 2;
+                      targetY = rect.top + rect.height / 2;
+                      console.log('🍔 Targeting hamburger menu at precise coordinates:', targetX, targetY);
+                      console.log('   Element details:', hamburgerElement.tagName, hamburgerElement.className);
+                    }
+                  }
+                  
+                  // Fallback to provided coordinates if no element found
+                  if (!targetX || !targetY) {
+                    targetX = window.innerWidth * (parseFloat(coordinates?.x || '50%') / 100);
+                    targetY = window.innerHeight * (parseFloat(coordinates?.y || '50%') / 100);
+                  }
+                  
+                  console.log('🎯 AI clicking at coordinates:', targetX, targetY, 'for target:', target);
                   
                   // Enhanced element detection and interaction
-                  const elementAtPoint = document.elementFromPoint(x, y);
+                  const elementAtPoint = document.elementFromPoint(targetX, targetY);
                   console.log('📍 Element found at coordinates:', elementAtPoint?.tagName, elementAtPoint?.className, elementAtPoint?.textContent?.substring(0, 100));
                   
-                  window.aiAutomation.performClick(x, y);
+                  window.aiAutomation.performClick(targetX, targetY);
                   break;
                 case 'type':
                   window.aiAutomation.performType(event.data.value || 'test@example.com');

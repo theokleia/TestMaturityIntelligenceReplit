@@ -279,9 +279,16 @@ class AIExecutionService {
         };
       } else if (pageAnalysis.hamburgerElements > 0 || pageAnalysis.navElements > 0) {
         // Login likely hidden in hamburger menu, explore navigation first
-        const coordinates = { x: '95%', y: '10%' }; // Typical hamburger menu location
+        // Send smart element detection request to find exact hamburger location
+        this.sendWebSocketMessage(context.websocket, {
+          type: 'find_element',
+          selector: '[class*="hamburger"], [class*="menu-toggle"], [aria-label*="menu"], [data-testid*="menu"], button:has(svg), .menu-icon',
+          elementType: 'hamburger menu'
+        });
+        
+        const coordinates = { x: '95%', y: '10%' }; // Fallback location
         return {
-          aiOutput: `AI exploring navigation menu on ${context.pageTitle}. Found ${pageAnalysis.hamburgerElements} hamburger menu(s) - opening to find login options.`,
+          aiOutput: `AI exploring navigation menu on ${context.pageTitle}. Found ${pageAnalysis.hamburgerElements} hamburger menu(s) and ${pageAnalysis.navElements} navigation elements - targeting hamburger menu to find login options.`,
           requiresUserIntervention: false,
           action: 'click',
           target: 'Hamburger menu',
