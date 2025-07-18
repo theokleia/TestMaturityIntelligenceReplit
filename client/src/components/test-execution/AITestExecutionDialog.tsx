@@ -232,11 +232,12 @@ export function AITestExecutionDialog({
         
       case 'execution_completed':
         setStatus('completed');
-        onComplete({
-          status: 'completed',
-          executionId: message.executionId,
-          steps
-        });
+        // Don't call onComplete immediately to keep dialog open for review
+        // onComplete({
+        //   status: 'completed',
+        //   executionId: message.executionId,
+        //   steps
+        // });
         break;
         
       case 'execution_failed':
@@ -399,7 +400,13 @@ export function AITestExecutionDialog({
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center justify-between">
                     Execution Controls
-                    <Badge variant={status === 'running' ? 'default' : 'secondary'}>
+                    <Badge variant={
+                      status === 'running' ? 'default' : 
+                      status === 'completed' ? 'default' : 
+                      'secondary'
+                    } className={
+                      status === 'completed' ? 'bg-green-500' : ''
+                    }>
                       {status.charAt(0).toUpperCase() + status.slice(1)}
                     </Badge>
                   </CardTitle>
@@ -434,10 +441,21 @@ export function AITestExecutionDialog({
                       </Button>
                     )}
                     
-                    <Button variant="destructive" size="sm" onClick={stopExecution}>
-                      <Square className="w-4 h-4 mr-2" />
-                      Stop
-                    </Button>
+                    {status === 'completed' ? (
+                      <Button variant="default" size="sm" onClick={() => onComplete({
+                        status: 'completed',
+                        executionId,
+                        steps
+                      })}>
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        Save & Close
+                      </Button>
+                    ) : (
+                      <Button variant="destructive" size="sm" onClick={stopExecution}>
+                        <Square className="w-4 h-4 mr-2" />
+                        Stop
+                      </Button>
+                    )}
                   </div>
 
                   {/* User Intervention */}
