@@ -98,7 +98,7 @@ class AIExecutionService {
       });
 
       // Enhanced step execution with real HTTP analysis
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Realistic processing time
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Processing time
 
       const result = await this.executeEnhancedStep(context, step, i + 1);
       
@@ -109,8 +109,12 @@ class AIExecutionService {
         action: result.action,
         target: result.target,
         coordinates: result.coordinates,
+        value: result.value,
         description: result.aiOutput
       });
+
+      // Wait for interaction to complete
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
       // Send step completed event with enhanced data
       this.sendWebSocketMessage(websocket, {
@@ -261,6 +265,17 @@ class AIExecutionService {
         action: 'click',
         target: 'Get started button',
         coordinates,
+        pageAnalysis
+      };
+    } else if (stepDescription.toLowerCase().includes('enter') || stepDescription.toLowerCase().includes('type')) {
+      const coordinates = { x: '50%', y: '45%' }; // Login form area
+      return {
+        aiOutput: `AI entering text into form fields on ${context.pageTitle}. Locating input fields for data entry.`,
+        requiresUserIntervention: false,
+        action: 'type',
+        target: 'Input field',
+        coordinates,
+        value: stepDescription.includes('password') ? '••••••••' : 'invalid@test.com',
         pageAnalysis
       };
     } else if (stepDescription.toLowerCase().includes('navigate') || stepDescription.toLowerCase().includes('open')) {

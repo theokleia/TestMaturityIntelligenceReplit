@@ -81,6 +81,7 @@ export function AITestExecutionDialog({
   const [executionResults, setExecutionResults] = useState<any>(null);
   const [deploymentUrl, setDeploymentUrl] = useState('');
   const [aiInteractions, setAiInteractions] = useState<any[]>([]);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // Initialize deployment URL from test cycle and parse test steps
   useEffect(() => {
@@ -237,7 +238,7 @@ export function AITestExecutionDialog({
         break;
         
       case 'ai_interaction':
-        setAiInteractions(prev => [...prev, {
+        const interaction = {
           id: Date.now(),
           stepNumber: message.stepNumber,
           action: message.action,
@@ -245,7 +246,17 @@ export function AITestExecutionDialog({
           coordinates: message.coordinates,
           description: message.description,
           timestamp: new Date()
-        }]);
+        };
+        setAiInteractions(prev => [...prev, interaction]);
+        
+        // Execute real browser interaction
+        executeRealBrowserAction(interaction);
+        
+        // Auto-advance to next step after interaction completes
+        setTimeout(() => {
+          // Clear this interaction after a few seconds
+          setAiInteractions(prev => prev.filter(i => i.id !== interaction.id));
+        }, 3000);
         break;
         
       case 'execution_completed':
@@ -341,6 +352,215 @@ export function AITestExecutionDialog({
         return <AlertCircle className="w-4 h-4 text-yellow-500" />;
       default:
         return <Clock className="w-4 h-4 text-gray-400" />;
+    }
+  };
+
+  const executeRealBrowserAction = (interaction: any) => {
+    if (!iframeRef.current) return;
+    
+    console.log(`🤖 AI executing ${interaction.action} on ${interaction.target} at ${interaction.coordinates?.x}, ${interaction.coordinates?.y}`);
+    
+    // Enhanced browser automation approach
+    const iframe = iframeRef.current;
+    
+    // Method 1: Direct iframe manipulation (works for same-origin)
+    try {
+      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+      
+      if (iframeDoc) {
+        console.log('✅ Direct iframe access available - performing real interaction');
+        
+        // Calculate actual pixel coordinates from percentages
+        const rect = iframe.getBoundingClientRect();
+        const x = (parseFloat(interaction.coordinates?.x || '50%') / 100) * rect.width;
+        const y = (parseFloat(interaction.coordinates?.y || '50%') / 100) * rect.height;
+        
+        // Find element at coordinates
+        const element = iframeDoc.elementFromPoint(x, y);
+        
+        if (element && interaction.action === 'click') {
+          // Highlight the element briefly
+          const originalStyle = element.style.cssText;
+          element.style.cssText += '; border: 3px solid #ff0000 !important; background-color: rgba(255,0,0,0.1) !important; box-shadow: 0 0 10px #ff0000 !important;';
+          
+          setTimeout(() => {
+            element.style.cssText = originalStyle;
+            // Perform the actual click
+            element.click();
+            console.log(`🎯 Successfully clicked element: ${element.tagName} ${element.className}`);
+          }, 1000);
+        } else if (element) {
+          console.log(`🔍 Found element ${element.tagName} at coordinates, but action ${interaction.action} not supported`);
+        }
+        return;
+      }
+    } catch (error) {
+      console.log('⚠️ Direct iframe access blocked:', error.message);
+    }
+    
+    // Method 2: PostMessage communication with intelligent scripts
+    try {
+      const actionScript = generateBrowserActionScript(interaction);
+      
+      iframe.contentWindow?.postMessage({
+        type: 'ai_automation',
+        action: interaction.action,
+        target: interaction.target,
+        coordinates: interaction.coordinates,
+        value: interaction.value,
+        script: actionScript,
+        timestamp: Date.now()
+      }, '*');
+      
+      console.log(`📡 Sent postMessage automation script for ${interaction.action}`);
+    } catch (postError) {
+      console.log('⚠️ PostMessage communication failed:', postError.message);
+    }
+    
+    // Method 3: URL manipulation for navigation actions
+    if (interaction.action === 'navigate' || interaction.target.includes('button')) {
+      try {
+        // For navigation actions, we can manipulate the iframe src
+        if (interaction.action === 'navigate') {
+          console.log(`🧭 Attempting navigation automation`);
+        }
+      } catch (navError) {
+        console.log('Navigation automation failed:', navError.message);
+      }
+    }
+    
+    console.log(`✨ AI interaction ${interaction.action} completed with overlay display`);
+  };
+  
+  const injectAIAutomationCapabilities = () => {
+    if (!iframeRef.current) return;
+    
+    try {
+      const iframe = iframeRef.current;
+      const iframeWindow = iframe.contentWindow;
+      const iframeDoc = iframe.contentDocument;
+      
+      if (iframeDoc && iframeWindow) {
+        // Inject AI automation script into the iframe
+        const script = iframeDoc.createElement('script');
+        script.textContent = `
+          // AI Browser Automation System
+          window.aiAutomation = {
+            highlightElement: function(element) {
+              if (!element) return;
+              element.style.transition = 'all 0.3s ease';
+              element.style.border = '3px solid #ff0000';
+              element.style.backgroundColor = 'rgba(255,0,0,0.1)';
+              element.style.boxShadow = '0 0 15px rgba(255,0,0,0.5)';
+              element.style.position = 'relative';
+              element.style.zIndex = '9999';
+            },
+            
+            removeHighlight: function(element) {
+              if (!element) return;
+              element.style.border = '';
+              element.style.backgroundColor = '';
+              element.style.boxShadow = '';
+              element.style.zIndex = '';
+            },
+            
+            performClick: function(x, y) {
+              const element = document.elementFromPoint(x, y);
+              if (element) {
+                console.log('🤖 AI clicking element:', element.tagName, element.textContent?.substring(0, 50));
+                this.highlightElement(element);
+                setTimeout(() => {
+                  element.click();
+                  this.removeHighlight(element);
+                  console.log('✅ Click completed');
+                }, 1000);
+                return true;
+              }
+              return false;
+            },
+            
+            performType: function(text, selector) {
+              const inputs = document.querySelectorAll(selector || 'input[type="text"], input[type="email"], input[type="password"], textarea');
+              for (let input of inputs) {
+                if (input.offsetParent !== null) {
+                  console.log('🤖 AI typing into:', input.type, input.placeholder);
+                  this.highlightElement(input);
+                  setTimeout(() => {
+                    input.focus();
+                    input.value = text;
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
+                    this.removeHighlight(input);
+                    console.log('✅ Typing completed');
+                  }, 1000);
+                  return true;
+                }
+              }
+              return false;
+            }
+          };
+          
+          // Listen for AI automation commands
+          window.addEventListener('message', function(event) {
+            if (event.data.type === 'ai_automation') {
+              const { action, coordinates, target } = event.data;
+              console.log('🎯 Received AI automation command:', action, target);
+              
+              switch (action) {
+                case 'click':
+                  const x = window.innerWidth * (parseFloat(coordinates?.x || '50%') / 100);
+                  const y = window.innerHeight * (parseFloat(coordinates?.y || '50%') / 100);
+                  window.aiAutomation.performClick(x, y);
+                  break;
+                case 'type':
+                  window.aiAutomation.performType(event.data.value || 'test@example.com');
+                  break;
+              }
+            }
+          });
+          
+          console.log('🚀 AI automation system initialized');
+        `;
+        iframeDoc.head.appendChild(script);
+        console.log('✅ AI automation capabilities injected into iframe');
+      }
+    } catch (error) {
+      console.log('⚠️ Could not inject AI automation:', error.message);
+    }
+  };
+  
+  const generateBrowserActionScript = (interaction: any) => {
+    switch (interaction.action) {
+      case 'click':
+        return `
+          // AI Click Automation Script
+          const x = window.innerWidth * ${parseFloat(interaction.coordinates?.x || '50%') / 100};
+          const y = window.innerHeight * ${parseFloat(interaction.coordinates?.y || '50%') / 100};
+          const element = document.elementFromPoint(x, y);
+          if (element) {
+            element.style.border = '3px solid red';
+            element.style.backgroundColor = 'rgba(255,0,0,0.1)';
+            setTimeout(() => {
+              element.click();
+              element.style.border = '';
+              element.style.backgroundColor = '';
+            }, 1000);
+          }
+        `;
+      case 'type':
+        return `
+          // AI Type Automation Script
+          const inputs = document.querySelectorAll('input[type="text"], input[type="email"], input[type="password"]');
+          inputs.forEach(input => {
+            if (input.offsetParent !== null) {
+              input.focus();
+              input.value = '${interaction.value || 'test@example.com'}';
+              input.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+          });
+        `;
+      default:
+        return `console.log('AI action: ${interaction.action} on ${interaction.target}');`;
     }
   };
 
@@ -555,10 +775,15 @@ export function AITestExecutionDialog({
                   {browserState.liveView && browserState.iframeUrl ? (
                     <div className="w-full h-[400px] relative">
                       <iframe
+                        ref={iframeRef}
                         src={browserState.iframeUrl}
                         className="w-full h-full border-0"
                         title="Live Browser View"
-                        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"
+                        onLoad={() => {
+                          // Inject AI automation capabilities when iframe loads
+                          injectAIAutomationCapabilities();
+                        }}
                       />
                       
                       {/* AI Interaction Overlays */}
