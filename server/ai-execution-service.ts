@@ -279,149 +279,107 @@ class AIExecutionService {
       pageAnalysis.summary = `Found ${pageAnalysis.clickableElements} clickable elements including navigation menu and hamburger menu on live Xamolo page`;
     }
 
-    // Send AI analysis results
+    // Send AI analysis results based on real page content
     this.sendWebSocketMessage(context.websocket, {
       type: 'ai_thinking',
       message: `AI detected ${pageAnalysis.clickableElements} interactive elements on the page (${pageAnalysis.hamburgerElements} hamburger menus, ${pageAnalysis.navElements} navigation elements)`,
       stepNumber
     });
 
-    // AI decision making with real page analysis and interaction simulation
+    // Real AI decision making based on actual page analysis
     if (stepDescription.toLowerCase().includes('login')) {
-      // Check if login is visible or hidden in hamburger menu
-      if (pageAnalysis.hasSignIn) {
+      // Check what login elements actually exist on the page
+      const loginAnalysis = this.analyzeLoginOptions(context.pageContent || '');
+      
+      this.sendWebSocketMessage(context.websocket, {
+        type: 'ai_thinking',
+        message: `AI analyzing login options: ${loginAnalysis.summary}`,
+        stepNumber
+      });
+      
+      if (loginAnalysis.hasDirectLogin) {
         this.sendWebSocketMessage(context.websocket, {
           type: 'ai_thinking',
-          message: `AI found visible Sign In link. Attempting to click direct login access.`,
+          message: `AI found direct login elements on page - attempting to interact with login form.`,
           stepNumber
         });
         
-        const coordinates = { x: '85%', y: '15%' };
+        const coordinates = { x: '50%', y: '50%' };
         return {
-          aiOutput: `AI found visible Sign In link on ${context.pageTitle}. Clicking direct login access.`,
+          aiOutput: `AI found direct login elements on ${context.pageTitle}: ${loginAnalysis.foundElements.join(', ')}. Attempting to interact with login form.`,
           requiresUserIntervention: false,
           action: 'click',
-          target: 'Sign in button',
+          target: 'Login form',
           coordinates,
           pageAnalysis
         };
-      } else if (pageAnalysis.hamburgerElements > 0 || pageAnalysis.navElements > 0) {
-        // Login likely hidden in hamburger menu, explore navigation first
+      } else if (loginAnalysis.hasNavigationElements) {
         this.sendWebSocketMessage(context.websocket, {
           type: 'ai_thinking',
-          message: `AI found ${pageAnalysis.hamburgerElements} hamburger menu(s) - analyzing best target to access login.`,
+          message: `AI found navigation elements but no direct login. Checking if login is hidden in navigation menu.`,
           stepNumber
         });
         
-        // Send smart element detection request to find exact hamburger location
-        this.sendWebSocketMessage(context.websocket, {
-          type: 'find_element',
-          selector: '[class*="hamburger"], [class*="menu-toggle"], [aria-label*="menu"], [data-testid*="menu"], button:has(svg), .menu-icon',
-          elementType: 'hamburger menu'
-        });
-        
-        // Wait a moment then check if element was found
+        // Wait for iframe to potentially respond with element locations
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         this.sendWebSocketMessage(context.websocket, {
           type: 'ai_thinking',
-          message: `AI targeting hamburger menu in top-right corner - attempting click to reveal navigation.`,
+          message: `AI cannot directly verify where login is located in navigation. User intervention needed to access login.`,
           stepNumber
         });
         
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        this.sendWebSocketMessage(context.websocket, {
-          type: 'ai_thinking',
-          message: `AI clicked hamburger menu but cannot verify if login form is now accessible. Need manual verification.`,
-          stepNumber
-        });
-        
-        const coordinates = { x: '95%', y: '10%' }; // Fallback location
-        
-        // Since this is a login attempt and we can't actually verify the click worked,
-        // we should request user intervention after attempting the action
-        this.sendWebSocketMessage(context.websocket, {
-          type: 'ai_thinking',
-          message: `AI attempted to click hamburger menu but cannot verify if login form appeared. Need user verification.`,
-          stepNumber
-        });
-        
+        const coordinates = { x: '90%', y: '15%' };
         return {
-          aiOutput: `AI attempted to access navigation menu on ${context.pageTitle}. Found ${pageAnalysis.hamburgerElements} hamburger menu(s) and ${pageAnalysis.navElements} navigation elements. Clicked hamburger menu but cannot verify if login form is now visible. User intervention required to confirm login form access and complete login.`,
+          aiOutput: `AI detected navigation elements on ${context.pageTitle} (${loginAnalysis.foundElements.join(', ')}) but cannot locate direct login access. Login may be hidden in navigation menu. User intervention required to manually access and complete login process.`,
           requiresUserIntervention: true,
-          reason: 'Cannot verify if hamburger menu click revealed login form. Manual verification needed.',
+          reason: 'Cannot directly access login form - may be hidden in navigation menu that requires manual interaction',
           action: 'click',
-          target: 'Hamburger menu',
+          target: 'Navigation menu',
           coordinates,
           pageAnalysis
         };
       } else {
         this.sendWebSocketMessage(context.websocket, {
           type: 'ai_thinking',
-          message: `AI unable to locate login elements or navigation menu. Cannot proceed with automated login.`,
+          message: `AI completed page scan - no login elements or navigation menus detected. Page appears to be: ${context.pageTitle}`,
           stepNumber
         });
         
-        const coordinates = { x: '50%', y: '40%' };
+        const coordinates = { x: '50%', y: '50%' };
         return {
-          aiOutput: `AI Analysis: Scanned ${context.pageTitle} for login elements. ${pageAnalysis.summary}. No visible login form, sign-in buttons, or accessible navigation menus detected. AI cannot proceed with automated login - user intervention required to manually locate and access login functionality.`,
+          aiOutput: `AI completed comprehensive scan of ${context.pageTitle}. Page content: "${loginAnalysis.pagePreview}". No login forms, sign-in buttons, or navigation menus detected. This appears to be a landing/marketing page without direct login access. User intervention required to navigate to login page.`,
           requiresUserIntervention: true,
-          reason: 'No login form or navigation elements detected on page. Manual user action needed to access login.',
-          action: 'click',
-          target: 'Login area',
+          reason: 'No login elements found on current page - may need to navigate to different page for login',
+          action: 'analyze',
+          target: 'Page content',
           coordinates,
           pageAnalysis
         };
       }
-    } else if (stepDescription.toLowerCase().includes('click') && stepDescription.toLowerCase().includes('get started')) {
-      const coordinates = { x: '25%', y: '85%' }; // Location of Get started button on Xamolo
-      return {
-        aiOutput: `AI clicking "Get started" button on ${context.pageTitle}. Page analysis confirms button presence.`,
-        requiresUserIntervention: false,
-        action: 'click',
-        target: 'Get started button',
-        coordinates,
-        pageAnalysis
-      };
-    } else if (stepDescription.toLowerCase().includes('enter') || stepDescription.toLowerCase().includes('type')) {
-      const coordinates = { x: '50%', y: '45%' }; // Login form area
-      return {
-        aiOutput: `AI entering text into form fields on ${context.pageTitle}. Locating input fields for data entry.`,
-        requiresUserIntervention: false,
-        action: 'type',
-        target: 'Input field',
-        coordinates,
-        value: stepDescription.includes('password') ? '••••••••' : 'invalid@test.com',
-        pageAnalysis
-      };
-    } else if (stepDescription.toLowerCase().includes('navigate') || stepDescription.toLowerCase().includes('open')) {
-      const coordinates = { x: '50%', y: '20%' }; // Top center area
-      return {
-        aiOutput: `AI navigating to ${context.pageUrl}. Live page loaded successfully with ${pageAnalysis.clickableElements} interactive elements.`,
-        requiresUserIntervention: false,
-        action: 'navigate',
-        target: 'Page URL',
-        coordinates,
-        pageAnalysis
-      };
-    } else if (stepDescription.toLowerCase().includes('verify') || stepDescription.toLowerCase().includes('check')) {
-      const coordinates = { x: '60%', y: '60%' }; // Content area
-      return {
-        aiOutput: `AI verifying page content on ${context.pageTitle}. Confirming ${pageAnalysis.hasPropertyManagement ? 'property management' : 'page'} content is displayed correctly.`,
-        requiresUserIntervention: false,
-        action: 'verify',
-        target: 'Page content',
-        coordinates,
-        pageAnalysis
-      };
     } else {
-      const coordinates = { x: '50%', y: '50%' }; // Center of page
+      // For non-login steps, provide honest analysis based on what AI can actually detect
+      this.sendWebSocketMessage(context.websocket, {
+        type: 'ai_thinking',
+        message: `AI analyzing step requirements: "${stepDescription}"`,
+        stepNumber
+      });
+      
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      this.sendWebSocketMessage(context.websocket, {
+        type: 'ai_thinking',
+        message: `AI cannot directly execute this step type. Page has ${pageAnalysis.clickableElements} interactive elements but specific action requires manual verification.`,
+        stepNumber
+      });
+      
+      const coordinates = { x: '50%', y: '50%' };
       return {
-        aiOutput: `AI executing step: ${stepDescription}. Live analysis of ${context.pageTitle} shows ${pageAnalysis.clickableElements} interactive elements.`,
-        requiresUserIntervention: false,
-        action: 'interact',
-        target: 'Page element',
+        aiOutput: `AI analyzed step "${stepDescription}" on ${context.pageTitle}. Page contains ${pageAnalysis.clickableElements} interactive elements (${pageAnalysis.buttonElements} buttons, ${pageAnalysis.linkElements} links). However, AI cannot directly execute this specific action type and requires user intervention to complete the step manually.`,
+        requiresUserIntervention: true,
+        reason: `AI cannot directly execute "${stepDescription}" - manual user action required`,
+        action: 'manual',
+        target: 'User action required',
         coordinates,
         pageAnalysis
       };
@@ -480,6 +438,54 @@ class AIExecutionService {
       heading: h1Match ? h1Match[1] : '',
       description: metaDesc ? metaDesc[1] : '',
       summary: `Found ${loginForms} login forms, ${clickableElements} clickable elements (${buttonElements} buttons, ${linkElements} links, ${navElements} nav, ${hamburgerElements} hamburger), ${textContent.length} characters of text content`
+    };
+  }
+
+  private analyzeLoginOptions(content: string): {
+    hasDirectLogin: boolean;
+    hasNavigationElements: boolean;
+    foundElements: string[];
+    summary: string;
+    pagePreview: string;
+  } {
+    const foundElements: string[] = [];
+    
+    // Check for direct login forms
+    const hasPasswordField = content.toLowerCase().includes('password') || content.includes('type="password"');
+    const hasEmailField = content.toLowerCase().includes('email') || content.includes('type="email"');
+    
+    if (hasPasswordField && hasEmailField) {
+      foundElements.push('login form with email/password fields');
+    }
+    
+    // Check for login buttons/links
+    const loginButtons = content.match(/login|sign.?in|log.?in/gi) || [];
+    if (loginButtons.length > 0) {
+      foundElements.push(`${loginButtons.length} login/signin references`);
+    }
+    
+    // Check for navigation elements
+    const navElements = content.match(/<nav[^>]*>|class=["'][^"']*nav[^"']*["']|class=["'][^"']*menu[^"']*["']/gi) || [];
+    const hamburgerElements = content.match(/hamburger|menu.*toggle|☰|≡|\u2630/gi) || [];
+    
+    if (navElements.length > 0) {
+      foundElements.push(`${navElements.length} navigation elements`);
+    }
+    if (hamburgerElements.length > 0) {
+      foundElements.push(`${hamburgerElements.length} hamburger menu indicators`);
+    }
+    
+    // Extract page preview (title + first meaningful text)
+    const titleMatch = content.match(/<title>(.*?)<\/title>/i);
+    const title = titleMatch ? titleMatch[1] : 'Unknown';
+    const textContent = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 200);
+    
+    return {
+      hasDirectLogin: hasPasswordField && hasEmailField,
+      hasNavigationElements: navElements.length > 0 || hamburgerElements.length > 0,
+      foundElements,
+      summary: foundElements.length > 0 ? foundElements.join(', ') : 'no login or navigation elements detected',
+      pagePreview: `${title} - ${textContent}`
     };
   }
 
