@@ -129,6 +129,7 @@ export interface IStorage {
   getTestRuns(cycleItemId: number): Promise<TestRun[]>;
   getTestRun(id: number): Promise<TestRun | undefined>;
   getTestRunsByTestCase(testCaseId: number): Promise<TestRun[]>;
+  getTestRunsByCycleItem(cycleItemId: number): Promise<TestRun[]>;
   createTestRun(testRun: InsertTestRun): Promise<TestRun>;
   updateTestRun(id: number, testRun: Partial<InsertTestRun>): Promise<TestRun | undefined>;
   
@@ -998,6 +999,14 @@ export class DatabaseStorage implements IStorage {
         cycleName: r.cycle.name,
         cycleId: r.cycle.id
       })));
+  }
+
+  async getTestRunsByCycleItem(cycleItemId: number): Promise<TestRun[]> {
+    return db
+      .select()
+      .from(testRuns)
+      .where(eq(testRuns.cycleItemId, cycleItemId))
+      .orderBy(desc(testRuns.executedAt));
   }
   
   async createTestRun(testRun: InsertTestRun): Promise<TestRun> {

@@ -16,6 +16,40 @@ import {
 import { requireAuth } from "./auth.routes";
 
 export function registerTestManagementRoutes(app: Express) {
+  // Test Runs CRUD
+  app.get("/api/test-runs/test-case/:testCaseId", async (req, res) => {
+    try {
+      const testCaseId = parseInt(req.params.testCaseId);
+      const testRuns = await storage.getTestRunsByTestCase(testCaseId);
+      res.json(testRuns);
+    } catch (error) {
+      console.error("Error fetching test runs by test case:", error);
+      res.status(500).json({ message: "Failed to fetch test runs" });
+    }
+  });
+
+  app.get("/api/test-runs/by-cycle-item/:cycleItemId", async (req, res) => {
+    try {
+      const cycleItemId = parseInt(req.params.cycleItemId);
+      const testRuns = await storage.getTestRunsByCycleItem(cycleItemId);
+      res.json(testRuns);
+    } catch (error) {
+      console.error("Error fetching test runs by cycle item:", error);
+      res.status(500).json({ message: "Failed to fetch test runs" });
+    }
+  });
+
+  app.post("/api/test-runs", async (req, res) => {
+    try {
+      const validatedData = insertTestRunSchema.parse(req.body);
+      const testRun = await storage.createTestRun(validatedData);
+      res.json(testRun);
+    } catch (error) {
+      console.error("Error creating test run:", error);
+      res.status(500).json({ message: "Failed to create test run" });
+    }
+  });
+
   // Test Suites CRUD
   app.get("/api/test-suites", async (req, res) => {
     try {
