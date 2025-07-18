@@ -76,6 +76,7 @@ export function AITestExecutionDialog({
   });
   const [userInterventionRequired, setUserInterventionRequired] = useState(false);
   const [userNotes, setUserNotes] = useState('');
+  const [executionResults, setExecutionResults] = useState<any>(null);
   const [deploymentUrl, setDeploymentUrl] = useState('');
 
   // Initialize deployment URL from test cycle and parse test steps
@@ -232,12 +233,8 @@ export function AITestExecutionDialog({
         
       case 'execution_completed':
         setStatus('completed');
-        // Don't call onComplete immediately to keep dialog open for review
-        // onComplete({
-        //   status: 'completed',
-        //   executionId: message.executionId,
-        //   steps
-        // });
+        // Store execution results for later save
+        setExecutionResults(message.results);
         break;
         
       case 'execution_failed':
@@ -445,7 +442,8 @@ export function AITestExecutionDialog({
                       <Button variant="default" size="sm" onClick={() => onComplete({
                         status: 'completed',
                         executionId,
-                        steps
+                        steps,
+                        results: executionResults
                       })}>
                         <CheckCircle className="w-4 h-4 mr-2" />
                         Save & Close
