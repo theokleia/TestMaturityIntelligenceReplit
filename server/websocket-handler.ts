@@ -92,14 +92,23 @@ async function handleStartExecution(ws: WebSocket, message: any): Promise<void> 
       }
     }
 
-    // Start the AI execution with cycle data
-    await aiExecutionService.startExecution(
-      executionId,
+    // Parse test steps and create execution context
+    const steps = aiExecutionService.parseTestSteps(testCase);
+    
+    const context = {
+      websocket: ws,
       testCase,
-      deploymentUrl || 'https://staging.example.com', // Use provided URL or fallback
-      ws,
-      testCycleData
-    );
+      testCycleData,
+      steps,
+      deploymentUrl: deploymentUrl || 'https://xamolo.com',
+      executionId,
+      status: 'running' as const,
+      currentStep: 0,
+      userInterventionRequired: false
+    };
+
+    // Start the AI execution with context
+    await aiExecutionService.startExecution(context);
 
   } catch (error) {
     console.error('Error starting AI execution:', error);

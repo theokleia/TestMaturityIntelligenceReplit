@@ -189,15 +189,16 @@ class AIExecutionService {
       };
     }
 
-    // Step 2: Login with specific credentials
-    if (desc.includes('log in') && desc.includes('invalid password')) {
+    // Step 2: Login with specific credentials - handle various login variations
+    if ((desc.includes('log in') || desc.includes('login') || desc.includes('attempt to log in')) && 
+        (desc.includes('invalid') || desc.includes('valid') || desc.includes('credentials') || desc.includes('password'))) {
       const testCredentials = this.extractTestCredentials(context.testCycleData, stepDescription);
       return {
         actionType: 'login_sequence',
         target: 'Login form',
         inputValue: JSON.stringify(testCredentials),
         coordinates: { x: '50%', y: '50%' },
-        validationCriteria: expected || 'Error message should appear for invalid credentials'
+        validationCriteria: expected || (testCredentials.isValid ? 'Login should succeed' : 'Error message should appear for invalid credentials')
       };
     }
 
