@@ -78,18 +78,39 @@ class AIExecutionService {
   private async shouldUseSimulation(): Promise<boolean> {
     try {
       // Try to launch a browser to test if Playwright works
-      const browser = await chromium.launch({ headless: true });
+      const browser = await chromium.launch({ 
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-web-security',
+          '--disable-gpu',
+          '--single-process',
+          '--disable-extensions'
+        ]
+      });
+      
+      // Test creating a page and basic navigation
+      const page = await browser.newPage();
+      await page.goto('about:blank');
+      await page.close();
       await browser.close();
+      
+      console.log('Playwright browser test successful - using real execution');
       return false; // Playwright works, use real execution
     } catch (error) {
+      console.log('Playwright browser test failed - using simulation mode:', error.message);
       return true; // Playwright failed, use simulation
     }
   }
 
   private async runRealExecution(context: ExecutionContext): Promise<void> {
-    // Launch browser in headless mode for containerized environment
+    // Launch browser in headless mode with proper Chrome path
     const browser = await chromium.launch({
-      headless: true,
+      headless: true, // Use headless for consistent screenshots
+      slowMo: 500, // Slow down actions for better visibility
+      // executablePath will use Playwright's bundled Chromium
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -99,7 +120,12 @@ class AIExecutionService {
         '--disable-blink-features=AutomationControlled',
         '--disable-background-timer-throttling',
         '--disable-backgrounding-occluded-windows',
-        '--disable-renderer-backgrounding'
+        '--disable-renderer-backgrounding',
+        '--disable-gpu',
+        '--no-first-run',
+        '--no-default-browser-check',
+        '--single-process',
+        '--disable-extensions'
       ]
     });
 
